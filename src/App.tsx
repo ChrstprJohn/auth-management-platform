@@ -1,11 +1,11 @@
-import { DashboardLayout } from '@/components/layout/dashboard-layout'
+import { AuthProvider } from '@/context/AuthContext'
 import { RouterView } from '@/router'
 
 function App() {
   return (
-    <DashboardLayout>
+    <AuthProvider>
       <RouterView />
-    </DashboardLayout>
+    </AuthProvider>
   )
 }
 

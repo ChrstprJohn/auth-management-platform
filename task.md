@@ -254,3 +254,56 @@ Tell the AI:
 Build a clean, minimal, professional authentication management dashboard inspired by Supabase's dashboard UX, but do not copy Supabase's branding. The primary concept is Projects → Project Dashboard → Users/API/Settings. Use TypeScript, React, Vite, Tailwind CSS v4, shadcn/ui with the Nova preset, and React Compiler. Prioritize excellent UX, responsive layout, clean typography, simple navigation, useful empty/loading/error states, and reusable components. Keep the architecture ready for connecting to my self-hosted GoTrue server at https://auth.chrbuilds.dev.
 
 That gives the AI a clear enough architecture without letting it start randomly creating pages/components.
+
+## Frontend architecture and coding pattern
+
+Use a React-friendly version of MVC / feature architecture. Do not force traditional MVC classes into React; instead, keep the same separation of responsibilities:
+
+```
+src/
+├── pages/                  # Route-level composition only
+├── components/             # Reusable presentational UI
+│   ├── ui/                 # shadcn primitives
+│   ├── layout/             # Sidebar, topbar, page shells
+│   └── <feature>/          # Feature-specific view components
+├── features/               # One folder per domain: projects, users, auth
+│   └── <feature>/
+│       ├── hooks/          # Controller-style UI/data logic
+│       ├── services/       # Requests to the future Admin API
+│       ├── types.ts        # Domain models and API contracts
+│       └── utils.ts        # Pure feature helpers
+├── hooks/                  # Shared reusable hooks only
+├── context/                # Small, app-wide client state only
+└── lib/                    # Shared utilities and API client configuration
+```
+
+### Responsibilities
+
+- **Views:** Pages and components render props and emit user events. Keep them as declarative and presentational as practical. They may keep tiny, local UI state such as whether a menu or dialog is open.
+- **Hooks:** Put reusable interaction and controller logic here: fetching state, form submission, search/filter state, optimistic updates, clipboard behavior, and mapping API data for a view. A hook should expose data, derived state, actions, loading, and error state—not JSX.
+- **Services:** Services make HTTP calls only. They must not import React, access components, or contain UI behavior. All privileged calls go through the future Admin API, never directly to PostgreSQL or GoTrue admin credentials from the browser.
+- **Models:** Use TypeScript types for domain and API contracts. Avoid `any`; validate or safely handle untrusted API responses at the boundary.
+- **Context:** Use context sparingly for true app-wide client concerns (for example session state, theme, or selected project). Do not make it a catch-all server-data store.
+
+### Current pattern and migration plan
+
+The current app is a UI prototype using `MOCK_PROJECTS` and a mock `AuthContext`. Keep this mock layer isolated and clearly labelled. When Phase 6 begins, replace mock reads with feature hooks and service calls while preserving the view component APIs where possible.
+
+Example flow:
+
+```
+UsersPage (route composition)
+  → useProjectUsers(projectId) (state, actions, loading/error)
+  → usersService.list(projectId) (Admin API request)
+  → Admin API → GoTrue / PostgreSQL
+```
+
+### Implementation rules
+
+- Prefer small, focused components with typed props over large page files.
+- Put business rules, request orchestration, and reusable event logic in hooks or pure utilities, not inline in JSX.
+- Keep route parameters parsing and missing-project handling at the route/page boundary.
+- Every async screen must support loading, empty, error, and success states.
+- Keep destructive operations disabled or mocked until the Admin API is implemented, with clear user feedback.
+- Use descriptive names: `useProjectUsers`, `usersService`, `ProjectUser`, `CreateUserInput`.
+- Run `pnpm typecheck` and `pnpm lint` before considering a change complete; keep both passing.

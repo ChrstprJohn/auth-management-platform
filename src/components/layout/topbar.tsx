@@ -1,38 +1,52 @@
-interface ProjectNavItem {
-  name: string
-  users: number
-  appId: string
+import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+import { useAuth } from '@/context/AuthContext'
+import { LogOut } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+
+interface TopbarProps {
+  /** Optional breadcrumb or subtitle text shown after the brand name */
+  breadcrumb?: string
+  /** Optional action element in the top-right (e.g. "+ New Project") */
+  action?: ReactNode
 }
 
-const projects: ProjectNavItem[] = [
-  { name: 'CRM', users: 124, appId: 'crm' },
-  { name: 'Dental Website', users: 38, appId: 'dental' },
-  { name: 'Portfolio', users: 8, appId: 'portfolio' },
-]
+export function Topbar({ breadcrumb, action }: TopbarProps) {
+  const { logout } = useAuth()
 
-const sortedProjects = [...projects].sort((a, b) => b.users - a.users)
-
-export function Topbar() {
   return (
-    <header className="border-b border-input/20 bg-card/50 px-4 py-2 flex items-center gap-4">
-      <h1 className="text-sm font-medium truncate">Auth Dashboard</h1>
-      <div className="flex items-center gap-3">
-        {sortedProjects.map((p) => (
-          <button
-            key={p.appId}
-            type="button"
-            className="flex items-center rounded-md border border-input/20 bg-white/50 px-3 py-1.5 text-sm font-medium hover:bg-accent/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <span className="line-clamp-1">{p.name}</span>
-            <span className="ml-1 text-xs font-medium text-muted-foreground">{p.users} users</span>
-          </button>
-        ))}
-        <button
-          type="button"
-          className="rounded-md bg-primary text-primary px-3 py-1.5 text-sm font-medium hover:bg-primary/10"
+    <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b border-border/80 bg-card/85 px-4 backdrop-blur-md sm:px-6">
+      {/* Left: brand + breadcrumb */}
+      <div className="flex items-center gap-2 min-w-0">
+        <Link
+          to="/projects"
+          className="flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground transition-colors hover:text-primary shrink-0"
         >
-          [+ New Project]
-        </button>
+          <span className="grid size-7 place-items-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">A</span>
+          Auth Dashboard
+        </Link>
+        {breadcrumb && (
+          <>
+            <span className="text-muted-foreground/40 select-none">/</span>
+            <span className="text-sm text-muted-foreground truncate">{breadcrumb}</span>
+          </>
+        )}
+      </div>
+
+      {/* Right: contextual action + logout */}
+      <div className="flex items-center gap-2 shrink-0">
+        {action}
+        <Button
+          type="button"
+          onClick={logout}
+          title="Sign out"
+          variant="ghost"
+          size="sm"
+          className="hidden text-muted-foreground sm:inline-flex"
+        >
+          <LogOut size={13} />
+          Sign out
+        </Button>
       </div>
     </header>
   )
