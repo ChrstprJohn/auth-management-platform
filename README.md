@@ -6,8 +6,10 @@ This repository contains the dashboard for the shared GoTrue service at `https:/
 |---|---|---|
 | `frontend/` | React + Vite dashboard | UI prototype with mock data |
 | `backend/` | Express API for projects and protected GoTrue admin operations | Scaffold with `GET /health` only |
-| `backend/db/` | Dashboard PostgreSQL schema and VM setup instructions | Migration ready; not applied |
-| `documentation/` | GoTrue route catalog and request examples | Reference for v2.196.0 |
+| `backend/prisma/` | Prisma schema and versioned dashboard database migration | Migration ready; not applied on VM |
+| `backend/DATABASE.md` | Local PostgreSQL and VM database setup instructions | Local Compose added |
+| `0-Documentation/` | GoTrue route catalog and request examples | Reference for v2.196.0 |
+| `1-Virtual_Machine_Architecture/` | VM service and network notes | Deployment reference |
 
 The backend is designed to run as a Docker container on the VM. Its future database and GoTrue admin credentials must remain server-side. See [backend/README.md](backend/README.md) for local and Docker commands.
 

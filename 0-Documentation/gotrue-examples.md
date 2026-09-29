@@ -48,7 +48,7 @@ Replace stored refresh tokens after a successful refresh if rotation is enabled.
 
 ## Admin user management
 
-Run admin calls from a private backend with an admin-role JWT. The current dashboard frontend must not hold this JWT. See the [VM auth notes](../VM/5-auth-server.md) for deployment details.
+Run admin calls from a private backend with an admin-role JWT. The current dashboard frontend must not hold this JWT. See the [VM auth notes](../1-Virtual_Machine_Architecture/5-auth-server.md) for deployment details.
 
 ```bash
 curl -i https://auth.chrbuilds.dev/admin/users \

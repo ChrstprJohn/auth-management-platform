@@ -4,7 +4,7 @@ This folder describes the self-hosted GoTrue service at **`https://auth.chrbuild
 
 - [Complete route catalog](gotrue-routes.md) — every route registered by the pinned GoTrue v2.196.0 router, grouped by feature and access level.
 - [Request examples](gotrue-examples.md) — starting points for the currently relevant email/password and admin flows.
-- [VM deployment notes](../VM/5-auth-server.md) — infrastructure, configuration, and operations.
+- [VM deployment notes](../1-Virtual_Machine_Architecture/5-auth-server.md) — infrastructure, configuration, and operations.
 
 Checked against [GoTrue v2.196.0 router source](https://github.com/supabase/auth/blob/v2.196.0/internal/api/api.go) and its [versioned OpenAPI file](https://github.com/supabase/auth/blob/v2.196.0/openapi.yaml). The live `/health` and `/settings` endpoints returned HTTP 200 on 2026-09-30. The other routes are documented from source; they were not exercised against production.
 

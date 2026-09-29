@@ -1,7 +1,5 @@
--- Run once in dashboard_db, owned by dashboard_app. Never run in auth_db.
-BEGIN;
-
-CREATE SCHEMA dashboard;
+-- Applied by Prisma Migrate to dashboard_db. Never run in auth_db.
+CREATE SCHEMA IF NOT EXISTS dashboard;
 
 CREATE TABLE dashboard.projects (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -49,11 +47,3 @@ CREATE TABLE dashboard.dashboard_admins (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE dashboard.schema_migrations (
-    version text PRIMARY KEY,
-    applied_at timestamptz NOT NULL DEFAULT now()
-);
-
-INSERT INTO dashboard.schema_migrations (version) VALUES ('001_initial_schema');
-
-COMMIT;

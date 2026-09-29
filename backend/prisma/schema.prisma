@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["dashboard"]
+}
+
+model Project {
+  id          String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug        String              @unique
+  name        String
+  description String?
+  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime            @default(now()) @map("updated_at") @db.Timestamptz(6)
+  memberships ProjectMembership[]
+
+  @@map("projects")
+  @@schema("dashboard")
+}
+
+model ProjectMembership {
+  projectId    String   @map("project_id") @db.Uuid
+  gotrueUserId String   @map("gotrue_user_id") @db.Uuid
+  role         String   @default("member")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, gotrueUserId])
+  @@index([gotrueUserId], map: "project_memberships_user_id_idx")
+  @@map("project_memberships")
+  @@schema("dashboard")
+}
+
+model DashboardAdmin {
+  gotrueUserId String   @id @map("gotrue_user_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("dashboard_admins")
+  @@schema("dashboard")
+}
