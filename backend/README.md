@@ -1,6 +1,6 @@
 # Dashboard backend
 
-Express API scaffold for the authentication dashboard. It currently serves `GET /health` and a database readiness check at `GET /health/ready`; project storage, dashboard authorization, and GoTrue admin calls have not been implemented.
+Express API for the authentication dashboard. Project create/list/read routes use Prisma and the separate dashboard database. Dashboard authorization and GoTrue admin calls are still pending, so do not add a public Caddy route yet.
 
 The Prisma schema, local PostgreSQL Compose setup, and future VM database steps are in [DATABASE.md](DATABASE.md). No migration has been applied to the VM from this repository.
 
@@ -16,6 +16,37 @@ pnpm dev
 ```
 
 The default listener is port 3000. Set `PORT` to change it. Use `pnpm build && pnpm start` to run the compiled production entry point locally.
+
+## Project API
+
+| Method | Path | Result |
+|---|---|---|
+| `POST` | `/api/projects` | Create a project from `slug`, `name`, and optional `description` |
+| `GET` | `/api/projects?limit=20&cursor=<UUID>` | List projects newest first, with `nextCursor` for pagination |
+| `GET` | `/api/projects/:id` | Get a project by UUID |
+| `GET` | `/health` | Process liveness |
+| `GET` | `/health/ready` | Database readiness |
+
+Example local request:
+
+```bash
+curl -i -X POST http://127.0.0.1:3000/api/projects \
+  -H 'Content-Type: application/json' \
+  -d '{"slug":"crm","name":"CRM"}'
+```
+
+Project slugs are unique lowercase URL identifiers. Requests return `{ "data": ... }`; the list includes `nextCursor`. Validation errors use HTTP 400, duplicate slugs use 409, and missing projects use 404. Run `pnpm test:integration` with the local PostgreSQL container running to exercise the routes; the test deletes its own project.
+
+## Code layers
+
+- `src/projects/project.routes.ts` maps HTTP methods and paths.
+- `src/projects/project.controller.ts` handles HTTP request and response objects.
+- `src/projects/project.service.ts` validates input and owns project rules.
+- `src/projects/project.repository.ts` contains Prisma queries.
+- `src/db/prisma.ts` creates the shared database client.
+- `src/middleware/error-handler.ts` maps known failures to API responses.
+
+The frontend still shows mock projects. Connect it to these routes after dashboard authorization is in place.
 
 ## VM deployment layout
 

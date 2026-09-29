@@ -1,0 +1,17 @@
+import type { RequestHandler } from 'express'
+import { projectService } from './project.service.js'
+
+export const createProject: RequestHandler = async (request, response) => {
+  const project = await projectService.create(request.body)
+  response.status(201).location(`/api/projects/${project.id}`).json({ data: project })
+}
+
+export const getProject: RequestHandler = async (request, response) => {
+  const project = await projectService.get(request.params.id)
+  response.json({ data: project })
+}
+
+export const listProjects: RequestHandler = async (request, response) => {
+  const result = await projectService.list(request.query.limit, request.query.cursor)
+  response.json(result)
+}

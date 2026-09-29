@@ -1,36 +1,21 @@
 import 'dotenv/config'
-import express from 'express'
-import { PrismaPg } from '@prisma/adapter-pg'
-import { PrismaClient } from './generated/prisma/client.js'
+import { app } from './app.js'
+import { prisma } from './db/prisma.js'
 
-const app = express()
 const port = Number(process.env.PORT ?? 3000)
+if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  throw new Error('PORT must be an integer between 1 and 65535')
+}
 
-app.disable('x-powered-by')
-app.use(express.json())
-
-app.get('/health', (_request, response) => {
-  response.json({ status: 'ok', service: 'auth-dashboard-backend' })
+const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1'
+const server = app.listen(port, host, () => {
+  console.log(`Auth dashboard backend listening on ${host}:${port}`)
 })
 
-app.get('/health/ready', async (_request, response) => {
-  const databaseUrl = process.env.DATABASE_URL
-  if (!databaseUrl) {
-    response.status(503).json({ status: 'unavailable' })
-    return
-  }
+async function shutdown() {
+  server.close()
+  await prisma.$disconnect()
+}
 
-  const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl }) })
-  try {
-    await prisma.$queryRaw`SELECT 1`
-    response.json({ status: 'ok' })
-  } catch {
-    response.status(503).json({ status: 'unavailable' })
-  } finally {
-    await prisma.$disconnect()
-  }
-})
-
-export const server = app.listen(port, '0.0.0.0', () => {
-  console.log(`Auth dashboard backend listening on port ${port}`)
-})
+process.once('SIGINT', shutdown)
+process.once('SIGTERM', shutdown)
