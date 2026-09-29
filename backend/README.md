@@ -2,6 +2,8 @@
 
 Express API scaffold for the authentication dashboard. It currently serves only `GET /health`; project storage, dashboard authorization, and GoTrue admin calls have not been implemented.
 
+The versioned PostgreSQL schema and VM setup steps are in [db/README.md](db/README.md). The SQL is ready for the existing VM PostgreSQL service; no migration has been applied to the VM from this repository.
+
 ## Local run
 
 ```bash
