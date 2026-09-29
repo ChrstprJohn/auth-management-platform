@@ -5,14 +5,14 @@ Base URL: `https://auth.chrbuilds.dev`. Examples use placeholder credentials onl
 ## Read-only checks
 
 ```bash
-curl -i https://auth.chrbuilds.dev/health
-curl -i https://auth.chrbuilds.dev/settings
+curl.exe -i https://auth.chrbuilds.dev/health
+curl.exe -i https://auth.chrbuilds.dev/health
 ```
 
 Both returned HTTP 200 on 2026-09-30. Health verifies the public route and service response; it does not prove database writes. Settings shows enabled providers and capabilities.
 
 ## Email/password account
-
+`
 ```bash
 curl -i -X POST https://auth.chrbuilds.dev/signup \
   -H 'Content-Type: application/json' \

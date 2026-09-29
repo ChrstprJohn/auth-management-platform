@@ -10,6 +10,7 @@ lerna-debug.log*
 
 VM
 node_modules
+.pnpm-store
 dist
 dist-ssr
 *.local
