@@ -12,13 +12,22 @@ pnpm start
 
 The default listener is port 3000. Set `PORT` to change it.
 
-## Docker / VM
+## VM deployment layout
+
+The VM runs each service as its own Docker Compose project on the external `app_network`. [docker-compose.yml](docker-compose.yml) follows that layout: it builds this backend from source, uses the `auth-dashboard-backend` container name, restarts unless stopped, and publishes **no host port**. Caddy can reach it privately at `auth-dashboard-backend:3000` after a route is added. PostgreSQL and GoTrue can be reached privately as `postgres:5432` and `gotrue:8081` once those integrations exist.
+
+After pulling this repository on the VM:
 
 ```bash
-docker build -t auth-dashboard-backend ./backend
-docker run --rm -p 127.0.0.1:3000:3000 auth-dashboard-backend
+cd backend
+docker network inspect app_network
+docker compose config
+docker compose build --pull
+docker compose up -d
+docker compose ps
+docker exec auth-dashboard-backend node -e "fetch('http://127.0.0.1:3000/health').then(async r => { console.log(r.status, await r.text()); process.exit(r.ok ? 0 : 1) })"
 ```
 
-Run the build command from the repository root. The image uses the backend's own lockfile. On the VM, place the container on the private Docker network used by PostgreSQL and GoTrue. Publish only through Caddy after authenticated API routes exist. Do not publish PostgreSQL, the GoTrue admin JWT, or database credentials to the browser.
+The image uses the backend's own lockfile. `app_network` must already exist, as documented in the VM reference. The Compose file has no `ports:` mapping, matching GoTrue and the realtime server. Add a Caddy route only when authenticated browser-facing API routes are implemented and a dashboard API hostname is chosen. Do not publish PostgreSQL, the GoTrue admin JWT, or database credentials to the browser.
 
-When Docker Compose is added, its build context should be `./backend`. Use a VM-local `.env` or secret mount for future credentials.
+Use a VM-local `.env` or secret mount for future credentials and reference it from Compose when those integrations are implemented. The example environment file contains no secrets. The frontend is not currently deployed by this Compose project.
