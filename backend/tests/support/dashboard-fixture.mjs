@@ -15,7 +15,8 @@ const user = {
   created_at: new Date().toISOString(),
   email_confirmed_at: new Date().toISOString(),
 }
-const auth = createServer((request, response) => {
+const users = new Map([[member, user]])
+const auth = createServer(async (request, response) => {
   response.setHeader('Access-Control-Allow-Origin', 'http://127.0.0.1:5174')
   response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
@@ -39,8 +40,26 @@ const auth = createServer((request, response) => {
     response.end(JSON.stringify({ id: actor }))
     return
   }
+  if (request.url === '/admin/users' && request.method === 'POST') {
+    let body = ''
+    for await (const chunk of request) body += chunk
+    const input = JSON.parse(body)
+    const created = {
+      id: randomUUID(),
+      email: input.email,
+      created_at: new Date().toISOString(),
+      ...(input.email_confirm ? { email_confirmed_at: new Date().toISOString() } : {}),
+    }
+    users.set(created.id, created)
+    response.end(JSON.stringify(created))
+    return
+  }
+  if (request.url.startsWith('/admin/users/') && users.has(request.url.split('/').at(-1))) {
+    response.end(JSON.stringify(users.get(request.url.split('/').at(-1))))
+    return
+  }
   if (request.url.startsWith('/admin/users?')) {
-    response.end(JSON.stringify({ users: [user], total: 1 }))
+    response.end(JSON.stringify({ users: [...users.values()], total: users.size }))
     return
   }
   if (request.url === '/admin/users/' + member) {
