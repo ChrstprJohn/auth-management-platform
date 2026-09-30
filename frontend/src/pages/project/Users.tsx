@@ -35,7 +35,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 export function UsersPage() {
-  const { project } = useProject()
+  const { project, reload: reloadProject } = useProject()
   const [page, setPage] = useState(1)
   const [assignOpen, setAssignOpen] = useState(false)
   const load = useCallback(() => adminApi.members(project.id, page), [project.id, page])
@@ -52,6 +52,7 @@ export function UsersPage() {
         setUserId('')
         setAssignOpen(false)
         resource.reload()
+        reloadProject()
       }
     )
   }
@@ -68,7 +69,14 @@ export function UsersPage() {
         </p>
       </header>
       <div className="flex flex-wrap gap-3">
-        <CreateAccountDialog project={project} onCreated={resource.reload} />
+        <CreateAccountDialog
+          key={project.id}
+          project={project}
+          onCreated={() => {
+            resource.reload()
+            reloadProject()
+          }}
+        />
         <Dialog
           open={assignOpen}
           onOpenChange={(open) => {

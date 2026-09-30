@@ -252,6 +252,16 @@ export function UserDetailsPage() {
                     Send recovery email
                   </Button>
                 </div>
+                {error && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {error}
+                  </p>
+                )}
+                {notice && (
+                  <p role="status" className="text-sm text-muted-foreground">
+                    {notice}
+                  </p>
+                )}
               </section>
             </DialogContent>
           </Dialog>
