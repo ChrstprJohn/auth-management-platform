@@ -1,6 +1,6 @@
 # Auth Management Platform architecture
 
-This is the current pattern for the Auth Management Platform. It describes what exists today and where new features should go. The frontend provides administration screens; the backend serves protected admin operations and will also provide project membership APIs for other applications.
+This is the current pattern for the Auth Management Platform. It describes what exists today and where new features should go. The frontend provides administration screens; the backend serves protected admin operations and provides project membership APIs for other applications.
 
 ## Folder structure
 
@@ -14,8 +14,16 @@ SelfHostedAuthDashboard/
 │   │   ├── server.ts                  Listener and shutdown
 │   │   ├── db/prisma.ts               Shared Prisma client
 │   │   ├── middleware/                Shared HTTP error handling
+│   │   ├── models/                    Domain data types; no Express dependencies
+│   │   ├── integrations/              Trusted GoTrue client, safe account projection
+│   │   ├── lib/                       Shared input validation
 │   │   ├── modules/
-│   │   │   └── projects/              Project routes, controller, service, repository
+│   │   │   ├── projects/              Project CRUD
+│   │   │   ├── memberships/           Enrollment/access and admin membership actions
+│   │   │   ├── users/                 Server-side GoTrue account administration
+│   │   │   ├── operators/             Dashboard admin management
+│   │   │   ├── identity/              Own verified identity/admin status
+│   │   │   └── audit/                 Audit event listing
 │   │   └── generated/prisma/          Generated client; do not hand edit
 │   ├── prisma/                        Schema and versioned SQL migrations
 │   ├── tests/                         API integration tests
@@ -31,7 +39,7 @@ SelfHostedAuthDashboard/
 
 ```text
 Browser dashboard (frontend)
-        │ future authenticated requests
+        │ authenticated requests
         ▼
 Dashboard API (backend/Express)
         ├── Prisma ──► dashboard schema in PostgreSQL
@@ -41,7 +49,7 @@ GoTrue ──► authentication, users and tokens
 Dashboard database ──► projects, project memberships and dashboard admins
 ```
 
-The frontend currently uses mock data and a placeholder login; it does not call the backend. The backend offers project create, list and read routes plus health checks. Project routes require a Bearer access token verified through GoTrue's `/user` endpoint, followed by a `DashboardAdmin` lookup using the verified user UUID. Health routes remain unauthenticated. First-admin bootstrap uses a trusted database session; frontend integration, GoTrue admin calls and membership/admin management are future work. Verify authenticated access before exposing the API on the VM.
+The frontend uses real GoTrue login and typed API services. Administrative routes require a GoTrue-verified token and a dashboard admin row; enrollment and own-membership routes require a verified user and their applicable project policy. Health routes remain unauthenticated. The backend implements project/account/member/operator administration and audit listing. GoTrue administrative operations additionally require a server-held operator credential. See [the endpoint reference](0-Documentation/platform-api.md) for exact behavior. VM configuration and integration of these checks into external project backends remain deployment work.
 
 Keep database credentials and any GoTrue admin credential in the backend environment. The browser should call the dashboard API for protected administration, never connect to PostgreSQL or hold an admin credential.
 

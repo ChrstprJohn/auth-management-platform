@@ -38,7 +38,7 @@ GoTrue still physically exposes its own protected admin endpoints. In our applic
 
 Keep GoTrue unchanged as the shared authentication service, and keep our dashboard administration backend separate. One GoTrue account may belong to several projects, but a successful login alone does not grant access to any project.
 
-The planned flow is:
+The agreed flow is:
 
 1. **Signup:** GoTrue creates the account. Once the user's identity is verified, our backend assigns project membership according to that project's registration policy. A client-supplied project name or user metadata alone cannot grant membership or an elevated role.
 2. **Login:** GoTrue validates credentials and returns a normal user access token. An existing user does not need another account to join another project.
@@ -51,7 +51,7 @@ Example: Christopher joins CRM. GoTrue stores his account; `project_memberships`
 
 If signup succeeds but membership assignment fails or is never called, the account still exists without that membership. It has no access to the project's protected resources. Enrollment should be retryable and avoid duplicate membership rows. Joining a project must follow a defined policy, such as open registration, a valid invitation, or administrator approval.
 
-**Implementation status:** Project management and dashboard admin checks exist. Signup enrollment, project enrollment policies, project-user membership authorization, and GoTrue admin integration remain planned. Other application backends must enforce project access too; our administration backend cannot protect an application's API unless that API participates in these checks.
+**Implementation status:** Project CRUD, open/closed enrollment, own membership/access checks, member administration, GoTrue user administration, dashboard operator management, and audit endpoints are implemented. The frontend now uses real API services. Live GoTrue administrative calls require a configured server-only admin token. Other application backends must enforce project access too; our administration backend cannot protect an application's API unless that API participates in these checks.
 
 ## Component responsibilities
 
@@ -148,7 +148,7 @@ A normal login token cannot authorize GoTrue admin operations. Editing a token's
 
 The live admin endpoint rejection behavior has not been independently verified in this workflow.
 
-## Future user-management flow
+## User-management flow
 
 ```text
 Dashboard sends normal user access token to our backend
@@ -171,14 +171,14 @@ The privileged credential belongs to the backend, not to the administrator's bro
 |---|---|---|
 | GOTRUE_JWT_SECRET | GoTrue VM environment | Existing signing secret in the documented symmetric signing setup. It is not itself a JWT. |
 | GOTRUE_JWT_ADMIN_ROLES | GoTrue configuration | Roles accepted for privileged operations; verify configured values or pinned-version defaults before minting a token. |
-| GOTRUE_ADMIN_TOKEN | Planned dashboard backend VM environment | A signed JWT with an accepted privileged role and expiration. This is our proposed backend variable, not a GoTrue built-in setting. |
+| GOTRUE_ADMIN_TOKEN | Dashboard backend VM environment | A signed JWT with an accepted privileged role and expiration. This is our proposed backend variable, not a GoTrue built-in setting. |
 | GOTRUE_URL | Dashboard backend environment | Trusted GoTrue base URL used to verify user tokens and, later, make admin calls. |
 
 Standalone GoTrue does not provide a public admin-token generation endpoint. For the documented secret-based setup, generate the token privately on the VM using a trusted signing script and the existing signing secret. Verify the actual signing configuration and accepted role first. Plan expiration/renewal and test the credential with a read-only admin call.
 
 Store only the resulting admin JWT in the backend environment when possible; the running dashboard backend does not need the signing secret to verify users through `/user`. Never put either credential in frontend environment variables, browser bundles, Git, screenshots, or logs.
 
-Adding `GOTRUE_ADMIN_TOKEN` alone does nothing yet: the current backend has no GoTrue administration client using it.
+The backend now reads `GOTRUE_ADMIN_TOKEN` through its dedicated GoTrue integration client. Generate/configure it privately on the VM; the implementation tests mock GoTrue and do not verify live operator credentials.
 
 ## VM deployment checklist for later
 
@@ -189,6 +189,6 @@ Adding `GOTRUE_ADMIN_TOKEN` alone does nothing yet: the current backend has no G
 5. Implement backend GoTrue admin integration, verify the live admin-role/signing configuration, and generate/store its privileged credential privately before enabling user-management features.
 6. Configure the frontend's real login/project requests and the intended HTTPS Caddy route. Keep database and operator credentials server-side.
 
-The user's local tests and authenticated project request were reported successful in this chat. This does not verify VM deployment or future GoTrue user-management operations. The frontend still uses placeholder login/mock project data unless changed separately.
+Backend authorization/HTTP tests and local PostgreSQL integration tests pass with mocked GoTrue. Frontend type checks, lint, production build, and fixture-based browser verification pass. No placeholder login or hardcoded account/project records remain. VM deployment, real operator credentials, email delivery, and integration into external project backends still require operational verification. See [platform-api.md](platform-api.md) for exact implemented routes and limitations.
 
 See [backend setup](../backend/README.md), [database and migrations](../backend/DATABASE.md), and [GoTrue VM reference](../1-Virtual_Machine_Architecture/5-auth-server.md).

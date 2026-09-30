@@ -21,7 +21,7 @@ Project apps ── user token + enrollment/access request ──► Platform ba
 Global admin dashboard ── user token + admin action ──► Platform backend
 Platform backend ── verify user token (/user) ──► GoTrue
 Platform backend ── project/admin permission checks ──► dashboard_db
-Platform backend ── server-held admin token (future) ──► GoTrue /admin/*
+Platform backend ── server-held admin token ──► GoTrue /admin/*
 Project backends ── enforce verified project membership ──► protected app data
 ```
 
@@ -53,16 +53,16 @@ User metadata can label signup origin, but cannot authorize project access or gr
 
 ## Backend API groups
 
-“Public” here means browser/application-facing, not unrestricted access to private data. Exact future routes are proposals.
+“Public” here means browser/application-facing, not unrestricted access to private data. See [platform-api.md](platform-api.md) for the authoritative implemented routes and payloads.
 
 | Group | Features | Permission |
 |---|---|---|
 | Health — existing | `GET /health`, `GET /health/ready` | No token; readiness checks DB. |
-| Application membership — planned | Enroll, check own access/role, list own memberships | Valid user token; project enrollment policy for joining; only the verified user's records. |
-| Project administration — partly existing | Create/list/read projects; later update and archive/delete with defined effects | Valid token + global dashboard admin. Existing routes: `POST/GET /api/projects`, `GET /api/projects/:id`. |
-| Membership administration — planned | List project members, assign/remove membership, change permitted roles | Valid token + global dashboard admin initially. |
-| GoTrue user administration — planned | List/search/read accounts, create/update accounts, relevant recovery/confirmation operations, deliberate global deletion | Valid token + global dashboard admin; backend uses GoTrue operator credential. |
-| Dashboard operator administration — planned | Grant/revoke global admin access | Global admin only; bootstrap first admin through a trusted DB session; prevent accidental loss of all operators. |
+| Application membership — implemented | Enroll, check own access/role, list own memberships | Valid user token; project enrollment policy for joining; only the verified user's records. |
+| Project administration — implemented | Create/list/read projects; later update and archive/delete with defined effects | Valid token + global dashboard admin. Existing routes: `POST/GET /api/projects`, `GET /api/projects/:id`. |
+| Membership administration — implemented | List project members, assign/remove membership, change permitted roles | Valid token + global dashboard admin initially. |
+| GoTrue user administration — implemented | List/search/read accounts, create/update accounts, relevant recovery/confirmation operations, deliberate global deletion | Valid token + global dashboard admin; backend uses GoTrue operator credential. |
+| Dashboard operator administration — implemented | Grant/revoke global admin access | Global admin only; bootstrap first admin through a trusted DB session; prevent accidental loss of all operators. |
 
 Choose distinct routes/middleware for ordinary membership requests; do not place them behind the existing admin-only project router. Proposed names include `POST /api/projects/:id/enroll`, `GET /api/projects/:id/access`, and `GET /api/me/memberships`.
 
@@ -81,12 +81,12 @@ Keep the existing frontend as the global admin dashboard; individual project app
 | Project overview | Project details, member counts, integration/access status. |
 | Project users | Members scoped to this project, search/pagination, assign/remove membership and roles. |
 | User details | GoTrue account details plus project memberships; distinguish account operations from membership operations. |
-| Global users — planned | Shared account search and administration across projects. |
+| Global users | Shared account search and administration across projects. |
 | API/integration | Endpoint examples for signup/login/enrollment/access, required headers, and project identifiers; no operator secrets. |
 | Project settings | Project details and enrollment policy; distinguish stored settings from GoTrue-wide configuration. |
-| Global operators/audit — planned | Admin grants/revocations and administrative event history. |
+| Global operators/audit | Admin grants/revocations and administrative event history. |
 
-Current routes already provide prototype project overview, users, user details, API, and settings screens. Replace mock data/placeholder login with real services, loading/empty/error states, and clear permission feedback. Frontend route guards improve UX; backend authorization is authoritative.
+The frontend now connects login, projects, project members/settings, global accounts, operators, and audit screens to real services. Hardcoded projects/users/statistics and empty placeholder files were removed. It includes loading/error/empty states and typed API models. Sessions stay in memory, refresh through GoTrue, and end on logout or rejected authorization; reloading requires sign-in. Frontend route guards improve UX; backend authorization is authoritative.
 
 ## Deployment and credentials
 
@@ -98,14 +98,11 @@ Current routes already provide prototype project overview, users, user details, 
 
 ## Current state and work order
 
-**Existing:** Express/TypeScript layers, Prisma schema/migration, local PostgreSQL Compose, VM Docker/migration setup, project create/list/read, `/user` token verification, global dashboard admin checks, health endpoints, and authorization/integration tests. Local tests and an authenticated request were reported successful by the user. Frontend remains a prototype. VM deployment and live GoTrue admin rejection have not been verified by this workflow.
+**Implemented foundation:** Uniform routes/controllers/services/repositories with a separate models directory; shared validation and GoTrue client; migrations; project CRUD and audit; open/closed enrollment and membership isolation; account CRUD/confirmation/disable/recovery; operator management with last-admin protection; CORS/body/request limits; and a frontend wired to these APIs. Both packages have format checks. Backend tests, frontend checks/build, and local fixture browser verification pass. Tests use local PostgreSQL and mocked GoTrue, not live account mutations.
 
-1. **Membership foundation:** Define the first project's enrollment policy, implement enrollment and own-membership/access endpoints, and test permitted/denied enrollment, forged metadata, wrong-project access, and retry behavior.
-2. **Application integration:** Document reusable calls and integrate one real project backend, checking membership on every protected operation. Verify a CRM-only user cannot access Dental.
-3. **Global dashboard integration:** Wire real login, session handling, project CRUD already available, and project-member views/actions to the backend.
-4. **GoTrue administration:** Add a dedicated server-side client; configure/test its privileged credential on the VM; implement scoped user-management actions and deletion/cleanup rules. Test missing/ordinary tokens are rejected by GoTrue admin endpoints.
-5. **Operational features:** Add required policy storage, admin grant/revoke safeguards, audit records, request limits, observability, and documented failure/retry behavior. Configure email delivery before relying on confirmation/recovery emails.
-6. **VM deployment:** Configure secrets/database, build and migrate, test readiness and permissions privately, then publish the HTTPS routes and verify frontend/application integration.
+**Remaining operational setup:** Configure and verify the privileged GoTrue JWT, email delivery, VM database/migrations/operator bootstrap, HTTPS and browser origins, and project-backend enforcement. This foundation does not deploy itself or automatically protect external app APIs.
+
+**Future extensions:** Invitations/approval policies, archival, global server-side search (current UI searches the loaded page), scoped manager administration, distributed limits, and reconciliation of externally deleted accounts. Add these when required rather than introducing unused abstractions now.
 
 **Done means:** Authorized users can enroll/access their permitted projects; unauthorized users cannot bypass API checks; global operators can administer through the dashboard; normal clients never receive privileged credentials; membership removal blocks project access; and the deployed setup has verified migrations, health, and recovery behavior.
 

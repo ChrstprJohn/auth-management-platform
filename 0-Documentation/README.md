@@ -4,6 +4,7 @@ This folder describes the self-hosted GoTrue service at **`https://auth.chrbuild
 
 - [Complete route catalog](gotrue-routes.md) — every route registered by the pinned GoTrue v2.196.0 router, grouped by feature and access level.
 - [Main project plan](PROJECT-PLAN.md) — agreed architecture, frontend layout, application/admin API groups, feature scope, and implementation roadmap.
+- [Platform endpoint reference](platform-api.md) — every implemented route, permissions, payloads, examples, error handling, and remaining deployment work.
 - [Request examples](gotrue-examples.md) — starting points for the currently relevant email/password and admin flows.
 - [Dashboard authentication and admin flow](dashboard-auth-flow.md) — current backend checks, local admin setup, protected GoTrue endpoints, and future VM/admin-token integration.
 - [VM deployment notes](../1-Virtual_Machine_Architecture/5-auth-server.md) — infrastructure, configuration, and operations.

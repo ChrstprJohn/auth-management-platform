@@ -1,6 +1,6 @@
 # Auth Management Platform backend
 
-Express API for the authentication dashboard. Project create/list/read routes use Prisma and the separate dashboard database. They now require a verified GoTrue access token and dashboard administrator permission. GoTrue admin calls and frontend integration are still pending.
+Express/TypeScript API for projects, memberships, GoTrue accounts, dashboard operators, and audit history. Every module follows routes → controller → service → repository, with a separate `src/models/` directory and shared validation/integration helpers. See [the full endpoint reference](../0-Documentation/platform-api.md) for permissions, inputs, examples, and deployment limitations.
 
 The Prisma schema, local PostgreSQL Compose setup, and future VM database steps are in [DATABASE.md](DATABASE.md). No migration has been applied to the VM from this repository.
 
@@ -47,7 +47,7 @@ Project slugs are unique lowercase URL identifiers. Requests return `{ "data": .
 - `src/db/prisma.ts` creates the shared database client.
 - `src/middleware/error-handler.ts` maps known failures to API responses.
 
-The frontend still shows mock projects. Connect its login to GoTrue and send access tokens with requests to these routes.
+The frontend now signs in through GoTrue and sends normal user access tokens to these routes. GoTrue account administration and user-ID validation for grants require the server-only `GOTRUE_ADMIN_TOKEN`. Configure `ALLOWED_ORIGINS` for cross-origin browser apps; local Vite proxies `/api` to this backend.
 
 ## Authentication and first administrator
 
@@ -69,7 +69,7 @@ Run `pnpm test` for authorization checks with mocked GoTrue/database responses. 
 
 ## VM deployment layout
 
-The VM runs each service as its own Docker Compose project on the external `app_network`. [docker-compose.yml](docker-compose.yml) follows that layout: it builds this backend from source, uses the `auth-dashboard-backend` container name, restarts unless stopped, and publishes **no host port**. Caddy can reach it privately at `auth-dashboard-backend:3000` after a route is added. PostgreSQL and GoTrue can be reached privately as `postgres:5432` and `gotrue:8081` once those integrations exist.
+The VM runs each service as its own Docker Compose project on the external `app_network`. [docker-compose.yml](docker-compose.yml) follows that layout: it builds this backend from source, uses the `auth-dashboard-backend` container name, restarts unless stopped, and publishes **no host port**. Caddy can reach it privately at `auth-dashboard-backend:3000` after a route is added. PostgreSQL and GoTrue can be reached privately as `postgres:5432` and `gotrue:8081` using the configured backend environment.
 
 After pulling this repository on the VM, create a VM-local `backend/.env` with a `DATABASE_URL` for the separate `dashboard_db` at `postgres:5432`. Do not copy the local example's password or `127.0.0.1:5433` URL. Then:
 
@@ -84,6 +84,6 @@ docker compose ps
 docker exec auth-dashboard-backend node -e "fetch('http://127.0.0.1:3000/health').then(async r => { console.log(r.status, await r.text()); process.exit(r.ok ? 0 : 1) })"
 ```
 
-The production image uses the backend's own lockfile. The one-off `migrate` service uses a build stage containing Prisma CLI, applies pending migrations, then exits. `app_network` must already exist, as documented in the VM reference. The Compose file has no `ports:` mapping, matching GoTrue and the realtime server. Add a Caddy route only when authenticated browser-facing API routes are implemented and a dashboard API hostname is chosen. Do not publish PostgreSQL, the GoTrue admin JWT, or database credentials to the browser.
+The production image uses the backend's own lockfile. The one-off `migrate` service uses a build stage containing Prisma CLI, applies pending migrations, then exits. `app_network` must already exist, as documented in the VM reference. The Compose file has no `ports:` mapping, matching GoTrue and the realtime server. Choose a dashboard API hostname and add its Caddy route when deploying. Set the allowed browser origins and proxy trust for that deployment. Do not publish PostgreSQL, the GoTrue admin JWT, or database credentials to the browser.
 
 Keep the VM-local `.env` out of Git. The frontend is not currently deployed by this Compose project.
