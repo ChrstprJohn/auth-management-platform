@@ -38,5 +38,7 @@ app.use('/api/users', userRoutes)
 app.use('/api/operators', operatorRoutes)
 app.use('/api/audit', auditRoutes)
 app.use('/api/me', identityRoutes)
-app.use('/api', () => { throw new HttpError(404, 'not_found', 'Route not found') })
+app.use('/api', () => {
+  throw new HttpError(404, 'not_found', 'Route not found')
+})
 app.use(errorHandler)

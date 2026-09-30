@@ -12,7 +12,8 @@ export function requestLimit(max = 300, windowMs = 60000): RequestHandler {
     }
     let entry = windows.get(key)
     if (!entry || entry.resetAt <= now) {
-      if (!entry && windows.size >= 10000) throw new HttpError(429, 'rate_limited', 'Too many requests. Try again later.')
+      if (!entry && windows.size >= 10000)
+        throw new HttpError(429, 'rate_limited', 'Too many requests. Try again later.')
       entry = { count: 0, resetAt: now + windowMs }
       windows.set(key, entry)
     }

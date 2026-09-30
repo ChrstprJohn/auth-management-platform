@@ -17,19 +17,57 @@ test('HTTP boundary handles CORS, bounded bodies and request limiting', async ()
   await once(server, 'listening')
   const base = `http://127.0.0.1:${server.address().port}`
   try {
-    const options = await fetch(base, { method: 'OPTIONS', headers: { origin: 'https://dashboard.example.test' } })
+    const options = await fetch(base, {
+      method: 'OPTIONS',
+      headers: { origin: 'https://dashboard.example.test' },
+    })
     assert.equal(options.status, 204)
-    assert.equal(options.headers.get('access-control-allow-origin'), 'https://dashboard.example.test')
-    assert.equal((await fetch(base, { method: 'OPTIONS', headers: { origin: 'https://wrong.example.test' } })).status, 403)
-    assert.equal((await fetch(base, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{broken' })).status, 400)
-    assert.equal((await fetch(base, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ long: 'a'.repeat(33000) }) })).status, 413)
-    assert.equal((await fetch(base, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).status, 200)
+    assert.equal(
+      options.headers.get('access-control-allow-origin'),
+      'https://dashboard.example.test'
+    )
+    assert.equal(
+      (await fetch(base, { method: 'OPTIONS', headers: { origin: 'https://wrong.example.test' } }))
+        .status,
+      403
+    )
+    assert.equal(
+      (
+        await fetch(base, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: '{broken',
+        })
+      ).status,
+      400
+    )
+    assert.equal(
+      (
+        await fetch(base, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ long: 'a'.repeat(33000) }),
+        })
+      ).status,
+      413
+    )
+    assert.equal(
+      (
+        await fetch(base, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: '{}',
+        })
+      ).status,
+      200
+    )
     const limited = await fetch(base, { method: 'POST' })
     assert.equal(limited.status, 429)
     assert.ok(Number(limited.headers.get('retry-after')) > 0)
   } finally {
     if (original === undefined) delete process.env.ALLOWED_ORIGINS
     else process.env.ALLOWED_ORIGINS = original
-    server.closeAllConnections(); await new Promise(resolve => server.close(resolve))
+    server.closeAllConnections()
+    await new Promise((resolve) => server.close(resolve))
   }
 })

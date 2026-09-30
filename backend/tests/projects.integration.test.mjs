@@ -15,7 +15,10 @@ test('project API creates, lists, reads, and rejects invalid or duplicate projec
       assert.equal(options.headers.authorization, 'Bearer integration-token')
       return new Response(JSON.stringify({ id: userId }))
     }
-    return realFetch(url, { ...options, headers: { ...options.headers, authorization: 'Bearer integration-token' } })
+    return realFetch(url, {
+      ...options,
+      headers: { ...options.headers, authorization: 'Bearer integration-token' },
+    })
   })
   await prisma.dashboardAdmin.create({ data: { gotrueUserId: userId } })
   const server = app.listen(0, '127.0.0.1')
@@ -63,7 +66,8 @@ test('project API creates, lists, reads, and rejects invalid or duplicate projec
     assert.equal((await fetched.json()).data.id, project.id)
 
     const updated = await fetch(`${baseUrl}/api/projects/${project.id}`, {
-      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ name: 'Updated project', enrollmentPolicy: 'open' }),
     })
     assert.equal(updated.status, 200)
@@ -73,14 +77,24 @@ test('project API creates, lists, reads, and rejects invalid or duplicate projec
     assert.equal(updatedProject.slug, slug)
 
     const invalidPolicy = await fetch(`${baseUrl}/api/projects/${project.id}`, {
-      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ enrollmentPolicy: 'anything' }),
     })
     assert.equal(invalidPolicy.status, 400)
-    assert.equal((await fetch(`${baseUrl}/api/projects/${project.id}`, { method: 'DELETE' })).status, 204)
+    assert.equal(
+      (await fetch(`${baseUrl}/api/projects/${project.id}`, { method: 'DELETE' })).status,
+      204
+    )
     assert.equal((await fetch(`${baseUrl}/api/projects/${project.id}`)).status, 404)
-    const events = await prisma.auditEvent.findMany({ where: { actorId: userId }, orderBy: { createdAt: 'asc' } })
-    assert.deepEqual(events.map(event => event.action), ['project.create', 'project.update', 'project.delete'])
+    const events = await prisma.auditEvent.findMany({
+      where: { actorId: userId },
+      orderBy: { createdAt: 'asc' },
+    })
+    assert.deepEqual(
+      events.map((event) => event.action),
+      ['project.create', 'project.update', 'project.delete']
+    )
   } finally {
     if (createdProjectId) await prisma.project.deleteMany({ where: { id: createdProjectId } })
     await prisma.dashboardAdmin.deleteMany({ where: { gotrueUserId: userId } })
@@ -88,7 +102,9 @@ test('project API creates, lists, reads, and rejects invalid or duplicate projec
     if (originalUrl === undefined) delete process.env.GOTRUE_URL
     else process.env.GOTRUE_URL = originalUrl
     server.closeAllConnections()
-    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))
+    await new Promise((resolve, reject) =>
+      server.close((error) => (error ? reject(error) : resolve()))
+    )
     await prisma.$disconnect()
   }
 })

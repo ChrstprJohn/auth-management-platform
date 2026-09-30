@@ -8,7 +8,10 @@ export function objectInput(value: unknown): Record<string, unknown> {
 }
 
 export function uuid(value: unknown): string {
-  if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+  if (
+    typeof value !== 'string' ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+  ) {
     throw new HttpError(400, 'invalid_id', 'A valid UUID is required')
   }
   return value
@@ -23,8 +26,10 @@ export function text(value: unknown, name: string, max: number): string {
 
 export function page(value: unknown, fallback = 1, max = 100000): number {
   if (value === undefined) return fallback
-  if (typeof value !== 'string' || !/^\d+$/.test(value)) throw new HttpError(400, 'invalid_pagination', 'Invalid pagination value')
+  if (typeof value !== 'string' || !/^\d+$/.test(value))
+    throw new HttpError(400, 'invalid_pagination', 'Invalid pagination value')
   const result = Number(value)
-  if (!Number.isInteger(result) || result < 1 || result > max) throw new HttpError(400, 'invalid_pagination', 'Pagination value out of range')
+  if (!Number.isInteger(result) || result < 1 || result > max)
+    throw new HttpError(400, 'invalid_pagination', 'Pagination value out of range')
   return result
 }

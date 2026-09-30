@@ -12,8 +12,14 @@ const server = app.listen(port, host, () => {
   console.log(`Auth Management Platform backend listening on ${host}:${port}`)
 })
 
+let shuttingDown = false
 async function shutdown() {
-  server.close()
+  if (shuttingDown) return
+  shuttingDown = true
+  const timeout = setTimeout(() => server.closeAllConnections(), 10000)
+  timeout.unref()
+  await new Promise<void>((resolve) => server.close(() => resolve()))
+  clearTimeout(timeout)
   await prisma.$disconnect()
 }
 

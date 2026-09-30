@@ -10,7 +10,8 @@ export const requireAuth: RequestHandler = async (request, response, next) => {
   if (!match) throw new HttpError(401, 'unauthorized', 'A Bearer access token is required')
 
   const baseUrl = process.env.GOTRUE_URL
-  if (!baseUrl) throw new HttpError(503, 'auth_unavailable', 'Authentication service is unavailable')
+  if (!baseUrl)
+    throw new HttpError(503, 'auth_unavailable', 'Authentication service is unavailable')
 
   let user: unknown
   try {
@@ -29,8 +30,13 @@ export const requireAuth: RequestHandler = async (request, response, next) => {
     throw new HttpError(503, 'auth_unavailable', 'Authentication service is unavailable')
   }
 
-  if (!user || typeof user !== 'object' || !('id' in user) ||
-      typeof user.id !== 'string' || !uuidPattern.test(user.id)) {
+  if (
+    !user ||
+    typeof user !== 'object' ||
+    !('id' in user) ||
+    typeof user.id !== 'string' ||
+    !uuidPattern.test(user.id)
+  ) {
     throw new HttpError(503, 'auth_unavailable', 'Authentication service is unavailable')
   }
 

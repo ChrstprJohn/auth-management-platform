@@ -5,7 +5,7 @@ export class HttpError extends Error {
   constructor(
     public readonly status: number,
     public readonly code: string,
-    message: string,
+    message: string
   ) {
     super(message)
   }
@@ -18,7 +18,9 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, _request, resp
   }
 
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-    response.status(409).json({ error: { code: 'conflict', message: 'This record already exists' } })
+    response
+      .status(409)
+      .json({ error: { code: 'conflict', message: 'This record already exists' } })
     return
   }
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
@@ -27,11 +29,15 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, _request, resp
   }
 
   if (error instanceof SyntaxError && 'body' in error) {
-    response.status(400).json({ error: { code: 'invalid_json', message: 'Request body must be valid JSON' } })
+    response
+      .status(400)
+      .json({ error: { code: 'invalid_json', message: 'Request body must be valid JSON' } })
     return
   }
   if (error && typeof error === 'object' && 'type' in error && error.type === 'entity.too.large') {
-    response.status(413).json({ error: { code: 'body_too_large', message: 'Request body is too large' } })
+    response
+      .status(413)
+      .json({ error: { code: 'body_too_large', message: 'Request body is too large' } })
     return
   }
 

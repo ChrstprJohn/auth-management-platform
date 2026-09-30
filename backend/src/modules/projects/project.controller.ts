@@ -17,7 +17,13 @@ export const listProjects: RequestHandler = async (request, response) => {
 }
 
 export const updateProject: RequestHandler = async (request, response) => {
-  response.json({ data: await projectService.update(request.params.id, request.body, response.locals.gotrueUserId) })
+  response.json({
+    data: await projectService.update(
+      request.params.id,
+      request.body,
+      response.locals.gotrueUserId
+    ),
+  })
 }
 
 export const deleteProject: RequestHandler = async (request, response) => {
