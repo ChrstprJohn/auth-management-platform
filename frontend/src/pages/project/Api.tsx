@@ -7,7 +7,14 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent } from '@/components/ui/card'
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardAction,
+  CardContent,
+} from '@/components/ui/card'
 
 function CodeExample({ title, code }: { title: string; code: string }) {
   const [copied, setCopied] = useState(false)
@@ -15,36 +22,38 @@ function CodeExample({ title, code }: { title: string; code: string }) {
   return (
     <Card className="min-w-0">
       <CardHeader>
-        <CardTitle role="heading" aria-level={3}>{title}</CardTitle>
+        <CardTitle role="heading" aria-level={3}>
+          {title}
+        </CardTitle>
         <CardAction>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            void navigator.clipboard
-              .writeText(code)
-              .then(() => {
-                setCopied(true)
-                setError('')
-                setTimeout(() => setCopied(false), 2000)
-              })
-              .catch(() => setError('Select and copy the code manually.'))
-          }}
-        >
-          {copied ? <Check /> : <Copy />}
-          {copied ? 'Copied' : 'Copy code'}
-        </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              void navigator.clipboard
+                .writeText(code)
+                .then(() => {
+                  setCopied(true)
+                  setError('')
+                  setTimeout(() => setCopied(false), 2000)
+                })
+                .catch(() => setError('Select and copy the code manually.'))
+            }}
+          >
+            {copied ? <Check /> : <Copy />}
+            {copied ? 'Copied' : 'Copy code'}
+          </Button>
         </CardAction>
       </CardHeader>
       <CardContent className="min-w-0 space-y-3">
-      <pre className="max-w-full overflow-x-auto rounded-lg bg-muted/40 p-4 text-xs leading-6">
-        <code>{code}</code>
-      </pre>
-      {error && (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
+        <pre className="max-w-full overflow-x-auto rounded-lg bg-muted/40 p-4 text-xs leading-6">
+          <code>{code}</code>
+        </pre>
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
       </CardContent>
     </Card>
   )
@@ -119,15 +128,19 @@ await request(PLATFORM_URL + '/projects/' + PROJECT_ID + '/members/' + user.id,
       </header>
       <Card>
         <CardHeader>
-          <CardTitle role="heading" aria-level={2}>Project integration</CardTitle>
+          <CardTitle role="heading" aria-level={2}>
+            Project integration
+          </CardTitle>
           <CardDescription>Use this project ID in the examples below.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">{project.slug}</Badge>
-          <Badge variant="outline" className="capitalize">{project.enrollmentPolicy} enrollment</Badge>
-        </div>
-        <p className="break-all font-mono text-sm">{project.id}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary">{project.slug}</Badge>
+            <Badge variant="outline" className="capitalize">
+              {project.enrollmentPolicy} enrollment
+            </Badge>
+          </div>
+          <p className="break-all font-mono text-sm">{project.id}</p>
         </CardContent>
       </Card>
       <Alert>
@@ -139,7 +152,7 @@ await request(PLATFORM_URL + '/projects/' + PROJECT_ID + '/members/' + user.id,
         </AlertDescription>
       </Alert>
       <Tabs defaultValue="combined" className="space-y-6">
-        <TabsList className="h-auto flex-wrap">
+        <TabsList className="flex-wrap group-data-horizontal/tabs:h-auto">
           <TabsTrigger value="combined">Combined flows</TabsTrigger>
           <TabsTrigger value="individual">Individual calls</TabsTrigger>
           <TabsTrigger value="admin">Admin creation</TabsTrigger>

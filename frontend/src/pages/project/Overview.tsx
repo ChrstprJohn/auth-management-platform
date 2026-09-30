@@ -15,7 +15,9 @@ export function OverviewPage() {
       </header>
       <Card>
         <CardHeader>
-          <CardTitle role="heading" aria-level={2}>Project summary</CardTitle>
+          <CardTitle role="heading" aria-level={2}>
+            Project summary
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <dl className="grid gap-5 sm:grid-cols-2">
@@ -40,13 +42,9 @@ export function OverviewPage() {
           </dl>
         </CardContent>
         <CardFooter>
-      <Button asChild variant="outline">
-        <Link
-          to={'/projects/' + project.id + '/users'}
-        >
-          Manage project members
-        </Link>
-      </Button>
+          <Button asChild variant="outline">
+            <Link to={'/projects/' + project.id + '/users'}>Manage project members</Link>
+          </Button>
         </CardFooter>
       </Card>
     </div>
