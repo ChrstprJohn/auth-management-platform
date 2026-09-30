@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personal website signup example</title>
+<style>
+body{font:16px system-ui;background:#f8fafc;color:#172033;margin:0;padding:24px}main{max-width:560px;margin:40px auto}label{display:block;margin:16px 0 6px}input,button{box-sizing:border-box;width:100%;padding:12px;font:inherit;border:1px solid #94a3b8;border-radius:6px}button{margin-top:20px;background:#172033;color:white;cursor:pointer}button:disabled{opacity:.6}pre{white-space:pre-wrap;overflow-wrap:anywhere;padding:16px;background:#e2e8f0;border-radius:6px}small{color:#475569}
+</style>
+<main>
+<h1>Personal website signup</h1>
+<p>Create an account, enroll in this project, then check membership.</p>
+<small>Project: personal-website · d5268cec-ee77-48e9-b9d8-db55cac8a6df</small>
+<form id="signup">
+<label for="auth">GoTrue URL</label><input id="auth" type="url" value="https://auth.chrbuilds.dev" required>
+<label for="api">Platform API base URL</label><input id="api" value="/api" required>
+<small>Use /api with the local Vite proxy, or your deployed platform URL ending in /api.</small>
+<label for="email">Email</label><input id="email" type="email" autocomplete="email" required>
+<label for="password">Password</label><input id="password" type="password" autocomplete="new-password" minlength="12" required>
+<button id="create">Create account and enroll</button>
+</form>
+<button id="continue" type="button" hidden>Sign in after confirmation and enroll</button>
+<pre id="status" role="status" aria-live="polite">Ready. This creates a real account. The project must allow open enrollment.</pre>
+<p><small>This browser demo shows the flow. Your application backend must also check membership before serving protected data. No admin token is used.</small></p>
+</main>
+<script type="module">
+const projectId = 'd5268cec-ee77-48e9-b9d8-db55cac8a6df'
+const field = id => document.getElementById(id)
+const log = message => { field('status').textContent += '\n' + message }
+let accountCreated = false
+async function request(url, method, body, token) {
+  const response = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    signal: AbortSignal.timeout(15000)
+  })
+  const result = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error('HTTP ' + response.status + ': ' + (typeof result.error === 'string' ? result.error : result.msg || result.error_description || result.message || 'Request failed'))
+  return result
+}
+async function run(signIn) {
+  if (!field('signup').reportValidity()) return
+  field('create').disabled = field('continue').disabled = true
+  field('status').textContent = signIn ? 'Signing in…' : 'Creating account…'
+  try {
+    const auth = field('auth').value.replace(/\/$/, '')
+    const api = field('api').value.replace(/\/$/, '')
+    const result = await request(auth + (signIn ? '/token?grant_type=password' : '/signup'), 'POST', { email: field('email').value, password: field('password').value })
+    accountCreated = true
+    field('continue').hidden = false
+    field('create').disabled = true
+    if (!result.access_token) {
+      log('Account created. Confirm your email, then use the sign-in button below to enroll. No membership has been assigned yet.')
+      return
+    }
+    log(signIn ? 'Signed in.' : 'Account created and authenticated.')
+    await request(api + '/projects/' + projectId + '/enroll', 'POST', {}, result.access_token)
+    log('Enrollment successful.')
+    const access = await request(api + '/projects/' + projectId + '/access', 'GET', undefined, result.access_token)
+    log('Membership check: ' + JSON.stringify(access.data, null, 2))
+    field('password').value = ''
+  } catch (error) {
+    log(error.message)
+    if (accountCreated) log('The account exists. Fix the enrollment issue, then sign in to retry; do not create it again.')
+    else log('If the signup response was interrupted, try signing in before repeating signup.')
+    field('continue').hidden = false
+  } finally {
+    field('create').disabled = accountCreated
+    field('continue').disabled = false
+  }
+}
+field('signup').addEventListener('submit', event => { event.preventDefault(); void run(false) })
+field('continue').addEventListener('click', () => void run(true))
+</script>
+</html>
