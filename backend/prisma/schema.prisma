@@ -13,6 +13,7 @@ model Project {
   slug        String              @unique
   name        String
   description String?
+  enrollmentPolicy String @default("closed") @map("enrollment_policy")
   createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime            @default(now()) @map("updated_at") @db.Timestamptz(6)
   memberships ProjectMembership[]
@@ -39,5 +40,17 @@ model DashboardAdmin {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@map("dashboard_admins")
+  @@schema("dashboard")
+}
+
+model AuditEvent {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorId String @map("actor_id") @db.Uuid
+  action String
+  targetId String @map("target_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([createdAt, id])
+  @@map("audit_events")
   @@schema("dashboard")
 }

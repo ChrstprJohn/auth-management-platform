@@ -15,3 +15,12 @@ export const listProjects: RequestHandler = async (request, response) => {
   const result = await projectService.list(request.query.limit, request.query.cursor)
   response.json(result)
 }
+
+export const updateProject: RequestHandler = async (request, response) => {
+  response.json({ data: await projectService.update(request.params.id, request.body) })
+}
+
+export const deleteProject: RequestHandler = async (request, response) => {
+  await projectService.delete(request.params.id)
+  response.status(204).end()
+}

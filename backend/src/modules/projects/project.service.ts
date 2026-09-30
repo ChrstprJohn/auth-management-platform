@@ -4,6 +4,11 @@ import { projectRepository, type NewProject } from './project.repository.js'
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+function enrollmentPolicy(value: unknown): string {
+  if (value !== 'open' && value !== 'closed') throw new HttpError(400, 'invalid_policy', 'Enrollment policy must be open or closed')
+  return value
+}
+
 function parseProjectInput(value: unknown): NewProject {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new HttpError(400, 'invalid_input', 'A JSON object is required')
@@ -29,6 +34,7 @@ function parseProjectInput(value: unknown): NewProject {
     slug,
     name: name.trim(),
     description: typeof description === 'string' ? description.trim() || null : null,
+    enrollmentPolicy: input.enrollmentPolicy === undefined ? 'closed' : enrollmentPolicy(input.enrollmentPolicy),
   }
 }
 
@@ -40,6 +46,20 @@ function parseUuid(value: unknown): string {
 }
 
 export const projectService = {
+  async update(id: unknown, input: unknown) {
+    const existing = await this.get(id)
+    if (!input || typeof input !== 'object' || Array.isArray(input)) throw new HttpError(400, 'invalid_input', 'A JSON object is required')
+    const value = input as Record<string, unknown>
+    const allowed = ['slug', 'name', 'description', 'enrollmentPolicy']
+    if (!Object.keys(value).length || Object.keys(value).some(key => !allowed.includes(key))) {
+      throw new HttpError(400, 'invalid_input', 'Provide project fields to update')
+    }
+    return projectRepository.update(existing.id, parseProjectInput({ ...existing, ...value }))
+  },
+  async delete(id: unknown) {
+    const existing = await this.get(id)
+    return projectRepository.delete(existing.id)
+  },
   create(input: unknown) {
     return projectRepository.create(parseProjectInput(input))
   },

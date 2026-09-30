@@ -18,7 +18,11 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, _request, resp
   }
 
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-    response.status(409).json({ error: { code: 'conflict', message: 'A project with this slug already exists' } })
+    response.status(409).json({ error: { code: 'conflict', message: 'This record already exists' } })
+    return
+  }
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+    response.status(404).json({ error: { code: 'not_found', message: 'Record not found' } })
     return
   }
 

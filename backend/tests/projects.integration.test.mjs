@@ -61,6 +61,24 @@ test('project API creates, lists, reads, and rejects invalid or duplicate projec
     const fetched = await fetch(`${baseUrl}/api/projects/${project.id}`)
     assert.equal(fetched.status, 200)
     assert.equal((await fetched.json()).data.id, project.id)
+
+    const updated = await fetch(`${baseUrl}/api/projects/${project.id}`, {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Updated project', enrollmentPolicy: 'open' }),
+    })
+    assert.equal(updated.status, 200)
+    const updatedProject = (await updated.json()).data
+    assert.equal(updatedProject.name, 'Updated project')
+    assert.equal(updatedProject.enrollmentPolicy, 'open')
+    assert.equal(updatedProject.slug, slug)
+
+    const invalidPolicy = await fetch(`${baseUrl}/api/projects/${project.id}`, {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ enrollmentPolicy: 'anything' }),
+    })
+    assert.equal(invalidPolicy.status, 400)
+    assert.equal((await fetch(`${baseUrl}/api/projects/${project.id}`, { method: 'DELETE' })).status, 204)
+    assert.equal((await fetch(`${baseUrl}/api/projects/${project.id}`)).status, 404)
   } finally {
     if (createdProjectId) await prisma.project.deleteMany({ where: { id: createdProjectId } })
     await prisma.dashboardAdmin.deleteMany({ where: { gotrueUserId: userId } })
