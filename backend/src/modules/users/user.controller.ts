@@ -16,3 +16,6 @@ export const deleteUser: RequestHandler = async (request, response) => {
   await userService.delete(request.params.id, request.body, response.locals.gotrueUserId)
   response.status(204).end()
 }
+export const recoverUser: RequestHandler = async (request, response) => {
+  response.json({ data: await userService.recovery(request.params.id, response.locals.gotrueUserId) })
+}

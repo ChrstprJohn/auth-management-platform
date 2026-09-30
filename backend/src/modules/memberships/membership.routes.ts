@@ -3,10 +3,9 @@ import { requireAuth, requireDashboardAdmin } from '../../middleware/dashboard-a
 import { ownMemberships, projectAccess, enroll, listMembers, assignMember, removeMember } from './membership.controller.js'
 
 export const membershipRoutes = Router()
-membershipRoutes.use(requireAuth)
-membershipRoutes.get('/me/memberships', ownMemberships)
-membershipRoutes.get('/projects/:projectId/access', projectAccess)
-membershipRoutes.post('/projects/:projectId/enroll', enroll)
-membershipRoutes.get('/projects/:projectId/members', requireDashboardAdmin, listMembers)
-membershipRoutes.put('/projects/:projectId/members/:userId', requireDashboardAdmin, assignMember)
-membershipRoutes.delete('/projects/:projectId/members/:userId', requireDashboardAdmin, removeMember)
+membershipRoutes.get('/me/memberships', requireAuth, ownMemberships)
+membershipRoutes.get('/projects/:projectId/access', requireAuth, projectAccess)
+membershipRoutes.post('/projects/:projectId/enroll', requireAuth, enroll)
+membershipRoutes.get('/projects/:projectId/members', requireAuth, requireDashboardAdmin, listMembers)
+membershipRoutes.put('/projects/:projectId/members/:userId', requireAuth, requireDashboardAdmin, assignMember)
+membershipRoutes.delete('/projects/:projectId/members/:userId', requireAuth, requireDashboardAdmin, removeMember)

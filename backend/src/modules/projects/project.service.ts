@@ -47,7 +47,7 @@ function parseUuid(value: unknown): string {
 }
 
 export const projectService = {
-  async update(id: unknown, input: unknown) {
+  async update(id: unknown, input: unknown, actorId: string) {
     const existing = await this.get(id)
     if (!input || typeof input !== 'object' || Array.isArray(input)) throw new HttpError(400, 'invalid_input', 'A JSON object is required')
     const value = input as Record<string, unknown>
@@ -55,14 +55,14 @@ export const projectService = {
     if (!Object.keys(value).length || Object.keys(value).some(key => !allowed.includes(key))) {
       throw new HttpError(400, 'invalid_input', 'Provide project fields to update')
     }
-    return projectRepository.update(existing.id, parseProjectInput({ ...existing, ...value }))
+    return projectRepository.update(existing.id, parseProjectInput({ ...existing, ...value }), actorId)
   },
-  async delete(id: unknown) {
+  async delete(id: unknown, actorId: string) {
     const existing = await this.get(id)
-    return projectRepository.delete(existing.id)
+    return projectRepository.delete(existing.id, actorId)
   },
-  create(input: unknown) {
-    return projectRepository.create(parseProjectInput(input))
+  create(input: unknown, actorId: string) {
+    return projectRepository.create(parseProjectInput(input), actorId)
   },
 
   async get(id: unknown) {

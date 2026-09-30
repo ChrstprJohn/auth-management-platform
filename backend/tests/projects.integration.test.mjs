@@ -79,9 +79,12 @@ test('project API creates, lists, reads, and rejects invalid or duplicate projec
     assert.equal(invalidPolicy.status, 400)
     assert.equal((await fetch(`${baseUrl}/api/projects/${project.id}`, { method: 'DELETE' })).status, 204)
     assert.equal((await fetch(`${baseUrl}/api/projects/${project.id}`)).status, 404)
+    const events = await prisma.auditEvent.findMany({ where: { actorId: userId }, orderBy: { createdAt: 'asc' } })
+    assert.deepEqual(events.map(event => event.action), ['project.create', 'project.update', 'project.delete'])
   } finally {
     if (createdProjectId) await prisma.project.deleteMany({ where: { id: createdProjectId } })
     await prisma.dashboardAdmin.deleteMany({ where: { gotrueUserId: userId } })
+    await prisma.auditEvent.deleteMany({ where: { actorId: userId } })
     if (originalUrl === undefined) delete process.env.GOTRUE_URL
     else process.env.GOTRUE_URL = originalUrl
     server.closeAllConnections()

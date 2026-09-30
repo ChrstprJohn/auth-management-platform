@@ -15,6 +15,10 @@ test('admin user API protects credentials, privileges and global deletion', asyn
   let allowed = true, calls = 0, deleted = false
   t.mock.method(globalThis, 'fetch', async (url, options) => {
     if (url === 'http://auth.test/user') return new Response(JSON.stringify({ id: actor }))
+    if (url === 'http://auth.test/recover') {
+      assert.deepEqual(JSON.parse(options.body), { email: 'fixture@example.test' })
+      return new Response('{}')
+    }
     if (url.startsWith('http://auth.test/admin')) {
       calls++
       assert.equal(options.headers.authorization, 'Bearer private-operator')
@@ -56,6 +60,9 @@ test('admin user API protects credentials, privileges and global deletion', asyn
     assert.equal((await call('', 'POST', { email: 'valid@example.test', password: 'short' })).status, 400)
     assert.equal((await call('', 'POST', { email: 'valid@example.test', password: 'long-fixture-password' })).status, 201)
     assert.equal((await call(`/${target}`, 'PATCH', { email_confirm: true })).status, 200)
+    assert.equal((await call(`/${target}`, 'PATCH', { disabled: true })).status, 200)
+    assert.equal((await call(`/${actor}`, 'PATCH', { disabled: true })).status, 409)
+    assert.equal((await call(`/${target}/recovery`, 'POST')).status, 200)
     assert.equal((await call(`/${target}`, 'DELETE', {})).status, 400)
     assert.equal(deleted, false)
     assert.equal((await call(`/${target}`, 'DELETE', { confirmUserId: target })).status, 204)

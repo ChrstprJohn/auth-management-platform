@@ -30,6 +30,10 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, _request, resp
     response.status(400).json({ error: { code: 'invalid_json', message: 'Request body must be valid JSON' } })
     return
   }
+  if (error && typeof error === 'object' && 'type' in error && error.type === 'entity.too.large') {
+    response.status(413).json({ error: { code: 'body_too_large', message: 'Request body is too large' } })
+    return
+  }
 
   console.error('Unhandled API error', error)
   response.status(500).json({ error: { code: 'internal_error', message: 'Internal server error' } })

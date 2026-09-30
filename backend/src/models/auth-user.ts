@@ -4,4 +4,6 @@ export interface AuthUser {
   created_at?: string
   email_confirmed_at?: string | null
   last_sign_in_at?: string | null
+  banned_until?: string | null
+  disabled?: boolean
 }

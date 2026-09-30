@@ -45,7 +45,7 @@ test('project routes enforce GoTrue identity and dashboard admin access', async 
   const base = `http://127.0.0.1:${server.address().port}`
   const headers = { authorization: 'Bearer test-token' }
   try {
-    for (const [path, method] of [['/api/projects', 'GET'], ['/api/projects', 'POST'], [`/api/projects/${userId}`, 'GET']]) {
+    for (const [path, method] of [['/api/projects', 'GET'], ['/api/projects', 'POST'], [`/api/projects/${userId}`, 'GET'], [`/api/projects/${userId}`, 'PATCH'], [`/api/projects/${userId}`, 'DELETE'], ['/api/operators', 'GET'], ['/api/audit', 'GET'], ['/api/me', 'GET']]) {
       assert.equal((await fetch(`${base}${path}`, { method })).status, 401)
     }
     assert.equal((await fetch(`${base}/api/projects`, { headers: { authorization: 'Bearer a b' } })).status, 401)

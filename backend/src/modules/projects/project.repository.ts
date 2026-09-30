@@ -2,14 +2,26 @@ import { prisma } from '../../db/prisma.js'
 import type { NewProject } from '../../models/project.js'
 
 export const projectRepository = {
-  update(id: string, data: Partial<NewProject>) {
-    return prisma.project.update({ where: { id }, data })
+  update(id: string, data: Partial<NewProject>, actorId: string) {
+    return prisma.$transaction(async tx => {
+      const project = await tx.project.update({ where: { id }, data })
+      await tx.auditEvent.create({ data: { actorId, action: 'project.update', targetId: id } })
+      return project
+    })
   },
-  delete(id: string) {
-    return prisma.project.delete({ where: { id } })
+  delete(id: string, actorId: string) {
+    return prisma.$transaction(async tx => {
+      const project = await tx.project.delete({ where: { id } })
+      await tx.auditEvent.create({ data: { actorId, action: 'project.delete', targetId: id } })
+      return project
+    })
   },
-  create(data: NewProject) {
-    return prisma.project.create({ data })
+  create(data: NewProject, actorId: string) {
+    return prisma.$transaction(async tx => {
+      const project = await tx.project.create({ data })
+      await tx.auditEvent.create({ data: { actorId, action: 'project.create', targetId: project.id } })
+      return project
+    })
   },
 
   findById(id: string) {

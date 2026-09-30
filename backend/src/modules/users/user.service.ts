@@ -5,9 +5,9 @@ import { HttpError } from '../../middleware/error-handler.js'
 
 function userInput(value: unknown, creating: boolean): Record<string, unknown> {
   const input = objectInput(value)
-  const allowed = ['email', 'password', 'email_confirm']
+  const allowed = ['email', 'password', 'email_confirm', 'disabled']
   if (!Object.keys(input).length || Object.keys(input).some(key => !allowed.includes(key))) {
-    throw new HttpError(400, 'invalid_input', 'Provide email, password or email_confirm only')
+    throw new HttpError(400, 'invalid_input', 'Provide email, password, email_confirm or disabled only')
   }
   const data: Record<string, unknown> = {}
   if (creating || input.email !== undefined) {
@@ -25,10 +25,21 @@ function userInput(value: unknown, creating: boolean): Record<string, unknown> {
     if (typeof input.email_confirm !== 'boolean') throw new HttpError(400, 'invalid_input', 'email_confirm must be boolean')
     data.email_confirm = input.email_confirm
   }
+  if (input.disabled !== undefined) {
+    if (typeof input.disabled !== 'boolean') throw new HttpError(400, 'invalid_input', 'disabled must be boolean')
+    data.ban_duration = input.disabled ? '876000h' : 'none'
+  }
   return data
 }
 
 export const userService = {
+  async recovery(id: unknown, actorId: string) {
+    const user = await userRepository.get(uuid(id))
+    if (!user.email) throw new HttpError(400, 'email_required', 'This account has no email address')
+    await userRepository.recovery(user.email)
+    await userRepository.audit(actorId, 'user.recovery', user.id)
+    return { message: 'Recovery request accepted. Delivery depends on GoTrue email configuration.' }
+  },
   async list(pageInput: unknown, limitInput: unknown) {
     const currentPage = page(pageInput), limit = page(limitInput, 20, 100)
     const result = await userRepository.list(currentPage, limit)
@@ -45,7 +56,11 @@ export const userService = {
   },
   async update(id: unknown, input: unknown, actorId: string) {
     const userId = uuid(id)
-    const user = await userRepository.update(userId, userInput(input, false))
+    const data = userInput(input, false)
+    if (data.ban_duration && data.ban_duration !== 'none' && await userRepository.admin(userId)) {
+      throw new HttpError(409, 'admin_account', 'Revoke dashboard admin permission before disabling this account')
+    }
+    const user = await userRepository.update(userId, data)
     await userRepository.audit(actorId, 'user.update', userId)
     return publicUser(user)
   },

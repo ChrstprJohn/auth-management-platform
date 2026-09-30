@@ -1,8 +1,9 @@
 import { prisma } from '../../db/prisma.js'
-import { gotrueAdmin, type AuthUser } from '../../integrations/gotrue.js'
+import { gotrueAdmin, gotrueRecovery, type AuthUser } from '../../integrations/gotrue.js'
 import { HttpError } from '../../middleware/error-handler.js'
 
 export const userRepository = {
+  recovery(email: string) { return gotrueRecovery(email) },
   list(page: number, limit: number) {
     return gotrueAdmin<{ users: AuthUser[]; total?: number }>(`/users?page=${page}&per_page=${limit}`)
   },

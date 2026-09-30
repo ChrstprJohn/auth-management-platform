@@ -5,16 +5,26 @@ export type { AuthUser } from '../models/auth-user.js'
 
 export function publicUser(user: AuthUser): AuthUser {
   return { id: user.id, email: user.email, created_at: user.created_at,
-    email_confirmed_at: user.email_confirmed_at, last_sign_in_at: user.last_sign_in_at }
+    email_confirmed_at: user.email_confirmed_at, last_sign_in_at: user.last_sign_in_at, banned_until: user.banned_until,
+    disabled: Boolean(user.banned_until && new Date(user.banned_until).getTime() > Date.now()) }
 }
 
 export async function gotrueAdmin<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
-  const url = process.env.GOTRUE_URL
   const token = process.env.GOTRUE_ADMIN_TOKEN
-  if (!url || !token) throw new HttpError(503, 'admin_unavailable', 'Authentication administration is not configured')
+  if (!token) throw new HttpError(503, 'admin_unavailable', 'Authentication administration is not configured')
+  return gotrueRequest<T>(`/admin${path}`, method, body, token)
+}
+
+export function gotrueRecovery(email: string) {
+  return gotrueRequest('/recover', 'POST', { email })
+}
+
+async function gotrueRequest<T>(path: string, method: string, body?: unknown, token?: string): Promise<T> {
+  const url = process.env.GOTRUE_URL
+  if (!url) throw new HttpError(503, 'admin_unavailable', 'Authentication administration is not configured')
   try {
-    const response = await fetch(`${url.replace(/\/+$/, '')}/admin${path}`, {
-      method, headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    const response = await fetch(`${url.replace(/\/+$/, '')}${path}`, {
+      method, headers: { ...(token ? { authorization: `Bearer ${token}` } : {}), 'content-type': 'application/json' },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       signal: AbortSignal.timeout(10000), redirect: 'error',
     })
