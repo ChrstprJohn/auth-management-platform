@@ -1,4 +1,4 @@
-import { HttpError } from '../middleware/error-handler.js'
+import { HttpError } from '../../middleware/error-handler.js'
 import { projectRepository, type NewProject } from './project.repository.js'
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/

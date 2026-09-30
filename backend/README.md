@@ -39,10 +39,10 @@ Project slugs are unique lowercase URL identifiers. Requests return `{ "data": .
 
 ## Code layers
 
-- `src/projects/project.routes.ts` maps HTTP methods and paths.
-- `src/projects/project.controller.ts` handles HTTP request and response objects.
-- `src/projects/project.service.ts` validates input and owns project rules.
-- `src/projects/project.repository.ts` contains Prisma queries.
+- `src/modules/projects/project.routes.ts` maps HTTP methods and paths.
+- `src/modules/projects/project.controller.ts` handles HTTP request and response objects.
+- `src/modules/projects/project.service.ts` validates input and owns project rules.
+- `src/modules/projects/project.repository.ts` contains Prisma queries.
 - `src/db/prisma.ts` creates the shared database client.
 - `src/middleware/error-handler.ts` maps known failures to API responses.
 

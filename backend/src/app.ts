@@ -1,6 +1,6 @@
 import express from 'express'
 import { prisma } from './db/prisma.js'
-import { projectRoutes } from './projects/project.routes.js'
+import { projectRoutes } from './modules/projects/project.routes.js'
 import { errorHandler, HttpError } from './middleware/error-handler.js'
 
 export const app = express()
