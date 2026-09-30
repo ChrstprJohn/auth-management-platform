@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'
 import { Link } from 'react-router-dom'
 import { useProject } from '@/hooks/use-project'
 export function OverviewPage() {
@@ -14,6 +14,9 @@ export function OverviewPage() {
         </p>
       </header>
       <Card>
+        <CardHeader>
+          <CardTitle role="heading" aria-level={2}>Project summary</CardTitle>
+        </CardHeader>
         <CardContent>
           <dl className="grid gap-5 sm:grid-cols-2">
             <div>
@@ -36,15 +39,16 @@ export function OverviewPage() {
             </div>
           </dl>
         </CardContent>
-      </Card>
+        <CardFooter>
       <Button asChild variant="outline">
         <Link
-          className="text-primary underline underline-offset-4"
           to={'/projects/' + project.id + '/users'}
         >
           Manage project members
         </Link>
       </Button>
+        </CardFooter>
+      </Card>
     </div>
   )
 }
