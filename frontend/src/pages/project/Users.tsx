@@ -34,6 +34,14 @@ import {
   TableCell,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { MoreHorizontal } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 export function UsersPage() {
   const { project, reload: reloadProject } = useProject()
   const [page, setPage] = useState(1)
@@ -117,9 +125,9 @@ export function UsersPage() {
               </div>
               <Button disabled={busy}>{busy ? 'Assigning…' : 'Assign membership'}</Button>
               {error && (
-                <p role="alert" className="text-sm text-destructive">
-                  {error}
-                </p>
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
             </form>
           </DialogContent>
@@ -136,41 +144,68 @@ export function UsersPage() {
       </div>
       <ResourceState {...resource} retry={resource.reload} />
       {rows && (
-        <div className="overflow-x-auto">
-          <Table className="w-full text-sm">
-            <TableHeader>
-              <TableRow className="border-b">
-                <TableHead className="p-3 text-left">Account</TableHead>
-                <TableHead className="p-3 text-left">Role</TableHead>
-                <TableHead className="p-3 text-left">Joined</TableHead>
+        <Table aria-label="Project members">
+          <TableHeader>
+            <TableRow className="border-b">
+              <TableHead className="p-3 text-left">Account</TableHead>
+              <TableHead className="p-3 text-left">Role</TableHead>
+              <TableHead className="p-3 text-left">Joined</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((member) => (
+              <TableRow key={member.gotrueUserId} className="border-b">
+                <TableCell className="p-3">
+                  <Link
+                    className="font-medium hover:text-primary hover:underline underline-offset-4"
+                    to={'/projects/' + project.id + '/users/' + member.gotrueUserId}
+                  >
+                    {member.user?.email ?? member.gotrueUserId}
+                  </Link>
+                  {!member.user && (
+                    <Badge variant="outline" className="ml-2">
+                      Account missing
+                    </Badge>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{member.role}</Badge>
+                </TableCell>
+                <TableCell className="p-3 whitespace-nowrap">
+                  {new Date(member.createdAt).toLocaleDateString()}
+                </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={'Actions for ' + (member.user?.email ?? member.gotrueUserId)}
+                      >
+                        <MoreHorizontal />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link to={'/projects/' + project.id + '/users/' + member.gotrueUserId}>
+                          View member details
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((member) => (
-                <TableRow key={member.gotrueUserId} className="border-b">
-                  <TableCell className="p-3">
-                    <Link
-                      className="font-medium hover:text-primary hover:underline underline-offset-4"
-                      to={'/projects/' + project.id + '/users/' + member.gotrueUserId}
-                    >
-                      {member.user?.email ?? member.gotrueUserId}
-                    </Link>
-                    {!member.user && (
-                      <span className="ml-2 text-muted-foreground">Account missing</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{member.role}</Badge>
-                  </TableCell>
-                  <TableCell className="p-3">
-                    {new Date(member.createdAt).toLocaleDateString()}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {!rows.length && <p className="py-8 text-muted-foreground">No members found.</p>}
-        </div>
+            ))}
+            {!rows.length && (
+              <TableRow>
+                <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+                  No members found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       )}
       <Pagination
         page={page}
