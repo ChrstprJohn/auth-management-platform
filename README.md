@@ -13,6 +13,8 @@ This repository contains the dashboard for the shared GoTrue service at `https:/
 
 The backend is designed to run as a Docker container on the VM. Its future database and GoTrue admin credentials must remain server-side. See [backend/README.md](backend/README.md) for local and Docker commands.
 
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the repository layout, system boundaries, and the pattern for new backend modules.
+
 ## Frontend development
 
 ```bash
