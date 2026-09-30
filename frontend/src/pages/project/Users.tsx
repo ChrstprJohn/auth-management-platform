@@ -42,6 +42,7 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
 export function UsersPage() {
   const { project, reload: reloadProject } = useProject()
   const [page, setPage] = useState(1)
@@ -133,86 +134,99 @@ export function UsersPage() {
           </DialogContent>
         </Dialog>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="member-search">Search this page</Label>
-        <Input
-          id="member-search"
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-      <ResourceState {...resource} retry={resource.reload} />
-      {rows && (
-        <Table aria-label="Project members">
-          <TableHeader>
-            <TableRow className="border-b">
-              <TableHead className="p-3 text-left">Account</TableHead>
-              <TableHead className="p-3 text-left">Role</TableHead>
-              <TableHead className="p-3 text-left">Joined</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((member) => (
-              <TableRow key={member.gotrueUserId} className="border-b">
-                <TableCell className="p-3">
-                  <Link
-                    className="font-medium hover:text-primary hover:underline underline-offset-4"
-                    to={'/projects/' + project.id + '/users/' + member.gotrueUserId}
-                  >
-                    {member.user?.email ?? member.gotrueUserId}
-                  </Link>
-                  {!member.user && (
-                    <Badge variant="outline" className="ml-2">
-                      Account missing
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{member.role}</Badge>
-                </TableCell>
-                <TableCell className="p-3 whitespace-nowrap">
-                  {new Date(member.createdAt).toLocaleDateString()}
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={'Actions for ' + (member.user?.email ?? member.gotrueUserId)}
+      <Card>
+        <CardHeader>
+          <div className="max-w-sm space-y-2">
+            <Label htmlFor="member-search">Search this page</Label>
+            <Input
+              id="member-search"
+              type="search"
+              placeholder="Search email or user ID…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </CardHeader>
+        <CardContent className="px-0">
+          <div className="px-4">
+            <ResourceState {...resource} retry={resource.reload} />
+          </div>
+          {rows && (
+            <Table aria-label="Project members">
+              <TableHeader className="bg-muted/50">
+                <TableRow>
+                  <TableHead className="px-4">Account</TableHead>
+                  <TableHead className="px-4">Role</TableHead>
+                  <TableHead className="px-4">Joined</TableHead>
+                  <TableHead className="px-4 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((member) => (
+                  <TableRow key={member.gotrueUserId}>
+                    <TableCell className="px-4 py-3">
+                      <Link
+                        className="font-medium hover:text-primary hover:underline underline-offset-4"
+                        to={'/projects/' + project.id + '/users/' + member.gotrueUserId}
                       >
-                        <MoreHorizontal />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <Link to={'/projects/' + project.id + '/users/' + member.gotrueUserId}>
-                          View member details
-                        </Link>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-            {!rows.length && (
-              <TableRow>
-                <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
-                  No members found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      )}
-      <Pagination
-        page={page}
-        hasMore={Boolean(resource.data?.hasMore)}
-        disabled={resource.loading}
-        onChange={setPage}
-      />
+                        {member.user?.email ?? member.gotrueUserId}
+                      </Link>
+                      {!member.user && (
+                        <Badge variant="outline" className="ml-2">
+                          Account missing
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <Badge variant="secondary">{member.role}</Badge>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 tabular-nums">
+                      {new Date(member.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={
+                              'Actions for ' + (member.user?.email ?? member.gotrueUserId)
+                            }
+                          >
+                            <MoreHorizontal />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link to={'/projects/' + project.id + '/users/' + member.gotrueUserId}>
+                              View member details
+                            </Link>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {!rows.length && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+                      No members found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+        <CardFooter className="justify-end">
+          <Pagination
+            page={page}
+            hasMore={Boolean(resource.data?.hasMore)}
+            disabled={resource.loading}
+            onChange={setPage}
+          />
+        </CardFooter>
+      </Card>
     </div>
   )
 }
