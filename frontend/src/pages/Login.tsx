@@ -36,7 +36,7 @@ export function LoginPage() {
         {/* Header */}
         <div className="text-center space-y-2">
           <div className="mx-auto grid size-11 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm"><ShieldCheck size={21} /></div>
-          <h1 className="text-2xl font-semibold tracking-tight">Auth Dashboard</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Auth Management Platform</h1>
           <p className="text-sm text-muted-foreground">
             Sign in to manage your authentication server
           </p>

@@ -1,4 +1,4 @@
-# Dashboard backend
+# Auth Management Platform backend
 
 Express API for the authentication dashboard. Project create/list/read routes use Prisma and the separate dashboard database. They now require a verified GoTrue access token and dashboard administrator permission. GoTrue admin calls and frontend integration are still pending.
 

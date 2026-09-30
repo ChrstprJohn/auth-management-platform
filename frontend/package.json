@@ -1,5 +1,5 @@
 {
-  "name": "selfhostedauthdashboard",
+  "name": "auth-management-platform-frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",

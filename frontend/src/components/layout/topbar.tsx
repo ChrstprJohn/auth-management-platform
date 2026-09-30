@@ -23,7 +23,7 @@ export function Topbar({ breadcrumb, action }: TopbarProps) {
           className="flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground transition-colors hover:text-primary shrink-0"
         >
           <span className="grid size-7 place-items-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">A</span>
-          Auth Dashboard
+          Auth Management Platform
         </Link>
         {breadcrumb && (
           <>

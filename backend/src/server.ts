@@ -9,7 +9,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 
 const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1'
 const server = app.listen(port, host, () => {
-  console.log(`Auth dashboard backend listening on ${host}:${port}`)
+  console.log(`Auth Management Platform backend listening on ${host}:${port}`)
 })
 
 async function shutdown() {

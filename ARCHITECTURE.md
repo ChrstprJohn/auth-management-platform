@@ -1,6 +1,6 @@
-# Repository structure and architecture
+# Auth Management Platform architecture
 
-This is the current pattern for the shared GoTrue dashboard. It describes what exists today and where new features should go.
+This is the current pattern for the Auth Management Platform. It describes what exists today and where new features should go. The frontend provides administration screens; the backend serves protected admin operations and will also provide project membership APIs for other applications.
 
 ## Folder structure
 
@@ -35,13 +35,13 @@ Browser dashboard (frontend)
         ▼
 Dashboard API (backend/Express)
         ├── Prisma ──► dashboard schema in PostgreSQL
-        └── future server-side calls ──► GoTrue
+        └── token verification (/user) ──► GoTrue
 
 GoTrue ──► authentication, users and tokens
 Dashboard database ──► projects, project memberships and dashboard admins
 ```
 
-The frontend currently uses mock data and a placeholder login; it does not call the backend. The backend currently offers project create, list and read routes plus health checks. Those project routes are **not authorized yet**, so the API should remain private until authentication and admin checks are added. GoTrue admin calls and membership/admin management are future work. The Prisma schema defines `Project`, `ProjectMembership` and `DashboardAdmin`; only the project routes are implemented.
+The frontend currently uses mock data and a placeholder login; it does not call the backend. The backend offers project create, list and read routes plus health checks. Project routes require a Bearer access token verified through GoTrue's `/user` endpoint, followed by a `DashboardAdmin` lookup using the verified user UUID. Health routes remain unauthenticated. First-admin bootstrap uses a trusted database session; frontend integration, GoTrue admin calls and membership/admin management are future work. Verify authenticated access before exposing the API on the VM.
 
 Keep database credentials and any GoTrue admin credential in the backend environment. The browser should call the dashboard API for protected administration, never connect to PostgreSQL or hold an admin credential.
 
