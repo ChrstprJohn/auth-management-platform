@@ -1,6 +1,5 @@
 import { NavLink, useParams } from 'react-router-dom'
 import { LayoutDashboard, Users, Code2, Settings } from 'lucide-react'
-import { MOCK_PROJECTS } from '@/types/project'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
@@ -14,20 +13,17 @@ const NAV_ITEMS = [
  * Project-scoped sidebar.
  * Shows the current project name and links: Overview / Users / API / Settings.
  */
-export function AppSidebar() {
+export function AppSidebar({ name }: { name: string }) {
   const { projectId } = useParams<{ projectId: string }>()
-  const project = MOCK_PROJECTS.find((p) => p.appId === projectId)
 
   return (
-    <aside className="w-56 shrink-0 border-r border-border bg-sidebar flex flex-col">
+    <aside className="shrink-0 border-b border-border bg-sidebar flex flex-col md:w-56 md:border-b-0 md:border-r">
       {/* Project name header */}
       <div className="px-4 py-4 border-b border-border">
         <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-0.5">
           Project
         </p>
-        <p className="text-sm font-semibold truncate">
-          {project?.name ?? projectId}
-        </p>
+        <p className="text-sm font-semibold truncate">{name}</p>
       </div>
 
       {/* Nav links */}

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@/context/AuthContext'
+import { useAuth } from '@/hooks/use-auth'
 import { Loader2, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -23,8 +23,8 @@ export function LoginPage() {
     try {
       await login(email, password)
       navigate('/projects', { replace: true })
-    } catch {
-      setError('Invalid email or password.')
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Unable to sign in. Try again.')
     } finally {
       setLoading(false)
     }
@@ -35,7 +35,9 @@ export function LoginPage() {
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <div className="mx-auto grid size-11 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm"><ShieldCheck size={21} /></div>
+          <div className="mx-auto grid size-11 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+            <ShieldCheck size={21} />
+          </div>
           <h1 className="text-2xl font-semibold tracking-tight">Auth Management Platform</h1>
           <p className="text-sm text-muted-foreground">
             Sign in to manage your authentication server
@@ -45,58 +47,50 @@ export function LoginPage() {
         {/* Card */}
         <Card className="shadow-lg shadow-primary/5">
           <CardContent className="p-6 sm:p-7">
-          <form onSubmit={handleSubmit} className="space-y-5" id="login-form">
-            <div className="space-y-2">
-              <Label
-                htmlFor="login-email"
-                className="block text-sm font-medium"
+            <form onSubmit={handleSubmit} className="space-y-5" id="login-form">
+              <div className="space-y-2">
+                <Label htmlFor="login-email" className="block text-sm font-medium">
+                  Email
+                </Label>
+                <Input
+                  id="login-email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@example.com"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="login-password" className="block text-sm font-medium">
+                  Password
+                </Label>
+                <Input
+                  id="login-password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                />
+              </div>
+
+              {error && <p className="text-sm text-destructive">{error}</p>}
+
+              <Button
+                id="login-submit"
+                type="submit"
+                disabled={loading}
+                size="lg"
+                className="w-full"
               >
-                Email
-              </Label>
-              <Input
-                id="login-email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@example.com"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label
-                htmlFor="login-password"
-                className="block text-sm font-medium"
-              >
-                Password
-              </Label>
-              <Input
-                id="login-password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-              />
-            </div>
-
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
-
-            <Button
-              id="login-submit"
-              type="submit"
-              disabled={loading}
-              size="lg"
-              className="w-full"
-            >
-              {loading && <Loader2 size={14} className="animate-spin" />}
-              {loading ? 'Signing in…' : 'Sign In'}
-            </Button>
-          </form>
+                {loading && <Loader2 size={14} className="animate-spin" />}
+                {loading ? 'Signing in…' : 'Sign In'}
+              </Button>
+            </form>
           </CardContent>
         </Card>
 

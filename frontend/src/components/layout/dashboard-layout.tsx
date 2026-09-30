@@ -15,9 +15,7 @@ export function DashboardLayout({ children, action }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Topbar action={action} />
-      <main className="flex-1 overflow-y-auto">
-        {children}
-      </main>
+      <main className="flex-1 overflow-y-auto">{children}</main>
     </div>
   )
 }

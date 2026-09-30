@@ -1,156 +1,109 @@
-import { useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { MOCK_PROJECTS } from '@/types/project'
-import { Save } from 'lucide-react'
+import { useAction } from '@/hooks/use-action'
+import { useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useProject } from '@/hooks/use-project'
+import { adminApi } from '@/services/admin-api'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-
-interface ToggleProps {
-  id: string
-  label: string
-  description?: string
-  checked: boolean
-  onChange: (v: boolean) => void
-  disabled?: boolean
-}
-
-function Toggle({ id, label, description, checked, onChange, disabled }: ToggleProps) {
-  return (
-    <label
-      htmlFor={id}
-      className="flex items-start justify-between gap-4 cursor-pointer"
-    >
-      <div>
-        <p className="text-sm font-medium">{label}</p>
-        {description && (
-          <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-        )}
-      </div>
-      <Switch
-        id={id}
-        type="button"
-        disabled={disabled}
-        onClick={() => onChange(!checked)}
-        checked={checked}
-      />
-    </label>
-  )
-}
-
 export function SettingsPage() {
-  const { projectId } = useParams<{ projectId: string }>()
-  const project = MOCK_PROJECTS.find((p) => p.appId === projectId)
-
-  const [name, setName] = useState(project?.name ?? '')
-  const [appId, setAppId] = useState(projectId ?? '')
-  const [emailAuth, setEmailAuth] = useState(true)
-  const [googleAuth, setGoogleAuth] = useState(false)
-  const [githubAuth, setGithubAuth] = useState(false)
-
+  const { project, reload } = useProject()
+  const navigate = useNavigate()
+  const [name, setName] = useState(project.name),
+    [slug, setSlug] = useState(project.slug)
+  const [description, setDescription] = useState(project.description ?? '')
+  const [policy, setPolicy] = useState(project.enrollmentPolicy)
+  const [confirmation, setConfirmation] = useState('')
+  const { busy, error: message, perform } = useAction()
+  async function save(event: FormEvent) {
+    event.preventDefault()
+    await perform(
+      () =>
+        adminApi.updateProject(project.id, { name, slug, description, enrollmentPolicy: policy }),
+      reload
+    )
+  }
+  async function remove() {
+    await perform(
+      () => adminApi.deleteProject(project.id),
+      () => navigate('/projects')
+    )
+  }
   return (
     <div className="max-w-2xl space-y-8">
-      <div>
-        <p className="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-primary">Project configuration</p>
-        <h2 className="text-2xl font-semibold tracking-tight">Settings</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Configure project name and authentication options.
-        </p>
-      </div>
-
-      {/* General */}
-      <Card>
-        <CardHeader><CardTitle>General</CardTitle><CardDescription>Update how this project is identified in the dashboard.</CardDescription></CardHeader>
-        <CardContent className="space-y-5">
+      <h1 className="text-2xl font-semibold">Project settings</h1>
+      <form onSubmit={save} className="space-y-5">
         <div className="space-y-2">
-          <Label htmlFor="settings-project-name">
-            Project Name
-          </Label>
+          <Label htmlFor="settings-name">Name</Label>
           <Input
-            id="settings-project-name"
-            type="text"
+            id="settings-name"
+            required
+            maxLength={120}
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="settings-app-id">
-            App ID
-          </Label>
+          <Label htmlFor="settings-slug">Slug</Label>
           <Input
-            id="settings-app-id"
-            type="text"
-            value={appId}
-            onChange={(e) => setAppId(e.target.value)}
-            className="font-mono"
+            id="settings-slug"
+            required
+            maxLength={63}
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
           />
-          <p className="text-xs text-muted-foreground">
-            This is the <code className="font-mono">app_id</code> value in user metadata.
-          </p>
         </div>
-        <Button
-          id="settings-save-btn"
-          type="button"
-          size="sm"
-        >
-          <Save size={12} />
-          Save Changes
-        </Button>
-        </CardContent>
-      </Card>
-
-      {/* Authentication */}
-      <Card>
-        <CardHeader><CardTitle>Authentication</CardTitle><CardDescription>Choose which sign-in methods are available for this project.</CardDescription></CardHeader>
-        <CardContent><div className="space-y-4 divide-y divide-border">
-          <Toggle
-            id="toggle-email-auth"
-            label="Email authentication"
-            description="Allow users to sign up and sign in with email and password."
-            checked={emailAuth}
-            onChange={setEmailAuth}
+        <div className="space-y-2">
+          <Label htmlFor="settings-description">Description</Label>
+          <Input
+            id="settings-description"
+            maxLength={500}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
           />
-          <div className="pt-4">
-            <Toggle
-              id="toggle-google-auth"
-              label="Google"
-              description="OAuth with Google — requires configuration in GoTrue."
-              checked={googleAuth}
-              onChange={setGoogleAuth}
-              disabled
-            />
-          </div>
-          <div className="pt-4">
-            <Toggle
-              id="toggle-github-auth"
-              label="GitHub"
-              description="OAuth with GitHub — requires configuration in GoTrue."
-              checked={githubAuth}
-              onChange={setGithubAuth}
-              disabled
-            />
-          </div>
-        </div></CardContent>
-      </Card>
-
-      {/* Danger Zone */}
-      <Card className="border-destructive/25">
-        <CardHeader><CardTitle className="text-destructive">Danger Zone</CardTitle><CardDescription>
-          Irreversible and destructive actions. These will be enabled when the admin API is connected.
-        </CardDescription></CardHeader>
-        <CardContent>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="settings-policy">Enrollment policy</Label>
+          <select
+            id="settings-policy"
+            className="block w-full rounded-md border bg-background p-2"
+            value={policy}
+            onChange={(e) => setPolicy(e.target.value as 'open' | 'closed')}
+          >
+            <option value="closed">Closed — administrators assign membership</option>
+            <option value="open">Open — authenticated users may enroll</option>
+          </select>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Authentication providers are configured globally in GoTrue.
+        </p>
+        <Button disabled={busy}>{busy ? 'Saving…' : 'Save changes'}</Button>
+      </form>
+      {message && (
+        <p role="alert" className="text-destructive">
+          {message}
+        </p>
+      )}
+      <section className="space-y-3 border-t pt-6">
+        <h2 className="font-semibold">Delete project</h2>
+        <p className="text-sm text-muted-foreground">
+          Deletes this project and its memberships. Shared GoTrue accounts and data in other
+          applications remain. Type the project slug to confirm.
+        </p>
+        <Label htmlFor="delete-confirm">Project slug confirmation</Label>
+        <Input
+          id="delete-confirm"
+          value={confirmation}
+          onChange={(e) => setConfirmation(e.target.value)}
+        />
         <Button
-          id="delete-project-btn"
-          type="button"
-          disabled
-          variant="destructive" size="sm"
+          variant="destructive"
+          disabled={busy || confirmation !== project.slug}
+          onClick={remove}
         >
-          Delete Project
+          Delete project
         </Button>
-        </CardContent>
-      </Card>
+      </section>
     </div>
   )
 }

@@ -1,12 +1,10 @@
 export interface Project {
+  id: string
+  slug: string
   name: string
-  users: number
-  appId: string
+  description: string | null
+  enrollmentPolicy: 'open' | 'closed'
+  createdAt: string
+  updatedAt: string
+  _count?: { memberships: number }
 }
-
-/** Mock projects — replace with real API data in Phase 6 */
-export const MOCK_PROJECTS: Project[] = [
-  { name: 'CRM', users: 124, appId: 'crm' },
-  { name: 'Dental Website', users: 38, appId: 'dental' },
-  { name: 'Portfolio', users: 8, appId: 'portfolio' },
-]

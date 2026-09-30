@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '@/context/AuthContext'
+import { useAuth } from '@/hooks/use-auth'
 import { LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -15,15 +15,18 @@ export function Topbar({ breadcrumb, action }: TopbarProps) {
   const { logout } = useAuth()
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b border-border/80 bg-card/85 px-4 backdrop-blur-md sm:px-6">
+    <header className="sticky top-0 z-10 flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-border bg-card px-4 py-3 sm:px-6">
       {/* Left: brand + breadcrumb */}
       <div className="flex items-center gap-2 min-w-0">
         <Link
           to="/projects"
           className="flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground transition-colors hover:text-primary shrink-0"
         >
-          <span className="grid size-7 place-items-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">A</span>
-          Auth Management Platform
+          <span className="grid size-7 place-items-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
+            A
+          </span>
+          <span className="hidden sm:inline">Auth Management Platform</span>
+          <span className="sm:hidden">Auth Platform</span>
         </Link>
         {breadcrumb && (
           <>
@@ -35,6 +38,12 @@ export function Topbar({ breadcrumb, action }: TopbarProps) {
 
       {/* Right: contextual action + logout */}
       <div className="flex items-center gap-2 shrink-0">
+        <nav aria-label="Global administration" className="flex gap-3 text-sm">
+          <Link to="/projects">Projects</Link>
+          <Link to="/users">Accounts</Link>
+          <Link to="/operators">Operators</Link>
+          <Link to="/audit">Audit</Link>
+        </nav>
         {action}
         <Button
           type="button"
@@ -42,7 +51,7 @@ export function Topbar({ breadcrumb, action }: TopbarProps) {
           title="Sign out"
           variant="ghost"
           size="sm"
-          className="hidden text-muted-foreground sm:inline-flex"
+          className="text-muted-foreground"
         >
           <LogOut size={13} />
           Sign out
