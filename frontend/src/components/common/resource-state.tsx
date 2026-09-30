@@ -1,3 +1,4 @@
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 export function ResourceState({
   loading,
@@ -16,12 +17,15 @@ export function ResourceState({
     )
   if (error)
     return (
-      <div role="alert" className="space-y-3 py-6">
-        <p className="text-destructive">{error}</p>
-        <Button onClick={retry} variant="outline">
-          Try again
-        </Button>
-      </div>
+      <Alert variant="destructive">
+        <AlertTitle>Unable to load this page</AlertTitle>
+        <AlertDescription className="space-y-3">
+          <p className="text-destructive">{error}</p>
+          <Button onClick={retry} variant="outline">
+            Try again
+          </Button>
+        </AlertDescription>
+      </Alert>
     )
   return null
 }

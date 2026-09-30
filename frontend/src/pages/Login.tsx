@@ -1,3 +1,4 @@
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
@@ -31,7 +32,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-background to-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
@@ -45,7 +46,7 @@ export function LoginPage() {
         </div>
 
         {/* Card */}
-        <Card className="shadow-lg shadow-primary/5">
+        <Card>
           <CardContent className="p-6 sm:p-7">
             <form onSubmit={handleSubmit} className="space-y-5" id="login-form">
               <div className="space-y-2">
@@ -78,7 +79,11 @@ export function LoginPage() {
                 />
               </div>
 
-              {error && <p className="text-sm text-destructive">{error}</p>}
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
 
               <Button
                 id="login-submit"

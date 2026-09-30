@@ -1,3 +1,6 @@
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
 import { Link } from 'react-router-dom'
 import { useProject } from '@/hooks/use-project'
 export function OverviewPage() {
@@ -10,30 +13,38 @@ export function OverviewPage() {
           {project.description || 'No description provided.'}
         </p>
       </header>
-      <dl className="grid gap-5 border-y py-6 sm:grid-cols-2">
-        <div>
-          <dt className="text-muted-foreground">Members</dt>
-          <dd className="mt-1 text-xl">{project._count?.memberships ?? 0}</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Enrollment</dt>
-          <dd className="mt-1 capitalize">{project.enrollmentPolicy}</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Project slug</dt>
-          <dd className="mt-1">{project.slug}</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Created</dt>
-          <dd className="mt-1">{new Date(project.createdAt).toLocaleDateString()}</dd>
-        </div>
-      </dl>
-      <Link
-        className="text-primary underline underline-offset-4"
-        to={'/projects/' + project.id + '/users'}
-      >
-        Manage project members
-      </Link>
+      <Card>
+        <CardContent>
+          <dl className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <dt className="text-muted-foreground">Members</dt>
+              <dd className="mt-1 text-xl">{project._count?.memberships ?? 0}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Enrollment</dt>
+              <dd className="mt-1">
+                <Badge variant="secondary">{project.enrollmentPolicy}</Badge>
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Project slug</dt>
+              <dd className="mt-1">{project.slug}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Created</dt>
+              <dd className="mt-1">{new Date(project.createdAt).toLocaleDateString()}</dd>
+            </div>
+          </dl>
+        </CardContent>
+      </Card>
+      <Button asChild variant="outline">
+        <Link
+          className="text-primary underline underline-offset-4"
+          to={'/projects/' + project.id + '/users'}
+        >
+          Manage project members
+        </Link>
+      </Button>
     </div>
   )
 }

@@ -20,14 +20,11 @@ export function AppSidebar({ name }: { name: string }) {
     <aside className="shrink-0 border-b border-border bg-sidebar flex flex-col md:w-56 md:border-b-0 md:border-r">
       {/* Project name header */}
       <div className="px-4 py-4 border-b border-border">
-        <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-0.5">
-          Project
-        </p>
         <p className="text-sm font-semibold truncate">{name}</p>
       </div>
 
       {/* Nav links */}
-      <nav className="flex-1 px-2 py-3 flex flex-col gap-0.5">
+      <nav className="flex-1 px-2 py-3 flex flex-row flex-wrap gap-0.5 md:flex-col">
         {NAV_ITEMS.map(({ label, icon: Icon, segment }) => (
           <NavLink
             key={segment}

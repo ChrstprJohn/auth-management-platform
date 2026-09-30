@@ -1,3 +1,11 @@
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table'
 import { useCallback, useState } from 'react'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { ResourceState } from '@/components/common/resource-state'
@@ -17,29 +25,29 @@ export function AuditPage() {
         </p>
         <ResourceState {...resource} retry={resource.reload} />
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
+          <Table className="w-full text-sm">
+            <TableHeader>
+              <TableRow className="border-b">
                 {['Time', 'Action', 'Actor UUID', 'Target UUID'].map((label) => (
-                  <th key={label} className="p-3 text-left">
+                  <TableHead key={label} className="p-3 text-left">
                     {label}
-                  </th>
+                  </TableHead>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {resource.data?.data.map((event) => (
-                <tr key={event.id} className="border-b">
-                  <td className="whitespace-nowrap p-3">
+                <TableRow key={event.id} className="border-b">
+                  <TableCell className="whitespace-nowrap p-3">
                     {new Date(event.createdAt).toLocaleString()}
-                  </td>
-                  <td className="p-3">{event.action}</td>
-                  <td className="p-3 font-mono text-xs">{event.actorId}</td>
-                  <td className="p-3 font-mono text-xs">{event.targetId}</td>
-                </tr>
+                  </TableCell>
+                  <TableCell className="p-3">{event.action}</TableCell>
+                  <TableCell className="p-3 font-mono text-xs">{event.actorId}</TableCell>
+                  <TableCell className="p-3 font-mono text-xs">{event.targetId}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
           {resource.data && !resource.data.data.length && (
             <p className="py-8 text-muted-foreground">No recorded events yet.</p>
           )}

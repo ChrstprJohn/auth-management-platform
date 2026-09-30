@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -37,12 +37,48 @@ export function Topbar({ breadcrumb, action }: TopbarProps) {
       </div>
 
       {/* Right: contextual action + logout */}
-      <div className="flex items-center gap-2 shrink-0">
-        <nav aria-label="Global administration" className="flex gap-3 text-sm">
-          <Link to="/projects">Projects</Link>
-          <Link to="/users">Accounts</Link>
-          <Link to="/operators">Operators</Link>
-          <Link to="/audit">Audit</Link>
+      <div className="flex flex-wrap items-center gap-2">
+        <nav aria-label="Global administration" className="flex flex-wrap gap-1 text-sm">
+          <Button asChild variant="ghost" size="sm">
+            <NavLink
+              to="/projects"
+              className={({ isActive }) =>
+                isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+              }
+            >
+              Projects
+            </NavLink>
+          </Button>
+          <Button asChild variant="ghost" size="sm">
+            <NavLink
+              to="/users"
+              className={({ isActive }) =>
+                isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+              }
+            >
+              Accounts
+            </NavLink>
+          </Button>
+          <Button asChild variant="ghost" size="sm">
+            <NavLink
+              to="/operators"
+              className={({ isActive }) =>
+                isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+              }
+            >
+              Operators
+            </NavLink>
+          </Button>
+          <Button asChild variant="ghost" size="sm">
+            <NavLink
+              to="/audit"
+              className={({ isActive }) =>
+                isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+              }
+            >
+              Audit
+            </NavLink>
+          </Button>
         </nav>
         {action}
         <Button

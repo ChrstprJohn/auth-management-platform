@@ -63,8 +63,8 @@ export function UsersPage() {
       <header>
         <h1 className="text-2xl font-semibold">Project members</h1>
         <p className="mt-2 text-muted-foreground">
-          Assign existing accounts to {project.name}. Removing membership does not delete the
-          account.
+          Create accounts or assign existing identities to {project.name}. Removing membership keeps
+          the shared account.
         </p>
       </header>
       <div className="flex flex-wrap gap-3">
