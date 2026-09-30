@@ -1,11 +1,5 @@
 import { prisma } from '../../db/prisma.js'
-
-export interface NewProject {
-  slug: string
-  name: string
-  description: string | null
-  enrollmentPolicy?: string
-}
+import type { NewProject } from '../../models/project.js'
 
 export const projectRepository = {
   update(id: string, data: Partial<NewProject>) {

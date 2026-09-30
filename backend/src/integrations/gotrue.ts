@@ -1,12 +1,7 @@
 import { HttpError } from '../middleware/error-handler.js'
 
-export interface AuthUser {
-  id: string
-  email?: string
-  created_at?: string
-  email_confirmed_at?: string | null
-  last_sign_in_at?: string | null
-}
+import type { AuthUser } from '../models/auth-user.js'
+export type { AuthUser } from '../models/auth-user.js'
 
 export function publicUser(user: AuthUser): AuthUser {
   return { id: user.id, email: user.email, created_at: user.created_at,

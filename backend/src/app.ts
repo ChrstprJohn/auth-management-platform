@@ -1,6 +1,7 @@
 import express from 'express'
 import { prisma } from './db/prisma.js'
 import { projectRoutes } from './modules/projects/project.routes.js'
+import { membershipRoutes } from './modules/memberships/membership.routes.js'
 import { errorHandler, HttpError } from './middleware/error-handler.js'
 
 export const app = express()
@@ -21,6 +22,7 @@ app.get('/health/ready', async (_request, response) => {
   }
 })
 
+app.use('/api', membershipRoutes)
 app.use('/api/projects', projectRoutes)
 app.use('/api', () => { throw new HttpError(404, 'not_found', 'Route not found') })
 app.use(errorHandler)

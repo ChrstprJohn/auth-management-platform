@@ -1,5 +1,6 @@
 import { HttpError } from '../../middleware/error-handler.js'
-import { projectRepository, type NewProject } from './project.repository.js'
+import { projectRepository } from './project.repository.js'
+import type { NewProject } from '../../models/project.js'
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
