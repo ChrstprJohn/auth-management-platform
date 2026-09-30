@@ -1,8 +1,7 @@
 import type { RequestHandler } from 'express'
 import { prisma } from '../db/prisma.js'
 import { HttpError } from './error-handler.js'
-
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+import { isUuid } from '../lib/validation.js'
 
 // The identity comes only from GoTrue, never from browser-supplied user metadata.
 export const requireAuth: RequestHandler = async (request, response, next) => {
@@ -30,13 +29,7 @@ export const requireAuth: RequestHandler = async (request, response, next) => {
     throw new HttpError(503, 'auth_unavailable', 'Authentication service is unavailable')
   }
 
-  if (
-    !user ||
-    typeof user !== 'object' ||
-    !('id' in user) ||
-    typeof user.id !== 'string' ||
-    !uuidPattern.test(user.id)
-  ) {
+  if (!user || typeof user !== 'object' || !('id' in user) || !isUuid(user.id)) {
     throw new HttpError(503, 'auth_unavailable', 'Authentication service is unavailable')
   }
 
@@ -46,7 +39,7 @@ export const requireAuth: RequestHandler = async (request, response, next) => {
 
 export const requireDashboardAdmin: RequestHandler = async (_request, response, next) => {
   const gotrueUserId: unknown = response.locals.gotrueUserId
-  if (typeof gotrueUserId !== 'string' || !uuidPattern.test(gotrueUserId)) {
+  if (!isUuid(gotrueUserId)) {
     throw new HttpError(401, 'unauthorized', 'Authentication is required')
   }
   const admin = await prisma.dashboardAdmin.findUnique({ where: { gotrueUserId } })

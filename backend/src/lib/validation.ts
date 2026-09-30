@@ -8,13 +8,17 @@ export function objectInput(value: unknown): Record<string, unknown> {
 }
 
 export function uuid(value: unknown): string {
-  if (
-    typeof value !== 'string' ||
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
-  ) {
+  if (!isUuid(value)) {
     throw new HttpError(400, 'invalid_id', 'A valid UUID is required')
   }
   return value
+}
+
+export function isUuid(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+  )
 }
 
 export function text(value: unknown, name: string, max: number): string {
