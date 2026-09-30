@@ -7,14 +7,16 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent } from '@/components/ui/card'
 
 function CodeExample({ title, code }: { title: string; code: string }) {
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState('')
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="font-medium">{title}</h3>
+    <Card className="min-w-0">
+      <CardHeader>
+        <CardTitle role="heading" aria-level={3}>{title}</CardTitle>
+        <CardAction>
         <Button
           variant="outline"
           size="sm"
@@ -32,8 +34,10 @@ function CodeExample({ title, code }: { title: string; code: string }) {
           {copied ? <Check /> : <Copy />}
           {copied ? 'Copied' : 'Copy code'}
         </Button>
-      </div>
-      <pre className="max-w-full overflow-x-auto rounded-lg border bg-muted/40 p-4 text-xs leading-6">
+        </CardAction>
+      </CardHeader>
+      <CardContent className="min-w-0 space-y-3">
+      <pre className="max-w-full overflow-x-auto rounded-lg bg-muted/40 p-4 text-xs leading-6">
         <code>{code}</code>
       </pre>
       {error && (
@@ -41,7 +45,8 @@ function CodeExample({ title, code }: { title: string; code: string }) {
           {error}
         </p>
       )}
-    </section>
+      </CardContent>
+    </Card>
   )
 }
 export function ApiPage() {
@@ -112,13 +117,19 @@ await request(PLATFORM_URL + '/projects/' + PROJECT_ID + '/members/' + user.id,
           those identities can access.
         </p>
       </header>
-      <div className="space-y-2 rounded-lg border bg-card p-4">
+      <Card>
+        <CardHeader>
+          <CardTitle role="heading" aria-level={2}>Project integration</CardTitle>
+          <CardDescription>Use this project ID in the examples below.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary">{project.slug}</Badge>
-          <span className="text-sm capitalize">{project.enrollmentPolicy} enrollment</span>
+          <Badge variant="outline" className="capitalize">{project.enrollmentPolicy} enrollment</Badge>
         </div>
         <p className="break-all font-mono text-sm">{project.id}</p>
-      </div>
+        </CardContent>
+      </Card>
       <Alert>
         <AlertTitle>Enforce access in your application backend</AlertTitle>
         <AlertDescription>
