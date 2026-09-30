@@ -23,6 +23,18 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from '@/components/ui/card'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 export function SettingsPage() {
   const { project, reload } = useProject()
   const navigate = useNavigate()
@@ -53,28 +65,130 @@ export function SettingsPage() {
   return (
     <div className="max-w-2xl space-y-8">
       <h1 className="text-2xl font-semibold">Project settings</h1>
-      <dl className="grid gap-4 rounded-xl border bg-card p-5 sm:grid-cols-2">
-        <div>
-          <dt className="text-sm text-muted-foreground">Name</dt>
-          <dd className="mt-1 font-medium">{project.name}</dd>
-        </div>
-        <div>
-          <dt className="text-sm text-muted-foreground">Slug</dt>
-          <dd className="mt-1">{project.slug}</dd>
-        </div>
-        <div>
-          <dt className="text-sm text-muted-foreground">Enrollment</dt>
-          <dd className="mt-1 capitalize">{project.enrollmentPolicy}</dd>
-        </div>
-        <div>
-          <dt className="text-sm text-muted-foreground">Description</dt>
-          <dd className="mt-1">{project.description || 'No description'}</dd>
-        </div>
-      </dl>
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline">Edit settings</Button>
-        </DialogTrigger>
+        <Tabs defaultValue="general" className="space-y-6">
+          <TabsList className="flex-wrap group-data-horizontal/tabs:h-auto">
+            <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="enrollment">Enrollment</TabsTrigger>
+            <TabsTrigger value="danger">Danger zone</TabsTrigger>
+          </TabsList>
+          <TabsContent value="general">
+            <Card>
+              <CardHeader>
+                <CardTitle role="heading" aria-level={2}>
+                  Project details
+                </CardTitle>
+                <CardDescription>
+                  Manage the name, slug, and description of this project.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <dl className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-sm text-muted-foreground">Name</dt>
+                    <dd className="mt-1 font-medium">{project.name}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">Slug</dt>
+                    <dd className="mt-1">{project.slug}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">Enrollment</dt>
+                    <dd className="mt-1">
+                      <Badge variant="secondary" className="capitalize">
+                        {project.enrollmentPolicy}
+                      </Badge>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">Description</dt>
+                    <dd className="mt-1">{project.description || 'No description'}</dd>
+                  </div>
+                </dl>
+              </CardContent>
+              <CardFooter>
+                <DialogTrigger asChild>
+                  <Button variant="outline">Edit settings</Button>
+                </DialogTrigger>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+          <TabsContent value="enrollment">
+            <Card>
+              <CardHeader>
+                <CardTitle role="heading" aria-level={2}>
+                  Enrollment policy
+                </CardTitle>
+                <CardDescription>
+                  Authentication providers are configured globally in GoTrue.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Badge variant="secondary" className="capitalize">
+                  {project.enrollmentPolicy}
+                </Badge>
+                <p className="text-sm text-muted-foreground">
+                  {project.enrollmentPolicy === 'open'
+                    ? 'Authenticated users may enroll themselves.'
+                    : 'Administrators assign membership.'}
+                </p>
+              </CardContent>
+              <CardFooter>
+                <DialogTrigger asChild>
+                  <Button variant="outline">Edit enrollment policy</Button>
+                </DialogTrigger>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+          <TabsContent value="danger">
+            <Card>
+              <CardHeader>
+                <CardTitle role="heading" aria-level={2}>
+                  Delete project
+                </CardTitle>
+                <CardDescription>
+                  This deletes the project and all its memberships. Shared accounts remain.
+                </CardDescription>
+              </CardHeader>
+              <CardFooter>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="destructive">Delete project</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle>Delete project</DialogTitle>
+                      <DialogDescription>
+                        Deletes this project and its memberships. Shared GoTrue accounts and data in
+                        other applications remain. Type the project slug to confirm.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                      <Label htmlFor="delete-confirm">Project slug confirmation</Label>
+                      <Input
+                        id="delete-confirm"
+                        value={confirmation}
+                        onChange={(e) => setConfirmation(e.target.value)}
+                      />
+                      <Button
+                        variant="destructive"
+                        disabled={busy || confirmation !== project.slug}
+                        onClick={remove}
+                      >
+                        Delete project
+                      </Button>
+                      {message && (
+                        <Alert variant="destructive">
+                          <AlertDescription>{message}</AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+        </Tabs>
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit project settings</DialogTitle>
@@ -111,6 +225,14 @@ export function SettingsPage() {
               />
             </div>
             <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="settings-self-enrollment">Allow self-enrollment</Label>
+                <Switch
+                  id="settings-self-enrollment"
+                  checked={policy === 'open'}
+                  onCheckedChange={(checked) => setPolicy(checked ? 'open' : 'closed')}
+                />
+              </div>
               <Label htmlFor="settings-policy">Enrollment policy</Label>
               <Select
                 value={policy}
@@ -130,55 +252,18 @@ export function SettingsPage() {
             </p>
             <Button disabled={busy}>{busy ? 'Saving…' : 'Save changes'}</Button>
             {message && (
-              <p role="alert" className="text-destructive">
-                {message}
-              </p>
+              <Alert variant="destructive">
+                <AlertDescription>{message}</AlertDescription>
+              </Alert>
             )}
           </form>
         </DialogContent>
       </Dialog>
       {message && (
-        <p role="alert" className="text-destructive">
-          {message}
-        </p>
+        <Alert variant="destructive">
+          <AlertDescription>{message}</AlertDescription>
+        </Alert>
       )}
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button variant="outline">Delete project</Button>
-        </DialogTrigger>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Delete project</DialogTitle>
-            <DialogDescription>
-              This deletes the project and all its memberships. Shared accounts remain.
-            </DialogDescription>
-          </DialogHeader>
-          <section className="space-y-3 border-t pt-6">
-            <p className="text-sm text-muted-foreground">
-              Deletes this project and its memberships. Shared GoTrue accounts and data in other
-              applications remain. Type the project slug to confirm.
-            </p>
-            <Label htmlFor="delete-confirm">Project slug confirmation</Label>
-            <Input
-              id="delete-confirm"
-              value={confirmation}
-              onChange={(e) => setConfirmation(e.target.value)}
-            />
-            <Button
-              variant="destructive"
-              disabled={busy || confirmation !== project.slug}
-              onClick={remove}
-            >
-              Delete project
-            </Button>
-            {message && (
-              <p role="alert" className="text-destructive">
-                {message}
-              </p>
-            )}
-          </section>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
