@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select'
 import { useAction } from '@/hooks/use-action'
 import { useCallback, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
@@ -9,9 +16,28 @@ import { Pagination } from '@/components/common/pagination'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { CreateAccountDialog } from '@/components/common/create-account-dialog'
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
 export function UsersPage() {
   const { project } = useProject()
   const [page, setPage] = useState(1)
+  const [assignOpen, setAssignOpen] = useState(false)
   const load = useCallback(() => adminApi.members(project.id, page), [project.id, page])
   const resource = useResource(load)
   const [userId, setUserId] = useState(''),
@@ -24,6 +50,7 @@ export function UsersPage() {
       () => adminApi.assign(project.id, userId.trim(), role),
       () => {
         setUserId('')
+        setAssignOpen(false)
         resource.reload()
       }
     )
@@ -40,35 +67,56 @@ export function UsersPage() {
           account.
         </p>
       </header>
-      <form onSubmit={assign} className="flex flex-wrap items-end gap-4 border-b pb-6">
-        <div className="min-w-0 flex-1 space-y-2">
-          <Label htmlFor="member-id">GoTrue user UUID</Label>
-          <Input
-            id="member-id"
-            required
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="member-role">Role</Label>
-          <select
-            id="member-role"
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className="block rounded-md border bg-background p-2"
-          >
-            <option value="member">Member</option>
-            <option value="manager">Manager</option>
-          </select>
-        </div>
-        <Button disabled={busy}>{busy ? 'Assigning…' : 'Assign membership'}</Button>
-      </form>
-      {error && (
-        <p role="alert" className="text-destructive">
-          {error}
-        </p>
-      )}
+      <div className="flex flex-wrap gap-3">
+        <CreateAccountDialog project={project} onCreated={resource.reload} />
+        <Dialog
+          open={assignOpen}
+          onOpenChange={(open) => {
+            if (!busy) setAssignOpen(open)
+          }}
+        >
+          <DialogTrigger asChild>
+            <Button variant="outline">Assign existing account</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Assign existing account</DialogTitle>
+              <DialogDescription>
+                Add an existing GoTrue identity to {project.name}.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={assign} className="space-y-4">
+              <div className="min-w-0 flex-1 space-y-2">
+                <Label htmlFor="member-id">GoTrue user UUID</Label>
+                <Input
+                  id="member-id"
+                  required
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="member-role">Role</Label>
+                <Select value={role} onValueChange={(value) => setRole(value)}>
+                  <SelectTrigger id="member-role" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="member">Member</SelectItem>
+                    <SelectItem value="manager">Manager</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button disabled={busy}>{busy ? 'Assigning…' : 'Assign membership'}</Button>
+              {error && (
+                <p role="alert" className="text-sm text-destructive">
+                  {error}
+                </p>
+              )}
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
       <div className="space-y-2">
         <Label htmlFor="member-search">Search this page</Label>
         <Input
@@ -81,20 +129,20 @@ export function UsersPage() {
       <ResourceState {...resource} retry={resource.reload} />
       {rows && (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="p-3 text-left">Account</th>
-                <th className="p-3 text-left">Role</th>
-                <th className="p-3 text-left">Joined</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="w-full text-sm">
+            <TableHeader>
+              <TableRow className="border-b">
+                <TableHead className="p-3 text-left">Account</TableHead>
+                <TableHead className="p-3 text-left">Role</TableHead>
+                <TableHead className="p-3 text-left">Joined</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {rows.map((member) => (
-                <tr key={member.gotrueUserId} className="border-b">
-                  <td className="p-3">
+                <TableRow key={member.gotrueUserId} className="border-b">
+                  <TableCell className="p-3">
                     <Link
-                      className="text-primary underline underline-offset-4"
+                      className="font-medium hover:text-primary hover:underline underline-offset-4"
                       to={'/projects/' + project.id + '/users/' + member.gotrueUserId}
                     >
                       {member.user?.email ?? member.gotrueUserId}
@@ -102,13 +150,17 @@ export function UsersPage() {
                     {!member.user && (
                       <span className="ml-2 text-muted-foreground">Account missing</span>
                     )}
-                  </td>
-                  <td className="p-3">{member.role}</td>
-                  <td className="p-3">{new Date(member.createdAt).toLocaleDateString()}</td>
-                </tr>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{member.role}</Badge>
+                  </TableCell>
+                  <TableCell className="p-3">
+                    {new Date(member.createdAt).toLocaleDateString()}
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
           {!rows.length && <p className="py-8 text-muted-foreground">No members found.</p>}
         </div>
       )}
