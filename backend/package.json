@@ -8,6 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "test": "pnpm build && node --import=dotenv/config --test tests/auth.test.mjs",
     "dev": "tsx watch src/server.ts",
     "build": "prisma generate && tsc",
     "test:integration": "pnpm build && node --import=dotenv/config --test tests/projects.integration.test.mjs",

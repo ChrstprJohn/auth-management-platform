@@ -1,6 +1,6 @@
 # Dashboard backend
 
-Express API for the authentication dashboard. Project create/list/read routes use Prisma and the separate dashboard database. Dashboard authorization and GoTrue admin calls are still pending, so do not add a public Caddy route yet.
+Express API for the authentication dashboard. Project create/list/read routes use Prisma and the separate dashboard database. They now require a verified GoTrue access token and dashboard administrator permission. GoTrue admin calls and frontend integration are still pending.
 
 The Prisma schema, local PostgreSQL Compose setup, and future VM database steps are in [DATABASE.md](DATABASE.md). No migration has been applied to the VM from this repository.
 
@@ -32,6 +32,7 @@ Example local request:
 ```bash
 curl -i -X POST http://127.0.0.1:3000/api/projects \
   -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <YOUR_ACCESS_TOKEN>' \
   -d '{"slug":"crm","name":"CRM"}'
 ```
 
@@ -46,7 +47,25 @@ Project slugs are unique lowercase URL identifiers. Requests return `{ "data": .
 - `src/db/prisma.ts` creates the shared database client.
 - `src/middleware/error-handler.ts` maps known failures to API responses.
 
-The frontend still shows mock projects. Connect it to these routes after dashboard authorization is in place.
+The frontend still shows mock projects. Connect its login to GoTrue and send access tokens with requests to these routes.
+
+## Authentication and first administrator
+
+Set `GOTRUE_URL=https://auth.chrbuilds.dev` in the local backend `.env`. On the VM set `GOTRUE_URL=http://gotrue:8081`. Use a trusted URL: the backend forwards the caller's token to GoTrue's `/user` endpoint with a five-second timeout. This check needs no GoTrue signing secret or operator credential.
+
+Project requests require `Authorization: Bearer <access_token>`. After GoTrue verifies the user, the backend checks their UUID in `dashboard.dashboard_admins`. Missing/invalid tokens return 401, ordinary users return 403, and auth configuration/upstream failures return 503. Health routes stay accessible. User metadata cannot grant dashboard permission.
+
+Confirm your existing GoTrue account's UUID, then bootstrap your first administrator in a trusted psql session connected to **dashboard_db**:
+
+```sql
+INSERT INTO dashboard.dashboard_admins (gotrue_user_id)
+VALUES ('YOUR-GOTRUE-USER-UUID')
+ON CONFLICT DO NOTHING;
+```
+
+This grants dashboard access only, not GoTrue operator privileges. Delete the corresponding row to revoke access; membership is checked on every project request.
+
+Run `pnpm test` for authorization checks with mocked GoTrue/database responses. Run `pnpm test:integration` with local PostgreSQL for real project persistence. The integration test mocks GoTrue and creates/cleans up a temporary admin and project; it does not modify VM accounts.
 
 ## VM deployment layout
 

@@ -3,8 +3,21 @@ import assert from 'node:assert/strict'
 import { once } from 'node:events'
 import { app } from '../dist/app.js'
 import { prisma } from '../dist/db/prisma.js'
+import { randomUUID } from 'node:crypto'
 
-test('project API creates, lists, reads, and rejects invalid or duplicate projects', async () => {
+test('project API creates, lists, reads, and rejects invalid or duplicate projects', async (t) => {
+  const userId = randomUUID()
+  const originalUrl = process.env.GOTRUE_URL
+  process.env.GOTRUE_URL = 'http://auth.test'
+  const realFetch = globalThis.fetch
+  t.mock.method(globalThis, 'fetch', async (url, options = {}) => {
+    if (url === 'http://auth.test/user') {
+      assert.equal(options.headers.authorization, 'Bearer integration-token')
+      return new Response(JSON.stringify({ id: userId }))
+    }
+    return realFetch(url, { ...options, headers: { ...options.headers, authorization: 'Bearer integration-token' } })
+  })
+  await prisma.dashboardAdmin.create({ data: { gotrueUserId: userId } })
   const server = app.listen(0, '127.0.0.1')
   await once(server, 'listening')
   const address = server.address()
@@ -50,6 +63,9 @@ test('project API creates, lists, reads, and rejects invalid or duplicate projec
     assert.equal((await fetched.json()).data.id, project.id)
   } finally {
     if (createdProjectId) await prisma.project.deleteMany({ where: { id: createdProjectId } })
+    await prisma.dashboardAdmin.deleteMany({ where: { gotrueUserId: userId } })
+    if (originalUrl === undefined) delete process.env.GOTRUE_URL
+    else process.env.GOTRUE_URL = originalUrl
     server.closeAllConnections()
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))
     await prisma.$disconnect()
