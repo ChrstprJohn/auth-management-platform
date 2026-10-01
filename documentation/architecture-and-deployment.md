@@ -15,7 +15,7 @@ packages/
   contracts/              # API types, separated by application
   database/               # Platform schema/migrations
 infrastructure/
-  local/                  # Local PostgreSQL, GoTrue, email capture
+  local/                  # Local GoTrue setup using existing PostgreSQL
   vm/                     # API Docker/Compose templates
 documentation/
 vm_infrastructure/        # Existing VM references
@@ -36,17 +36,24 @@ Shared GoTrue -> postgres/auth_db
 
 The platform route also enters through Caddy. `admin-api.chrbuilds.dev` is proposed and needs DNS. Both containers can use internal port 3000 on `app_network`; Caddy selects by service name. No public backend port mappings or normal API-to-API calls are needed.
 
-VM API directories:
+One repository checkout on the VM:
 
 ```text
-~/apps/gotrue-admin-api/   # Compose, protected .env, build context if needed
-~/apps/platform-api/       # Independent deployment configuration
+~/apps/auth-management-platform/
+  apps/                   # Both API and frontend source folders
+  packages/               # Shared source used when building apps
+  infrastructure/         # Local setup and VM API deployment templates
+  documentation/
 ~/auth/gotrue/             # Existing auth service
 ~/infrastructure/caddy/
 ~/postgres/
 ```
 
 Existing MongoDB, n8n, and realtime folders/services remain separate. The prepared deployment is documented as `~/apps/hello_api/`, `hello_api:3000`, behind `api.chrbuilds.dev`; inspect consumers before replacing it with `platform-api`. The documented VM has 1 GiB RAM: measure resource capacity before adding services. Frontend hosting/builds stay on Vercel.
+
+Clone the complete repository into `~/apps/auth-management-platform/` once; later run `git pull` there. Pulling downloads source only, not running services. Build each API image with the repository root as its build context so it can include the shared packages. Only the resulting two API containers run on the VM. Separate copies of the APIs under `~/apps/` are unnecessary.
+
+Frontend source will also be present in the checkout, but Vercel builds/deploys it. `packages/` contains shared code included in application builds; it is not another deployed service.
 
 ## One identity pool, distinct permissions
 
@@ -64,11 +71,29 @@ GoTrue proves identity; backend records supply authority. Operator eligibility i
 
 ## Local development and browser connections
 
-Use one local GoTrue, local PostgreSQL, and an email capture mailbox. Use separate host ports for the APIs, e.g. admin 3100 and platform 3200. Containers resolve service names; host processes use local ports. Local data/secrets do not synchronize automatically to production.
+Use the existing local PostgreSQL 17 container, `local-database-server-postgres-1`, on `local-database-server_default`. The [local Compose setup](../infrastructure/local/README.md) runs one development GoTrue container on that network; it does not create another PostgreSQL server. Prepare a dedicated `auth_local_db` and role before starting it. Create separate platform data/credentials when the platform phase begins. Email capture must be configured separately.
+
+Use separate host ports for the APIs, e.g. admin 3100 and platform 3200. Containers resolve service names; host processes use local ports. Local data/secrets do not synchronize automatically to production.
 
 Each API configures its private/local GoTrue URL; the platform additionally configures its restricted database connection and session encryption key. Admin credentials and operator eligibility remain server-side. Follow the supplied foreground Node and orphan-worker cleanup rules.
 
 Vercel frontends call public HTTPS API URLs. Configure exact trusted origins, cookie credentials, HttpOnly/Secure settings, and CSRF protection. `vercel.app` and the API domain are cross-site: test browser cookie behavior. Prefer production frontend custom domains under `chrbuilds.dev`; do not give arbitrary preview origins production operator access.
+
+## Local versus VM: what runs
+
+| Component | Local development | VM / production |
+|---|---|---|
+| GoTrue | Development container from `infrastructure/local/` | Reuse existing `~/auth/gotrue/`; do not start local Compose |
+| PostgreSQL | Reuse existing local container with dedicated development databases | Reuse existing private PostgreSQL; create `platform_db` and restricted role if absent |
+| API backends | Run locally against local services | Build/recreate two API containers with VM configuration |
+| Frontends | Local frontend dev processes | Deploy on Vercel |
+| Shared packages | Imported by applications | Included in builds; no separate running service |
+| Caddy | Not required for normal local development | Reuse existing Caddy and add/update API hostname routes |
+| Data and secrets | Development-only | Separate production data and protected credentials |
+
+The goal is the same code with environment-specific configuration: locally test without calling the VM; later deploy backends that call private VM GoTrue/PostgreSQL. `infrastructure/local/` may exist in the VM checkout but is never started there. `infrastructure/vm/` is reserved for backend deployment configuration, not replacement GoTrue/PostgreSQL services.
+
+Deployment means pull code, build/recreate the relevant API, apply platform migrations when needed, and verify health/auth flows. Pull alone does not deploy, migrate, or transfer local users.
 
 ## Deployment order and GoTrue privacy
 

@@ -1,0 +1,21 @@
+name: auth-platform-local
+
+services:
+  gotrue:
+    image: supabase/gotrue:v2.196.0
+    env_file:
+      - .env
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      PORT: "8081"
+    ports:
+      - "127.0.0.1:8081:8081"
+    networks:
+      - existing_postgres
+
+networks:
+  existing_postgres:
+    external: true
+    name: local-database-server_default
+
+# PostgreSQL is intentionally not defined: use your existing local server.
