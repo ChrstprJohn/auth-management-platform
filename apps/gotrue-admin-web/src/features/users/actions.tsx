@@ -227,7 +227,7 @@ export function UserActions({ user }: { user: SafeUser }) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap lg:flex-col">
           <Button
             variant="outline"
             disabled={m.pending || m.uncertain}

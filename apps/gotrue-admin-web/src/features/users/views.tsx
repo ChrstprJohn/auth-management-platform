@@ -55,15 +55,15 @@ export function UserInformation({ user }: { user: SafeUser }) {
           <h2>Account information</h2>
         </CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-x-6 gap-y-2 md:grid-cols-2">
+      <CardContent className="grid min-w-0 gap-x-6 gap-y-2 xl:grid-cols-2">
         <Item className="px-0">
-          <ItemContent>
+          <ItemContent className="min-w-0">
             <ItemTitle>UUID</ItemTitle>
             <CopyId value={user.id} label="user UUID" />
           </ItemContent>
         </Item>
         <Item className="px-0">
-          <ItemContent>
+          <ItemContent className="min-w-0">
             <ItemTitle>Email</ItemTitle>
             <ItemDescription className="break-all">
               {user.email ?? 'Not reported'}
@@ -71,7 +71,7 @@ export function UserInformation({ user }: { user: SafeUser }) {
           </ItemContent>
         </Item>
         <Item className="px-0">
-          <ItemContent>
+          <ItemContent className="min-w-0">
             <ItemTitle>Email confirmation</ItemTitle>
             <ItemDescription>
               {user.emailConfirmedAt ? (
@@ -83,7 +83,7 @@ export function UserInformation({ user }: { user: SafeUser }) {
           </ItemContent>
         </Item>
         <Item className="px-0">
-          <ItemContent>
+          <ItemContent className="min-w-0">
             <ItemTitle>Created</ItemTitle>
             <ItemDescription>
               <Timestamp value={user.createdAt} />
@@ -91,7 +91,7 @@ export function UserInformation({ user }: { user: SafeUser }) {
           </ItemContent>
         </Item>
         <Item className="px-0">
-          <ItemContent>
+          <ItemContent className="min-w-0">
             <ItemTitle>Last sign in</ItemTitle>
             <ItemDescription>
               <Timestamp value={user.lastSignInAt} />
@@ -99,11 +99,15 @@ export function UserInformation({ user }: { user: SafeUser }) {
           </ItemContent>
         </Item>
         <Item className="px-0">
-          <ItemContent>
+          <ItemContent className="min-w-0">
             <ItemTitle>Ban status</ItemTitle>
             <ItemDescription>
-              <Badge variant="outline">{banStatus(user.isBanned)}</Badge> · Ban
-              expiry: <Timestamp value={user.bannedUntil} />
+              <span className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">{banStatus(user.isBanned)}</Badge>
+              </span>
+              <span className="mt-2 block">
+                Ban expiry: <Timestamp value={user.bannedUntil} />
+              </span>
             </ItemDescription>
           </ItemContent>
         </Item>
@@ -248,25 +252,32 @@ export function UserDetailsPage() {
     );
   return (
     <section className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1>Account details</h1>
-        <Button
-          variant="outline"
-          disabled={m.refreshing || m.state === 'loading'}
-          onClick={m.refresh}
-        >
-          {m.refreshing ? 'Refreshing…' : 'Refresh account'}
-        </Button>
-      </div>
+      <PageHeader
+        title="Account details"
+        actions={
+          <Button
+            variant="outline"
+            disabled={m.refreshing || m.state === 'loading'}
+            onClick={m.refresh}
+          >
+            <RefreshCw className={m.refreshing ? 'animate-spin' : ''} />
+            {m.refreshing ? 'Refreshing…' : 'Refresh account'}
+          </Button>
+        }
+      />
       {m.error && <Failure error={m.error} retry={m.refresh} />}{' '}
       {m.state === 'loading' ? (
         <Loading label="Loading account details" />
       ) : (
         m.user && (
-          <>
-            <UserInformation user={m.user} />
-            <UserActions user={m.user} />
-          </>
+          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-7">
+            <div className="min-w-0 lg:col-span-4">
+              <UserInformation user={m.user} />
+            </div>
+            <div className="min-w-0 lg:col-span-3">
+              <UserActions user={m.user} />
+            </div>
+          </div>
         )
       )}
     </section>
