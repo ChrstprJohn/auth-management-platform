@@ -1,14 +1,14 @@
-# Authentication Project Documentation
+# Project Documentation
 
-Agreed design, October 1, 2026. These documents describe planned work; application code and VM deployment have not been created by this documentation task.
+Planned basic scope. All checklist items start unchecked; documentation does not imply completed implementation.
 
-| Document | Contents |
-|---|---|
-| [Deployment layout](deployment-layout.md) | Repository folders, VM folders, containers, routing, deployment sequence |
-| [Architecture and development](architecture-and-development.md) | Shared GoTrue, database ownership, permissions, local setup, sessions |
-| [V1 scope](auth-platform-spec.md) | Dashboard-first build order and basic developer-platform features |
-| [Implementation checklist](initial-feature-checklist.md) | Completion checks for both phases |
+Build **GoTrue dashboard first**, then **developer auth platform**. Each project has its own API on the VM and frontend on Vercel. Both use one shared GoTrue.
 
-Start with deployment layout, then architecture. The final design uses **two separate Express APIs, two frontends on Vercel, and one shared GoTrue instance**. Build the GoTrue management dashboard first, then the developer platform.
+| Project | Features | Checklist |
+|---|---|---|
+| GoTrue operator dashboard | [Basic V1](gotrue-dashboard/features.md) | [Delivery checks](gotrue-dashboard/checklist.md) |
+| Developer auth platform | [Basic V1](platform/features.md) | [Delivery checks](platform/checklist.md) |
 
-Existing deployment references remain in [vm_infrastructure](../vm_infrastructure/vm-infrastructure-reference-updated.md). They describe the current setup, including the public GoTrue route, rather than the target design.
+[Shared architecture and deployment](architecture-and-deployment.md) contains the repository/VM structure, database ownership, permissions, local setup, and private GoTrue migration. Keep cross-project infrastructure decisions there instead of duplicating them in each spec.
+
+Existing operational documents stay in [vm_infrastructure](../vm_infrastructure/vm-infrastructure-reference-updated.md).
