@@ -134,15 +134,17 @@ function SnapshotChart({
         {children}
         <dl
           aria-label={`${title} counts`}
-          className="grid grid-cols-2 gap-x-4 gap-y-2 border-t pt-4"
+          className="grid grid-cols-1 gap-x-4 gap-y-2 border-t pt-4 sm:grid-cols-2"
         >
           {data.map((row) => (
             <div
               key={row.label}
               className="flex items-center justify-between gap-2 text-sm"
             >
-              <dt className="capitalize text-muted-foreground">{row.label}</dt>
-              <dd className="font-medium tabular-nums">{row.count}</dd>
+              <dt className="min-w-0 capitalize text-muted-foreground">
+                {row.label}
+              </dt>
+              <dd className="shrink-0 font-medium tabular-nums">{row.count}</dd>
             </div>
           ))}
         </dl>
@@ -278,24 +280,21 @@ export function BanBreakdown({
   data: Array<Count & { percentage: number }>;
 }) {
   return (
-    <section
-      aria-labelledby="ban-breakdown"
-      className="flex min-w-0 flex-col justify-center gap-6 px-1 py-4 sm:px-6"
-    >
-      <div className="space-y-1">
+    <Card className="min-w-0" aria-labelledby="ban-breakdown">
+      <CardHeader>
         <h3 id="ban-breakdown" className="text-base font-medium">
           Ban status
         </h3>
-        <p className="text-sm text-muted-foreground">
+        <CardDescription>
           Share of this user page. Unknown is counted separately.
-        </p>
-      </div>
-      <div className="space-y-6">
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col justify-center gap-6">
         {data.map((row) => (
           <div key={row.label} className="space-y-2">
             <div className="flex items-center justify-between gap-4 text-sm">
               <span>{row.label}</span>
-              <span className="tabular-nums text-muted-foreground">
+              <span className="shrink-0 whitespace-nowrap tabular-nums text-muted-foreground">
                 {row.count} · {Math.round(row.percentage)}%
               </span>
             </div>
@@ -305,7 +304,7 @@ export function BanBreakdown({
             />
           </div>
         ))}
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   );
 }

@@ -6,7 +6,7 @@ import {
   BanBreakdown,
   DailyActivity,
 } from './charts';
-import { ArrowUpRight, RefreshCw } from 'lucide-react';
+import { ArrowUpRight, RefreshCw, MoreHorizontal } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -14,6 +14,7 @@ import {
   CardTitle,
   CardDescription,
   CardFooter,
+  CardAction,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,26 +30,30 @@ import {
 import { Blank, Failure, Loading } from '@/components/feedback/states';
 import { Timestamp } from '@/components/timestamp';
 import { ActionDetails } from '@/features/history/details';
+import { PageHeader } from '@/components/page-header';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import { useDashboard } from './hooks';
 
 export function DashboardPage() {
   const m = useDashboard();
   return (
-    <section className="space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="max-w-prose space-y-2">
-          <h1>Dashboard</h1>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            A snapshot of the first 20 users and 20 recent audit records. These
-            charts describe the loaded pages, not global totals or growth.
-          </p>
-        </div>
-        <Button variant="outline" disabled={m.refreshing} onClick={m.refresh}>
-          <RefreshCw className={m.refreshing ? 'animate-spin' : ''} />
-          {m.refreshing ? 'Refreshing snapshot…' : 'Refresh snapshot'}
-        </Button>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <section className="min-w-0 space-y-6">
+      <PageHeader
+        title="Dashboard"
+        description="A snapshot of the first 20 users and 20 recent audit records. These charts describe the loaded pages, not global totals or growth."
+        actions={
+          <Button variant="outline" disabled={m.refreshing} onClick={m.refresh}>
+            <RefreshCw className={m.refreshing ? 'animate-spin' : ''} />
+            {m.refreshing ? 'Refreshing snapshot…' : 'Refresh snapshot'}
+          </Button>
+        }
+      />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[
           {
             title: 'Users loaded',
@@ -75,9 +80,27 @@ export function DashboardPage() {
             href: '/history',
           },
         ].map((metric) => (
-          <Card key={metric.title}>
+          <Card key={metric.title} className="min-w-0">
             <CardHeader>
-              <CardDescription>{metric.title}</CardDescription>
+              <CardDescription className="min-w-0">
+                {metric.title}
+              </CardDescription>
+              <CardAction>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={<Button variant="ghost" size="icon-sm" />}
+                    aria-label={`Actions for ${metric.title}`}
+                  >
+                    <MoreHorizontal />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem render={<Link to={metric.href} />}>
+                      View{' '}
+                      {metric.href === '/users' ? 'users' : 'action history'}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </CardAction>
               <CardTitle className="text-3xl tabular-nums">
                 {metric.value ?? '—'}
               </CardTitle>
@@ -175,9 +198,13 @@ export function DashboardPage() {
         ) : (
           m.users.summary && (
             <>
-              <div className="grid gap-4 lg:grid-cols-2">
-                <ConfirmationChart data={m.users.summary.confirmation} />
-                <BanBreakdown data={m.users.summary.bans} />
+              <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-7">
+                <div className="min-w-0 lg:col-span-4 [&>div]:h-full">
+                  <ConfirmationChart data={m.users.summary.confirmation} />
+                </div>
+                <div className="min-w-0 lg:col-span-3 [&>div]:h-full">
+                  <BanBreakdown data={m.users.summary.bans} />
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">
                 Last loaded:{' '}
@@ -228,12 +255,16 @@ export function DashboardPage() {
         ) : (
           m.audit.summary && (
             <>
-              <div className="grid gap-4 lg:grid-cols-2">
-                <OutcomeChart
-                  data={m.audit.summary.outcomes}
-                  unresolved={m.audit.summary.unresolved}
-                />
-                <ActivityChart data={m.audit.summary.actions} />
+              <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-7">
+                <div className="min-w-0 lg:col-span-3 [&>div]:h-full">
+                  <OutcomeChart
+                    data={m.audit.summary.outcomes}
+                    unresolved={m.audit.summary.unresolved}
+                  />
+                </div>
+                <div className="min-w-0 lg:col-span-4 [&>div]:h-full">
+                  <ActivityChart data={m.audit.summary.actions} />
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">
                 Last loaded:{' '}
@@ -266,8 +297,8 @@ export function DashboardPage() {
                 <TableRow>
                   <TableHead>Action</TableHead>
                   <TableHead>Outcome</TableHead>
-                  <TableHead className="hidden sm:table-cell">Target</TableHead>
-                  <TableHead className="hidden sm:table-cell">
+                  <TableHead className="hidden lg:table-cell">Target</TableHead>
+                  <TableHead className="hidden lg:table-cell">
                     Created
                   </TableHead>
                   <TableHead className="w-16 text-right">Actions</TableHead>
@@ -276,7 +307,7 @@ export function DashboardPage() {
               <TableBody>
                 {m.audit.data.entries.slice(0, 5).map((entry) => (
                   <TableRow key={entry.id}>
-                    <TableCell className="capitalize font-medium">
+                    <TableCell className="whitespace-nowrap capitalize font-medium">
                       {entry.action}
                     </TableCell>
                     <TableCell>
@@ -294,7 +325,7 @@ export function DashboardPage() {
                         </p>
                       )}
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell">
+                    <TableCell className="hidden lg:table-cell">
                       <span
                         title={entry.targetId ?? undefined}
                         className="font-mono text-xs"
@@ -304,7 +335,7 @@ export function DashboardPage() {
                           : 'Not known'}
                       </span>
                     </TableCell>
-                    <TableCell className="hidden whitespace-normal sm:table-cell">
+                    <TableCell className="hidden whitespace-normal lg:table-cell">
                       <Timestamp value={entry.createdAt} compact />
                     </TableCell>
                     <TableCell className="text-right">
