@@ -286,7 +286,7 @@ export function UserDetailsPage() {
 export function CreateUserPage() {
   const m = useCreateUser();
   return (
-    <section className="max-w-2xl space-y-6">
+    <section className="min-w-0 space-y-6">
       <Link
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
         to="/users"
@@ -294,131 +294,156 @@ export function CreateUserPage() {
         <ArrowLeft className="size-4" />
         Return to users
       </Link>
-      <div className="space-y-2">
-        <h1>Create a global user</h1>
-        <p className="text-muted-foreground">
-          Both policies create an account without sending an invitation or
-          confirmation email.
-        </p>
-      </div>
-      {m.result ? (
-        <>
-          <Success title="Account creation confirmed">
-            Audit ID: <CopyId value={m.result.auditId} label="audit ID" />
-          </Success>
-          <UserInformation user={m.result.user} />
-          <div className="flex flex-wrap gap-2">
-            <Button
-              nativeButton={false}
-              render={<Link to={`/users/${m.result.user.id}`} />}
-            >
-              Open account
-            </Button>
-            <Button variant="outline" onClick={m.newAccount}>
-              Create another user
-            </Button>
-          </div>
-        </>
-      ) : (
-        <Card>
-          <CardHeader className="border-b">
-            <CardTitle>
-              <h2>New account details</h2>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form noValidate onSubmit={m.submit}>
-              <FieldGroup>
-                <TextField
-                  id="create-email"
-                  label="Email"
-                  type="email"
-                  autoComplete="off"
-                  registration={m.form.register('email')}
-                  error={m.form.formState.errors.email?.message}
-                  disabled={m.pending || m.blocked}
-                />
-                <PasswordField
-                  id="create-password"
-                  label="Password"
-                  registration={m.form.register('password')}
-                  error={m.form.formState.errors.password?.message}
-                  visible={m.visible}
-                  toggle={m.toggle}
-                  newPassword
-                  disabled={m.pending || m.blocked}
-                />
-                <Controller
-                  control={m.form.control}
-                  name="confirmation"
-                  render={({ field, fieldState }) => (
-                    <FieldSet>
-                      <FieldLegend>Confirmation policy</FieldLegend>
-                      <FieldDescription id="policy-help">
-                        Operator confirmation bypasses email ownership
-                        verification.
-                      </FieldDescription>
-                      <RadioGroup
-                        name={field.name}
-                        value={field.value ?? ''}
-                        onValueChange={field.onChange}
-                        onBlur={field.onBlur}
-                        disabled={m.pending || m.blocked}
-                        aria-labelledby="policy-label"
-                        aria-describedby="policy-help policy-error"
-                      >
-                        <span id="policy-label" className="sr-only">
-                          Confirmation policy
-                        </span>
-                        <Field orientation="horizontal">
-                          <RadioGroupItem
-                            id="require-verification"
-                            value="require_verification"
-                            inputRef={field.ref}
-                          />
-                          <FieldLabel htmlFor="require-verification">
-                            Require verification
-                          </FieldLabel>
-                        </Field>
-                        <FieldDescription>
-                          This account remains unconfirmed and cannot complete
-                          normal verified login until a supported verification
-                          flow is available. No email is sent.
-                        </FieldDescription>
-                        <Field orientation="horizontal">
-                          <RadioGroupItem
-                            id="operator-confirmed"
-                            value="operator_confirmed"
-                          />
-                          <FieldLabel htmlFor="operator-confirmed">
-                            Operator confirmed
-                          </FieldLabel>
-                        </Field>
-                        <FieldDescription>
-                          Explicitly bypass email ownership verification. No
-                          email is sent.
-                        </FieldDescription>
-                      </RadioGroup>
-                      {fieldState.error && (
-                        <FieldError id="policy-error">
-                          {fieldState.error.message}
-                        </FieldError>
+      <PageHeader
+        title="Create a global user"
+        description="Both policies create an account without sending an invitation or confirmation email."
+      />
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-7">
+        <div className="min-w-0 lg:col-span-4">
+          {m.result ? (
+            <>
+              <Success title="Account creation confirmed">
+                Audit ID: <CopyId value={m.result.auditId} label="audit ID" />
+              </Success>
+              <UserInformation user={m.result.user} />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  nativeButton={false}
+                  render={<Link to={`/users/${m.result.user.id}`} />}
+                >
+                  Open account
+                </Button>
+                <Button variant="outline" onClick={m.newAccount}>
+                  Create another user
+                </Button>
+              </div>
+            </>
+          ) : (
+            <Card>
+              <CardHeader className="border-b">
+                <CardTitle>
+                  <h2>New account details</h2>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form noValidate onSubmit={m.submit}>
+                  <FieldGroup>
+                    <TextField
+                      id="create-email"
+                      label="Email"
+                      type="email"
+                      autoComplete="off"
+                      registration={m.form.register('email')}
+                      error={m.form.formState.errors.email?.message}
+                      disabled={m.pending || m.blocked}
+                    />
+                    <PasswordField
+                      id="create-password"
+                      label="Password"
+                      registration={m.form.register('password')}
+                      error={m.form.formState.errors.password?.message}
+                      visible={m.visible}
+                      toggle={m.toggle}
+                      newPassword
+                      disabled={m.pending || m.blocked}
+                    />
+                    <Controller
+                      control={m.form.control}
+                      name="confirmation"
+                      render={({ field, fieldState }) => (
+                        <FieldSet>
+                          <FieldLegend>Confirmation policy</FieldLegend>
+                          <FieldDescription id="policy-help">
+                            Operator confirmation bypasses email ownership
+                            verification.
+                          </FieldDescription>
+                          <RadioGroup
+                            className="gap-4"
+                            name={field.name}
+                            value={field.value ?? ''}
+                            onValueChange={field.onChange}
+                            onBlur={field.onBlur}
+                            disabled={m.pending || m.blocked}
+                            aria-labelledby="policy-label"
+                            aria-describedby="policy-help policy-error"
+                          >
+                            <span id="policy-label" className="sr-only">
+                              Confirmation policy
+                            </span>
+                            <Field orientation="horizontal">
+                              <RadioGroupItem
+                                id="require-verification"
+                                value="require_verification"
+                                inputRef={field.ref}
+                              />
+                              <FieldLabel htmlFor="require-verification">
+                                Require verification
+                              </FieldLabel>
+                            </Field>
+                            <FieldDescription>
+                              This account remains unconfirmed and cannot
+                              complete normal verified login until a supported
+                              verification flow is available. No email is sent.
+                            </FieldDescription>
+                            <Field orientation="horizontal">
+                              <RadioGroupItem
+                                id="operator-confirmed"
+                                value="operator_confirmed"
+                              />
+                              <FieldLabel htmlFor="operator-confirmed">
+                                Operator confirmed
+                              </FieldLabel>
+                            </Field>
+                            <FieldDescription>
+                              Explicitly bypass email ownership verification. No
+                              email is sent.
+                            </FieldDescription>
+                          </RadioGroup>
+                          {fieldState.error && (
+                            <FieldError id="policy-error">
+                              {fieldState.error.message}
+                            </FieldError>
+                          )}
+                        </FieldSet>
                       )}
-                    </FieldSet>
-                  )}
-                />
-                {m.error && <Failure error={m.error} />}
-                <Submit
-                  pending={m.pending}
-                  disabled={m.blocked}
-                  label="Create user"
-                  progress="Creating user…"
-                />
-              </FieldGroup>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+                    />
+                    {m.error && <Failure error={m.error} />}
+                    <Submit
+                      pending={m.pending}
+                      disabled={m.blocked}
+                      label="Create user"
+                      progress="Creating user…"
+                    />
+                  </FieldGroup>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+        <aside className="min-w-0 lg:col-span-3">
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <h2>Shared identity</h2>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Global accounts are shared across applications. Choose the
+                confirmation policy explicitly; operator confirmation bypasses
+                email ownership verification.
+              </p>
+              <Button
+                nativeButton={false}
+                variant="outline"
+                render={<Link to="/users" />}
+              >
+                Browse existing users
+              </Button>
+            </CardContent>
+          </Card>
+        </aside>
+      </div>
     </section>
   );
 }
