@@ -12,6 +12,10 @@ Copy this folder's `.env.example` to `.env`, replace every placeholder, generate
 
 Run `pnpm dev` from the root in the foreground. Stop with Ctrl+C. Production runs compiled JavaScript with `pnpm --filter @auth/gotrue-admin-api start`; set HOST to the container bind address, HTTPS same-site frontend origins, and TRUST_PROXY to the actual Caddy IP/subnet. No production deployment is included.
 
+## Local management verification
+
+The manual `pnpm exec tsx scripts/verify-local-management.ts` walkthrough passed on 2026-10-01 against existing PostgreSQL and pinned GoTrue. It uses disposable accounts and a temporary process-only allowlist/deletion flag; it never edits real operator configuration or runs setup SQL. It verifies operator authorization, safe bounded list/details, both creation modes without invitation email, ban duration and existing-token rejection, unban, permanent deletion, audit/session restart persistence, two-instance last-operator protection, eligibility removal and logout. It removes disposable identities and retains durable audit history. Restricted-role verification remains pending because the configured connection is still privileged.
+
 ## First local operator
 
 The setup command uses built-in Windows PowerShell (`powershell.exe`); PowerShell 7 (`pwsh`) is not required. Its execution-policy override applies only to this command's process and does not change the machine policy.

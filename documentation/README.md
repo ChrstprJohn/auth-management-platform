@@ -1,6 +1,6 @@
 # Project Documentation
 
-Start here. Build the GoTrue operator dashboard first, then the developer auth platform. The operator backend, including recovery, is implemented with isolated tests and a separate pinned GoTrue/Mailpit recovery probe; the local PostgreSQL recovery gateway flow is verified; broader management verification remains pending. Documented design decisions are not delivery completion.
+Start here. Build the GoTrue operator dashboard first, then the developer auth platform. The operator backend, including recovery, is implemented with isolated tests and a separate pinned GoTrue/Mailpit recovery probe; the local PostgreSQL recovery gateway flow is verified; the controlled local management walkthrough also passed, including persistence and two-instance last-operator protection. Documented design decisions are not delivery completion.
 
 ## Where to make changes
 

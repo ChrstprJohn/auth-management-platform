@@ -6,6 +6,14 @@ Prerequisites: a user-provisioned PostgreSQL database, schema owner, and restric
 
 ## Initialization versus upgrade
 
+### Local restricted runtime role
+
+The read-only local privilege check on 2026-10-01 found the currently configured API connection was a superuser/database owner with schema CREATE permission. The user subsequently reported executing runtime-role setup; a repeat check still found the configured API connection privileged. Switching `ADMIN_DATABASE_URL` to the restricted role and verifying its application permissions remain pending. Credentials were not modified by the agent. Endpoint verification under the privileged role does not prove least-privilege operation.
+
+For a new role named `admin_api_runtime`, execute `local-runtime-role.sql` once as an administrator/owner connected to `admin_local_db`, after public schema baseline 0003 exists. This is environment setup, not a schema migration; it is intentionally separate from `schema.sql` and the migration ledger. The script refuses the wrong database/missing tables and fails if the role already exists, rolling back the transaction. It creates a cluster-wide role without a password or privileged capabilities, grants only the needed owned-table operations and schema USAGE, sets the local search path, and revokes schema CREATE from PUBLIC in the admin database. The PUBLIC change affects other roles relying on implicit CREATE in this admin schema; it does not change other databases. It does not change database/table ownership or modify application data.
+
+Set a strong role password through your database client's role/password UI, then change only the username/password portion of `ADMIN_DATABASE_URL` in the ignored backend `.env` to this role (URL-encode special characters), preserving the host, port and database. Restart the API. Never save the password into the prepared SQL file or commit it. Do not repeat CREATE ROLE after setup has succeeded. Existing roles require a reviewed adjustment to their actual memberships/ownership; production setup is separate. No runtime-role setup has been executed by the agent. A subsequent read-only privilege check and endpoint walkthrough must confirm restricted operation.
+
 For an empty database, execute current `schema.sql` once and record baseline 0003. Alternatively execute migrations 0001, 0002, then 0003 once. Do not execute both approaches. For an existing database at 0001, execute migrations 0002 then 0003; at 0002, execute only `migrations/0003_operator_recovery.sql`. The API never executes schema or migration files, including at startup or in tests.
 
 | Migration                               | Change                                                      | Execution status                               |

@@ -11,6 +11,10 @@ Implementation checks are marked only after verification. Decision checks below 
 - [x] Define exact recovery and later user-management/audit contracts, including pagination limits.
 - [ ] Verify GoTrue recovery, creation/confirmation/email behavior, ban duration, and permanent deletion against the pinned version.
 
+## Latest local backend evidence
+
+On 2026-10-01, `scripts/verify-local-management.ts` passed against existing PostgreSQL and pinned GoTrue using disposable accounts. It verified operator login/me, wrong-password and ordinary-account rejection, bounded safe pagination/details, both creation modes without email, duplicate handling, ban duration and existing-access-token rejection during ban, unban, permanent deletion/not-found, audit/session persistence through gateway reconstruction, two-instance destructive contention and last-usable-operator rejection, eligibility removal, and logout. The real allowlist and credentials were unchanged; accounts were removed and audit history retained. This used the configured privileged database role; restricted-role operation, natural ban/session/OTP expiry walkthroughs, UI and production deployment remain unverified. Route extraction preserved endpoint contracts and all 76 isolated tests pass. Earlier phase evidence below records the checks available at that phase.
+
 ## Login and session
 
 Initial implementation evidence (2026-10-01): workspace/backend build and 14 isolated configuration/HTTP tests pass for auth boundaries, expiry, encryption, CSRF, rate limits, logout, production-cookie attributes and readiness failure. No SQL was executed. Delivery boxes below stay unchecked until controlled live PostgreSQL/GoTrue walkthroughs establish them. See [backend setup](../../apps/gotrue-admin-api/README.md).
@@ -19,8 +23,8 @@ Second phase evidence: 48 isolated tests now cover user-list/details contracts, 
 
 Recovery implementation evidence (2026-10-01): 76 isolated tests pass across the backend, including separate recovery cookies, generic responses, Origin/CSRF, encrypted material, expiry, identity binding, replay/concurrent claims, session invalidation ordering, ambiguous outcomes and mocked transaction failures. A disposable-account pinned GoTrue/Mailpit walkthrough verified email, PKCE exchange/state preservation, code replay/invalid-link rejection, password change and old/new password/token effects. After the user reported migration 0003 applied and GoTrue restarted, the complete gateway/PostgreSQL recovery flow passed: context survived gateway restart, concurrent reset produced one 204 and one 400, old dashboard session/password failed, and new-password login/logout worked. Readiness returned 200 ready. These probes applied no schema SQL and removed their accounts/mail. A real wait-until-OTP-expiry check and frontend reset page remain pending; broader V1 management/security delivery remains separate work.
 
-- [ ] Eligible operator can sign in and retrieve current ID/email.
-- [ ] Wrong credentials return a safe error; valid ordinary accounts receive no operator session.
+- [x] Eligible operator can sign in and retrieve current ID/email.
+- [x] Wrong credentials return a safe error; valid ordinary accounts receive no operator session.
 - [ ] Every protected endpoint rejects absent/invalid/expired sessions and rechecks operator eligibility.
 - [ ] Removing eligibility blocks subsequent protected requests; platform credentials cannot substitute for operator sessions.
 - [ ] Logout invalidates the dashboard session and clears its cookie; refresh and expiry match the documented policy.
@@ -35,9 +39,9 @@ Recovery implementation evidence (2026-10-01): 76 isolated tests pass across the
 
 ## Browse users
 
-- [ ] List uses bounded upstream pagination and supports navigation without implying global search.
+- [x] List uses bounded upstream pagination and supports navigation without implying global search.
 - [ ] List shows safe account fields with loading, empty, and error states.
-- [ ] Details show verification, creation, available last-sign-in, and ban information accurately.
+- [x] Details show verification, creation, available last-sign-in, and ban information accurately.
 - [ ] Missing/deleted users show not-found; unavailable fields are represented honestly.
 
 ## Create users
@@ -45,36 +49,36 @@ Recovery implementation evidence (2026-10-01): 76 isolated tests pass across the
 - [ ] Email/password and explicit confirmation policy are validated on the backend.
 - [ ] Operator-confirmed creation clearly explains bypassing email verification.
 - [ ] Duplicate and upstream failures produce safe errors; UI prevents repeated pending submissions.
-- [ ] Creation returns safe account details and records an audit outcome.
+- [x] Creation returns safe account details and records an audit outcome.
 - [ ] UI accurately explains whether email was sent; account creation is not labeled as an invitation.
 
 ## Ban and unban
 
 - [ ] Ban requires confirmation, explains global impact, and validates the agreed duration policy.
-- [ ] Ban/unban refresh account status and record outcomes.
+- [x] Ban/unban refresh account status and record outcomes.
 - [ ] Existing-token/session effects and ban expiry are accurately documented and tested.
 
 ## Delete
 
 - [ ] Confirmation identifies the target and explicitly explains permanent global identity deletion.
-- [ ] The supported deletion operation matches the promised permanent behavior.
+- [x] The supported deletion operation matches the promised permanent behavior.
 - [ ] Successful deletion updates the list and records the outcome; ambiguous failure is not blindly retried.
 - [ ] Platform-reference reconciliation is defined before enabling deletion against production platform users.
 
 ## Last-operator protection
 
-- [ ] Backend rejects banning/deleting the last usable operator, including direct API calls.
-- [ ] Check uses existing eligible identities and their login/ban state, not just allowlist length.
-- [ ] Concurrent mutations cannot bypass protection; unknown eligibility fails closed.
+- [x] Backend rejects banning/deleting the last usable operator, including direct API calls.
+- [x] Check uses existing eligible identities and their login/ban state, not just allowlist length.
+- [x] Concurrent mutations cannot bypass protection; unknown eligibility fails closed.
 - [ ] Another usable operator permits the target operation; out-of-band recovery is documented.
 
 ## Health and history
 
 - [ ] Health distinguishes API liveness from reachable/unreachable GoTrue and exposes safe version information.
 - [ ] Timeouts are clear; health is not presented as proof of working email/database/login flows.
-- [ ] Operators can browse a bounded/paginated recent history of create/ban/unban/delete attempts.
-- [ ] History includes actor, target, action, outcome, time, and request ID without credentials.
-- [ ] Audit survives restart and distinguishes completed, failed, and unknown/partial outcomes.
+- [x] Operators can browse a bounded/paginated recent history of create/ban/unban/delete attempts.
+- [x] History includes actor, target, action, outcome, time, and request ID without credentials.
+- [x] Audit survives restart and distinguishes completed, failed, and unknown/partial outcomes.
 - [ ] Audit persistence failure follows the documented policy and never claims an applied GoTrue change rolled back.
 
 ## Security and reliability
@@ -87,7 +91,7 @@ Recovery implementation evidence (2026-10-01): 76 isolated tests pass across the
 
 ## End-to-end completion
 
-- [ ] Controlled local test account completes create, list/details, ban/unban, delete, and history walkthrough.
+- [x] Controlled local test account completes create, list/details, ban/unban, delete, and history walkthrough.
 - [ ] Operator recovery, expiry, logout, ordinary-account rejection, and last-operator protection pass.
 - [ ] Admin API deploys independently behind VM Caddy; frontend deploys on Vercel and calls only our API.
 - [ ] Production browser cookies/origins and real recovery email delivery are verified before launch.
