@@ -22,7 +22,9 @@ function start(): void {
       void close().then(
         () => {
           clearTimeout(timer);
-          process.exit(0);
+          // Let Node finish closing native handles after HTTP and pg drain.
+          // Forcing exit here can interrupt Windows handle cleanup.
+          process.exitCode = 0;
         },
         () => process.exit(1),
       );

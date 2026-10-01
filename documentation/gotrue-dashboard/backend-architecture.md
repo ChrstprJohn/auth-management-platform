@@ -63,6 +63,8 @@ The example assumes bound arrow handlers and separate validation/error handling.
 
 Feature-specific `*.routes.ts` factories receive controllers and middleware explicitly and own route registration, body parsing, and feature rate limits. `app.ts` wires dependencies, installs global middleware, mounts these routers, and installs final error handlers. Shared rate-limit response handling lives in `middleware/rate-limit.ts`. Recovery has its own module and router, mounted alongside operator authentication under `/v1/operator/auth`.
 
+On SIGINT/SIGTERM, `server.ts` stops accepting HTTP connections, waits for active requests, and closes the PostgreSQL pool. Successful cleanup sets the exit status and lets Node close remaining native handles naturally. A ten-second deadline closes remaining connections and forces a failure exit; repeated signals do not start duplicate cleanup.
+
 ## Folder structure
 
 ```text

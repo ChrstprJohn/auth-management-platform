@@ -69,6 +69,16 @@ function check(condition: boolean, label: string): asserts condition {
   if (!condition) throw new LocalManagementCheckError(label);
 }
 class LocalManagementCheckError extends Error {}
+// Exercise persisted expiry quickly without changing the configured session policy.
+class ShortSessionGoTrue extends GoTrueClient {
+  override async passwordLogin(email: string, selectedPassword: string) {
+    const session = await super.passwordLogin(email, selectedPassword);
+    return {
+      ...session,
+      expiresAt: Math.min(session.expiresAt, Date.now() + 2000),
+    };
+  }
+}
 function cookie(response: { headers: Record<string, unknown> }): string {
   const value = z
     .array(z.string())
@@ -148,6 +158,71 @@ try {
     'Configured UUID alone is insufficient proof',
   );
   const b = await login(second);
+  const expiryResource = createApp(config, {
+    upstream: new ShortSessionGoTrue(local.baseUrl, 5000),
+  });
+  resources.push(expiryResource);
+  const shortLogin = await request(expiryResource.app)
+    .post('/v1/operator/auth/login')
+    .set('Origin', origin)
+    .set('X-CSRF-Protection', '1')
+    .send({ email: first.email, password });
+  check(shortLogin.status === 200, 'Short upstream expiry login');
+  const expiredCookie = cookie(shortLogin);
+  sessions.push({ resource: expiryResource, cookie: expiredCookie });
+  const expiry = z
+    .object({ expiresAt: z.iso.datetime() })
+    .parse(shortLogin.body);
+  check(
+    (
+      await request(expiryResource.app)
+        .get('/v1/operator/auth/me')
+        .set('Cookie', expiredCookie)
+    ).status === 200,
+    'Persisted short session initially valid',
+  );
+  await closeResource(expiryResource);
+  await new Promise((resolve) =>
+    setTimeout(
+      resolve,
+      Math.max(0, Date.parse(expiry.expiresAt) - Date.now()) + 100,
+    ),
+  );
+  const protectedRoutes = [
+    { method: 'get', path: '/v1/operator/auth/me' },
+    { method: 'get', path: '/v1/operator/health' },
+    { method: 'get', path: '/v1/operator/audit' },
+    { method: 'get', path: '/v1/operator/users' },
+    { method: 'get', path: `/v1/operator/users/${first.id}` },
+    { method: 'post', path: '/v1/operator/users' },
+    { method: 'post', path: `/v1/operator/users/${first.id}/ban` },
+    { method: 'post', path: `/v1/operator/users/${first.id}/unban` },
+    { method: 'delete', path: `/v1/operator/users/${first.id}` },
+  ] as const;
+  for (const route of protectedRoutes) {
+    for (const session of ['', 'operator_session=invalid', expiredCookie]) {
+      const endpoint = request(resource.app);
+      const operation =
+        route.method === 'get'
+          ? endpoint.get(route.path)
+          : route.method === 'post'
+            ? endpoint.post(route.path)
+            : endpoint.delete(route.path);
+      const response = await operation
+        .set('Origin', origin)
+        .set('X-CSRF-Protection', '1')
+        .set('Cookie', session)
+        .send(route.method === 'get' ? undefined : {});
+      check(
+        response.status === 401,
+        'Protected endpoint rejects absent invalid expired session',
+      );
+      check(
+        response.body.error.code === 'AUTHENTICATION_REQUIRED',
+        'Safe expired-session error',
+      );
+    }
+  }
   const health = await request(resource.app)
     .get('/v1/operator/health')
     .set('Cookie', a);
@@ -482,6 +557,8 @@ try {
       auditAndSessionsSurviveRestart: true,
       twoInstanceLastOperatorProtection: true,
       eligibilityAndLogoutVerified: true,
+      persistedShortSessionExpiry: true,
+      everyProtectedRouteRejectsInvalidSessions: true,
     }),
   );
 } catch (error: unknown) {

@@ -18,6 +18,8 @@ The manual `pnpm exec tsx scripts/verify-local-management.ts` walkthrough passed
 
 ## First local operator
 
+The management probe also verifies persisted session expiry with a test-only two-second cap on the returned upstream lifetime. It checks that the session works before expiry, then that every protected route rejects absent, malformed and expired cookies through another gateway. The production one-hour policy is unchanged. The compiled server's registered SIGTERM handler was verified in a temporary foreground process on port 3101 after readiness, exiting successfully and leaving no listener. Successful shutdown lets Node finish native-handle cleanup rather than forcing an immediate exit.
+
 The setup command uses built-in Windows PowerShell (`powershell.exe`); PowerShell 7 (`pwsh`) is not required. Its execution-policy override applies only to this command's process and does not change the machine policy.
 
 With local GoTrue/Mailpit running, run `pnpm operator:setup` from the repository root in your own PowerShell terminal. It opens a Windows setup dialog with pasteable email and masked password fields (Ctrl+V or right-click Paste), submits the supported signup flow, then waits while you verify the email at `http://localhost:8025`. After clicking OK, it validates password login/identity and saves the verified UUID in `OPERATOR_UUID_ALLOWLIST`, preserving existing configured operators and other `.env` values. You do not need to copy or manually enter the UUID. It does not save the password, display tokens, apply SQL or provision databases/roles. Restart the API afterward. For console prompts instead, run `pnpm operator:setup -Terminal`.
