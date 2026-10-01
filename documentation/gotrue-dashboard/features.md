@@ -1,43 +1,101 @@
-# GoTrue Dashboard — Basic V1
+# GoTrue Dashboard — Basic V1 Features
 
-Build first. Apps: `gotrue-admin-api` (Express/TypeScript on VM) and `gotrue-admin-web` (Vercel). See [shared architecture](../architecture-and-deployment.md).
+Agreed product scope; not an implementation report. Build `gotrue-admin-api` and `gotrue-admin-web` first. See [backend architecture](backend-architecture.md), [tech stack](tech-stack.md), and [shared deployment](../architecture-and-deployment.md).
 
-## Purpose and authority
+## What this dashboard manages
 
-Give the platform operator a visual interface for the existing shared GoTrue. The browser calls the admin API; that backend calls GoTrue's private API. It does not manage developer projects or expose upstream admin credentials.
+A trusted operator manages global accounts in the shared GoTrue identity pool. The browser calls our backend, which calls private GoTrue. V1 does not manage Docker containers, server environment settings, or developer projects. Accounts share one identity pool: bans and deletion can affect every application using that identity.
 
-Operator login uses GoTrue identity plus a server-controlled allowlist of trusted user UUIDs. No public registration or client-editable role can grant operator access. Use a protected operator session, logout, and recovery through the supported auth flow. Provision the initial operator deliberately.
+Operator eligibility comes from a server-controlled allowlist of GoTrue UUIDs. Valid login credentials alone do not grant operator access. No public dashboard signup or editable profile field can grant this permission. Provision the first operator through a trusted setup procedure.
 
-## Features
+## 1. Operator login, account, and logout
 
-| Feature | Required behavior |
-|---|---|
-| Operator login/current account/logout | Authenticate identity and check operator eligibility on protected requests; logout invalidates the session |
-| Password recovery | Deliver a working recovery message through the admin gateway and restrict redirects; never display reset tokens |
-| Health | Show reachable/unreachable auth status and safe version information; distinguish service health from database/email readiness |
-| User list | Paginated global users; email search supported through the adapter where available; loading, empty, and error states |
-| User details | ID, email, verification state, creation time, available last login, and ban status; no password hashes or credential tokens |
-| Create user | Validate email/password and confirmation policy, call supported GoTrue admin operation, and explain whether email is actually sent |
-| Ban/unban | Explicit confirmation for ban; document existing-token behavior rather than claiming instant universal revocation |
-| Delete user | Destructive confirmation and audit record; explain global impact and possible remaining application references |
-| Action history | Record operator, target UUID, action, outcome, timestamp, request ID; simple operator-visible recent history |
+- Sign in with the operator's GoTrue email/password.
+- Reject ordinary accounts even when their password is correct.
+- Show the signed-in operator's ID and email through a current-account endpoint.
+- Authenticate the session and check current operator eligibility on every protected request.
+- Handle session expiry with a clear sign-in requirement; define refresh behavior before implementation.
+- Logout invalidates the dashboard session and clears its cookie. Document the scope of any upstream logout separately.
 
-Search must not imply searching only the currently displayed page. If the pinned upstream cannot support it, implement a bounded/documented approach or ship pagination without claiming global search.
+## 2. Operator password recovery
 
-Deletion is permanent identity administration, not project removal. While platform data exists, warn about developer workspaces and memberships; do not silently cascade into platform tables. Define reconciliation for deleted/banned identities before enabling deletion against production platform users.
+- Provide a forgot-password flow with a generic response that does not reveal whether an email belongs to an operator.
+- Deliver recovery email to Mailpit locally and the configured email provider in production.
+- Allow only trusted recovery destinations and use expiring, purpose-bound recovery context.
+- Let the account owner set a new password through GoTrue's supported recovery flow; invalid/expired links show a safe error.
+- Require an ordinary operator login after reset. Recovery must never grant operator eligibility or a management session by itself.
+- Do not expose recovery tokens in history, logs, or ordinary API responses. Define the effect on existing sessions before implementation.
 
-## Backend and data
+## 3. Paginated user list
 
-Use protected `/v1/operator/auth/*` and `/v1/operator/users` route groups plus minimal health. Define exact methods/payloads during implementation. Every user mutation rechecks operator authority; unrestricted GoTrue passthrough is not allowed.
+- Browse global GoTrue accounts with bounded page size and next/previous navigation where supported.
+- Show ID, email, verification status, creation time, and ban status when available.
+- Show loading, no-users, and retryable error states; a failed request must not look like an empty database.
+- Open a selected account's details. Search is deferred; do not present page filtering as global search.
 
-GoTrue owns `auth_db`. Initially use server configuration for operator eligibility and a durable protected audit sink; no separate password database is needed. Share the server-only GoTrue adapter with the platform API. API secrets and configuration are separate per backend.
+## 4. User details
 
-## Complete V1 means
+- Show UUID, email, email-confirmation state, creation time, and available last-sign-in and ban information.
+- Show unavailable fields honestly; do not invent dates or treat missing data as confirmed/unbanned.
+- Provide create/ban/unban/delete entry points where appropriate; a missing/deleted user gets a clear not-found state.
+- Never show password hashes, access/refresh tokens, recovery tokens, or privileged credentials.
 
-An eligible operator logs in, browses users, inspects one, creates a test identity, bans/unbans it, and deletes it with recorded outcomes. Non-operators fail. Recovery and session expiry work. The Vercel UI operates against the deployed VM API without direct GoTrue access from its code.
+## 5. Create a user
+
+- Accept and validate email, password, and an explicit confirmation policy.
+- Support an account requiring email verification or deliberate operator-confirmed creation through the supported upstream operation.
+- State that operator confirmation bypasses email ownership verification; it must be an explicit choice.
+- Show duplicate/invalid-input errors safely and prevent repeated submission while the request is pending.
+- Show the new user's safe details and record the management action.
+- Creating an account is not an invitation. Verify and document whether the selected operation actually sends email; never display an email-sent message unless that is supported and confirmed.
+
+## 6. Ban and unban a user
+
+- Require explicit confirmation before banning and explain the shared-account impact.
+- Define a bounded V1 ban-duration policy and validate it against pinned GoTrue before implementation; do not claim an indefinite ban unless supported.
+- Restore access through the supported unban operation and reload the user's status.
+- Show whether a ban is active and its expiry when upstream supplies it.
+- Record both successful and failed management attempts. Explain the actual effect on existing tokens/sessions; do not claim instant universal revocation.
+
+## 7. Delete a user
+
+- Show the target ID/email and require explicit permanent-deletion confirmation.
+- Explain that this removes the global identity, rather than removing membership from one project.
+- Verify the pinned upstream deletion mode supports the intended permanent behavior; do not silently substitute soft deletion.
+- On confirmed success, remove the user from the visible list and record the result without credentials.
+- Keep application-owned references separate. Define reconciliation before enabling deletion against production identities with platform data; never silently cascade into platform tables.
+
+## 8. Protect the last operator
+
+- Reject ban/delete requests that would remove the last usable configured operator; enforce this on the backend, not only by disabling buttons.
+- Define usable as an eligible identity that exists, is not actively banned, and satisfies the configured login policy. Presence of a UUID in configuration alone is insufficient.
+- Handle concurrent actions so two requests cannot both remove the final usable operator; fail closed when eligibility cannot be established.
+- Explain a rejected action clearly. This protects dashboard operations; out-of-band GoTrue/configuration changes still require a trusted recovery procedure.
+
+## 9. Basic GoTrue health
+
+- Show reachable/unreachable status and safe upstream version information.
+- Distinguish API liveness from upstream readiness. A health response alone does not establish that login, the database, or email delivery works.
+- Show timeout/unavailable states without exposing connection strings or internal credentials.
+
+## 10. Recent management action history
+
+- Show recent user creation, ban, unban, and deletion attempts with pagination or a bounded recent view.
+- Record actor UUID, target UUID where known, action, outcome, timestamp, and request ID.
+- Keep records durable across API restarts and restrict viewing to eligible operators.
+- Distinguish success, failure, and unknown/partial outcomes. GoTrue mutation and audit storage are not one transaction; define intent/completion records and reconciliation before implementation.
+- Never record passwords, cookies, tokens, or raw upstream payloads. Operational Pino logs are separate from this history.
+
+## Required foundations
+
+Secure operator sessions, constructor-injected class-based layers, server-side input validation, exact browser origins, CSRF protection for cookie-authenticated mutations, request/body limits, safe errors and logging, bounded Axios timeouts, and durable audit persistence. No unrestricted GoTrue passthrough or direct access to GoTrue tables.
+
+Planned route groups remain `/v1/operator/auth/*`, `/v1/operator/users`, operator audit history, and minimal health. Final methods/payloads, storage, session lifecycle, and recovery callbacks are documented before their implementation.
 
 ## Deferred
 
-Editing GoTrue environment settings, Docker/service controls, bulk import/export, advanced analytics, arbitrary credential inspection, and full session/device administration.
+Global email search until upstream support is assessed; editing user email/password/metadata; invitation and resend-verification workflows; bulk operations; full session/device administration; operator-role management UI; analytics; provider/environment settings; Docker restart/log controls; developer/project management.
 
-Use the [checklist](checklist.md) for delivery.
+## Complete V1
+
+An eligible operator signs in, browses accounts, opens details, creates a controlled test account, bans/unbans it, deletes it, and sees durable action outcomes. Recovery, logout, expiry, ordinary-account rejection, and last-operator protection work. The frontend communicates only with our API. See [specific delivery checks](checklist.md).
