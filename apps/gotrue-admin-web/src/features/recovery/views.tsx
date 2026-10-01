@@ -11,6 +11,11 @@ export function ForgotPasswordPage() {
   return (
     <AuthLayout
       title="Recover your password"
+      navigation={
+        <Link to="/login" className="block text-center text-sm underline">
+          Return to sign in
+        </Link>
+      }
       description={
         <>
           Request recovery here, then open the newest email in this same
@@ -59,9 +64,6 @@ export function ForgotPasswordPage() {
           </FieldGroup>
         </form>
       )}
-      <Link to="/login" className="block text-center text-sm underline">
-        Return to sign in
-      </Link>
     </AuthLayout>
   );
 }
@@ -70,6 +72,24 @@ export function ResetPasswordPage() {
   return (
     <AuthLayout
       title="Set a new password"
+      navigation={
+        <div className="flex flex-col gap-2">
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<Link to="/login" />}
+          >
+            Return to sign in
+          </Button>
+          <Button
+            nativeButton={false}
+            variant="outline"
+            render={<Link to="/forgot-password" />}
+          >
+            Request a fresh recovery email
+          </Button>
+        </div>
+      }
       description={
         <>
           Open your newest recovery email in this browser first. Recovery is
@@ -116,22 +136,6 @@ export function ResetPasswordPage() {
           </FieldGroup>
         </form>
       )}
-      <div className="flex flex-col gap-2">
-        <Button
-          variant="outline"
-          nativeButton={false}
-          render={<Link to="/login" />}
-        >
-          Return to sign in
-        </Button>
-        <Button
-          nativeButton={false}
-          variant="outline"
-          render={<Link to="/forgot-password" />}
-        >
-          Request a fresh recovery email
-        </Button>
-      </div>
     </AuthLayout>
   );
 }
