@@ -1,6 +1,10 @@
 # Operator frontend delivery checklist
 
-Status: documentation is prepared; frontend implementation has not started. Checked documentation decisions do not mean working UI. Mark implementation items only after the behavior is built and verified, recording its tests/browser evidence and phase commit.
+Status: frontend implementation is in progress. Checked documentation decisions do not mean working UI. Mark implementation items only after the behavior is built and verified, recording its tests/browser evidence and phase commit.
+
+## Phase evidence
+
+Foundation (2026-10-01): Vite 7.3.6/React 19.3.0 with strict browser TypeScript, Tailwind 4.3.3 and official shadcn 4.21.0 Base UI `base-nova` generation. Package versions are pinned. Frontend typecheck, repository lint, static build and 11 API-boundary tests passed. Tests establish cookie/CSRF/DELETE configuration, 204 handling, response stripping/validation, safe partial metadata, network uncertainty/no retry, health 503 handling and public-origin validation. React Hooks lint rules and separate browser tests are integrated into root checks. Setup is documented in `apps/gotrue-admin-web/README.md`. No database, infrastructure or deployment actions occurred. Screen/browser verification remains pending. Phase commit: `feat(web): establish Vite and safe operator API foundation` (resolve by title in Git history).
 
 [Requirements](frontend-requirements.md) owns features and endpoint usage; [architecture](frontend-architecture.md) owns the stack and hook/view boundaries; [implementation plan](frontend-implementation-plan.md) owns phases; [API reference](api.md) owns contracts. The [product checklist](checklist.md) tracks overall V1/backend/production delivery.
 
@@ -15,11 +19,11 @@ Status: documentation is prepared; frontend implementation has not started. Chec
 
 ## Foundation and navigation
 
-- [ ] Vite React SPA works in the pnpm workspace with compatible pinned dependencies and strict TypeScript.
+- [x] Vite React SPA works in the pnpm workspace with compatible pinned dependencies and strict TypeScript.
 - [ ] Tailwind and generated shadcn controls share consistent default tokens and interaction states.
 - [ ] Component-map controls, including Field/Empty/Spinner/Input Group, are used where appropriate with consistent current primitive APIs.
-- [ ] Public API configuration is validated/documented; no secrets or backend environment imports reach the frontend.
-- [ ] Shared Axios requests implement cookies, exact CSRF/body fields, bounded timeout, cancellation and safe response validation.
+- [x] Public API configuration is validated/documented; no secrets or backend environment imports reach the frontend.
+- [x] Shared Axios requests implement cookies, exact CSRF/body fields, bounded timeout, cancellation and safe response validation.
 - [ ] Public login/recovery and protected Users/create/details/History/Status/Account routes work on navigation/reload.
 - [ ] Unknown routes have a useful not-found screen; navigation works on desktop/mobile and by keyboard.
 - [ ] Views only render presentation and bind hook callbacks; business/request/effect/form/navigation behavior lives in hooks or shared boundaries.

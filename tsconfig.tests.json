@@ -5,6 +5,7 @@
     "declaration": false,
     "noEmit": true
   },
+  "exclude": ["apps/gotrue-admin-web"],
   "include": [
     "apps/**/*.test.ts",
     "packages/**/*.test.ts",
