@@ -10,6 +10,7 @@ import { GoTrueAdminClient } from '@auth/gotrue-client';
 import { createApp } from '../apps/gotrue-admin-api/src/app.js';
 import { loadConfig } from '../apps/gotrue-admin-api/src/config/env.js';
 import { localOperatorConfig } from './local-operator.js';
+import { assertMailpitCapture } from './mailpit-capture.js';
 import { mutationSchema } from '../apps/gotrue-admin-web/src/lib/api/schemas.js';
 
 // Manual foreground browser verification. --live uses only disposable identities
@@ -17,6 +18,7 @@ import { mutationSchema } from '../apps/gotrue-admin-web/src/lib/api/schemas.js'
 const live = process.argv.includes('--live');
 const recoveryOnly = process.argv.includes('--recovery-only');
 const layoutReview = process.argv.includes('--layout-review');
+const createReview = process.argv.includes('--create-review');
 const uiReview = process.argv
   .find((argument) => argument.startsWith('--ui-review='))
   ?.split('=')[1];
@@ -31,7 +33,7 @@ const base = `http://localhost:${reviewPort}`;
 const apiBase = 'http://localhost:3101';
 const output = fileURLToPath(
   new URL(
-    `../artifacts/web-review/${uiReview ? `${layoutReview ? 'layout' : 'polish'}-${uiReview}/` : ''}`,
+    `../artifacts/web-review/${uiReview ? `${createReview ? 'create' : layoutReview ? 'layout' : 'polish'}-${uiReview}/` : ''}`,
     import.meta.url,
   ),
 );
@@ -112,6 +114,8 @@ async function screenshot(page: Page, name: string) {
 }
 async function fixtureReview(page: Page) {
   let scenario = 'data';
+  let createCalls = 0;
+  let releaseCreation: (() => void) | undefined;
   await page.route(`${apiBase}/**`, async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -141,6 +145,34 @@ async function fixtureReview(page: Page) {
           requestId: fixtureId,
         };
       } else body = fixtureSession;
+    } else if (path === '/v1/operator/users' && request.method() === 'POST') {
+      createCalls++;
+      check(
+        request.headers()['x-csrf-protection'] === '1',
+        'Creation includes CSRF header',
+      );
+      if (scenario === 'create-pending')
+        await new Promise<void>((resolve) => {
+          releaseCreation = resolve;
+        });
+      if (scenario === 'create-unknown') {
+        status = 503;
+        body = {
+          error: { code: 'UPSTREAM_OUTCOME_UNKNOWN', message: 'Fixture' },
+          requestId: fixtureId,
+          auditId: fixtureId,
+          outcome: 'unknown',
+        };
+      } else {
+        status = 201;
+        body = {
+          user: {
+            ...fixtureUser,
+            email: `${'long-'.repeat(20)}address@example.test`,
+          },
+          auditId: fixtureId,
+        };
+      }
     } else if (path === '/v1/operator/users') {
       if (scenario === 'error') {
         status = 503;
@@ -224,6 +256,194 @@ async function fixtureReview(page: Page) {
     });
   });
   await mkdir(output, { recursive: true });
+  if (createReview) {
+    const dialog = page.getByRole('dialog', { name: 'Create a global user' });
+    const trigger = page.getByRole('button', {
+      name: 'Create user',
+      exact: true,
+    });
+    for (const width of [1440, 390, 320]) {
+      stage = `create dialog ${width} form and keyboard`;
+      await page.setViewportSize({
+        width,
+        height: width === 1440 ? 1000 : 844,
+      });
+      await navigate(page, '/users?page=3&perPage=50', 'Users');
+      await page.getByRole('table').waitFor();
+      await trigger.focus();
+      await page.keyboard.press('Enter');
+      await dialog.waitFor();
+      await page.evaluate(() => document.fonts.ready);
+      check(
+        new URL(page.url()).search === '?page=3&perPage=50',
+        'Modal preserves pagination URL',
+      );
+      check(
+        await dialog
+          .getByLabel('Email', { exact: true })
+          .evaluate((element) => element === document.activeElement),
+        'Dialog initially focuses email',
+      );
+      check(
+        await dialog.evaluate((element) => {
+          const bounds = element.getBoundingClientRect();
+          return (
+            bounds.top >= 0 &&
+            bounds.bottom <= innerHeight &&
+            element.scrollWidth <= element.clientWidth + 1
+          );
+        }),
+        'Dialog fits viewport and long content',
+      );
+      await screenshot(page, `${width}-create-form`);
+      await dialog
+        .getByRole('button', { name: 'Create user', exact: true })
+        .click();
+      await dialog
+        .getByText('Enter a valid email address.', { exact: true })
+        .waitFor();
+      check(
+        await dialog
+          .getByLabel('Email', { exact: true })
+          .evaluate((element) => element === document.activeElement),
+        'First invalid field focused',
+      );
+      await screenshot(page, `${width}-create-invalid`);
+      await dialog.getByRole('button', { name: 'Cancel' }).focus();
+      await page.keyboard.press('Tab');
+      check(
+        await dialog.evaluate((element) =>
+          element.contains(document.activeElement),
+        ),
+        'Forward Tab stays in dialog',
+      );
+      await dialog.getByLabel('Email', { exact: true }).focus();
+      await page.keyboard.press('Shift+Tab');
+      check(
+        await dialog.evaluate((element) =>
+          element.contains(document.activeElement),
+        ),
+        'Backward Tab stays in dialog',
+      );
+      await page.keyboard.press('Escape');
+      await dialog.waitFor({ state: 'detached' });
+      check(
+        await trigger.evaluate((element) => element === document.activeElement),
+        'Escape returns focus to trigger',
+      );
+      await trigger.click();
+      await dialog.waitFor();
+      await page
+        .locator('[data-slot="dialog-overlay"]')
+        .click({ position: { x: 2, y: 2 } });
+      await dialog.waitFor({ state: 'detached' });
+      scenario = 'create-pending';
+      await trigger.click();
+      await dialog.getByLabel('Email', { exact: true }).fill(fixtureUser.email);
+      await dialog
+        .getByLabel('Password', { exact: true })
+        .fill('fixture-password');
+      await dialog
+        .getByRole('radio', { name: 'Operator confirmed', exact: true })
+        .click();
+      await dialog
+        .getByRole('button', { name: 'Create user', exact: true })
+        .click();
+      await dialog.getByRole('button', { name: /Creating user/ }).waitFor();
+      check(
+        await dialog.getByRole('button', { name: 'Cancel' }).isDisabled(),
+        'Pending cancel disabled',
+      );
+      check(
+        (await dialog.getByLabel('Password', { exact: true }).inputValue()) ===
+          '',
+        'Pending password cleared',
+      );
+      await page.keyboard.press('Escape');
+      await page
+        .locator('[data-slot="dialog-overlay"]')
+        .click({ position: { x: 2, y: 2 } });
+      check(await dialog.isVisible(), 'Pending Escape/backdrop cannot close');
+      check(
+        createCalls === [1440, 390, 320].indexOf(width) + 1,
+        'One create request per explicit submit',
+      );
+      releaseCreation?.();
+      await dialog.getByText('Account creation confirmed').waitFor();
+      check(
+        await dialog.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth + 1,
+        ),
+        'Long success email wraps',
+      );
+      await dialog
+        .getByRole('button', { name: 'Close', exact: true })
+        .scrollIntoViewIfNeeded();
+      await screenshot(page, `${width}-create-success`);
+      await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+      await dialog.waitFor({ state: 'detached' });
+      await trigger.click();
+      await dialog.getByText('Account creation confirmed').waitFor();
+      await dialog.getByRole('button', { name: 'Create another user' }).click();
+      check(
+        (await dialog.getByLabel('Password', { exact: true }).inputValue()) ===
+          '',
+        'Intentional another clears password',
+      );
+      await page.keyboard.press('Escape');
+      await dialog.waitFor({ state: 'detached' });
+      scenario = 'data';
+    }
+    stage = 'legacy create redirect and unknown navigation';
+    await navigate(
+      page,
+      '/users/new?page=2&perPage=50',
+      'Create a global user',
+    );
+    check(
+      new URL(page.url()).pathname === '/users' &&
+        new URL(page.url()).search === '?page=2&perPage=50',
+      'Legacy redirect preserves pagination',
+    );
+    scenario = 'create-unknown';
+    await dialog.getByLabel('Email', { exact: true }).fill(fixtureUser.email);
+    await dialog
+      .getByLabel('Password', { exact: true })
+      .fill('fixture-password');
+    await dialog
+      .getByRole('radio', { name: 'Require verification', exact: true })
+      .click();
+    await dialog
+      .getByRole('button', { name: 'Create user', exact: true })
+      .click();
+    await dialog.getByRole('alert').waitFor();
+    await screenshot(page, '320-create-unknown');
+    await dialog.getByRole('link', { name: 'Inspect action history' }).click();
+    await heading(page, 'Action history');
+    await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
+    await page.getByRole('link', { name: 'Users', exact: true }).click();
+    await heading(page, 'Users');
+    await trigger.click();
+    check(
+      await dialog
+        .getByRole('button', { name: 'Create user', exact: true })
+        .isDisabled(),
+      'Unknown stays blocked after navigation',
+    );
+    await page.keyboard.press('Escape');
+    await dialog.waitFor({ state: 'detached' });
+    await navigate(page, '/forgot-password', 'Recover your password');
+    check(
+      (await page
+        .getByRole('link', { name: 'Mailpit', exact: true })
+        .count()) === 0,
+      'Recovery copy is provider-neutral',
+    );
+    console.log(
+      'Create-dialog fixture review passed at 1440/390/320px: keyboard/focus trap and return, Escape/backdrop, pending protection, password cleanup, long success, legacy redirect and uncertainty across navigation. No email or infrastructure used.',
+    );
+    return;
+  }
   await page.setViewportSize({ width: 1440, height: 1000 });
   if (uiReview === 'before') {
     for (const name of ['login-03', 'sidebar-07']) {
@@ -376,7 +596,10 @@ async function fixtureReview(page: Page) {
   stage = 'fixture keyboard and read states';
   await page.setViewportSize({ width: 1440, height: 1000 });
   await navigate(page, '/users/new', 'Create a global user');
-  await page.getByRole('button', { name: 'Create user', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Create a global user' })
+    .getByRole('button', { name: 'Create user', exact: true })
+    .click();
   await page
     .getByText('Enter a valid email address.', { exact: true })
     .waitFor();
@@ -497,6 +720,7 @@ async function fixtureReview(page: Page) {
   );
 }
 async function liveReview(page: Page) {
+  assertMailpitCapture();
   stage = 'load loopback-only configuration';
   const environment = await readFile(
     new URL('../apps/gotrue-admin-api/.env', import.meta.url),
@@ -587,6 +811,7 @@ async function liveReview(page: Page) {
           response.request().method() === 'POST',
       );
       await page
+        .getByRole('dialog', { name: 'Create a global user' })
         .getByRole('button', { name: 'Create user', exact: true })
         .click();
       stage = 'live create response';

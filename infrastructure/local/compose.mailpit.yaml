@@ -1,0 +1,13 @@
+# Explicit credential-free capture mode; never a fallback for provider failures.
+# User runs with: docker compose -f compose.yaml -f compose.mailpit.yaml --profile mailpit up -d
+services:
+  gotrue:
+    environment:
+      GOTRUE_SMTP_HOST: mailpit
+      GOTRUE_SMTP_PORT: "1025"
+      GOTRUE_SMTP_USER: ""
+      GOTRUE_SMTP_PASS: ""
+      GOTRUE_SMTP_ADMIN_EMAIL: auth@local.test
+      GOTRUE_SMTP_SENDER_NAME: Local Auth
+    depends_on:
+      - mailpit

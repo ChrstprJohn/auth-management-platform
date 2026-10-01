@@ -3,8 +3,10 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { parseEnv } from 'node:util';
 import { z } from 'zod';
 import { localOperatorConfig } from './local-operator.js';
+import { assertMailpitCapture } from './mailpit-capture.js';
 
 // This walkthrough calls supported local GoTrue/Mailpit APIs only. No SQL.
+assertMailpitCapture();
 const environment = readFileSync(
   new URL('../apps/gotrue-admin-api/.env', import.meta.url),
   'utf8',

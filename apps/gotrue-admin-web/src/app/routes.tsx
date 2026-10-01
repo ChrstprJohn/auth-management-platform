@@ -16,7 +16,7 @@ import { UserActionsProvider } from '@/features/users/actions';
 import {
   UsersPage,
   UserDetailsPage,
-  CreateUserPage,
+  LegacyCreateUserRoute,
 } from '@/features/users/views';
 import {
   ForgotPasswordPage,
@@ -44,7 +44,7 @@ export function AppRoutes() {
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/status" element={<StatusPage />} />
           <Route path="/users" element={<UsersPage />} />
-          <Route path="/users/new" element={<CreateUserPage />} />
+          <Route path="/users/new" element={<LegacyCreateUserRoute />} />
           <Route path="/users/:id" element={<UserDetailsPage />} />
         </Route>
         <Route

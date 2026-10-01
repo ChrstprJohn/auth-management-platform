@@ -12,19 +12,20 @@ The frontend calls `gotrue-admin-api`. It never holds a GoTrue admin token, data
 
 ## Screens and navigation
 
-The paths below describe desired browser destinations, not a selected routing library. Protected screens share navigation to Users, Action history, Service status and Current account, plus Logout. Users is the default destination after sign-in; no invented analytics overview is required.
+React Router destinations are listed below. Creation opens a Users dialog; `/users/new` redirects to Users and opens it, preserving pagination. Current verification and final SMTP setup belong in [GoTrue status](status.md). Protected screens share navigation to Dashboard, Users, Action history, Service status and Current account, plus Logout. Users is the default destination after sign-in. Dashboard uses bounded snapshots.
 
-| Screen          | Suggested browser path              | Required content                                                                   |
-| --------------- | ----------------------------------- | ---------------------------------------------------------------------------------- |
-| Sign in         | `/login`                            | Email/password form, safe failures, link to password recovery                      |
-| Forgot password | `/forgot-password`                  | Email form, generic acknowledgement, same-browser instructions                     |
-| Reset password  | `/reset-password`                   | New password and confirmation, expired/invalid context guidance, return to sign-in |
-| Users           | `/users`                            | Paginated safe account table, create action, detail links                          |
-| User details    | `/users/:id`                        | Account information and confirmation flows for ban, unban and permanent deletion   |
-| Create user     | `/users/new` or a dialog from Users | Email, password and explicit confirmation-policy choice                            |
-| Action history  | `/history`                          | Paginated durable management attempts, outcomes and safe support identifiers       |
-| Service status  | `/status`                           | API liveness, dependency readiness and protected GoTrue version/reachability       |
-| Current account | `/account` or an account panel      | Signed-in operator UUID/email, session expiry and Logout                           |
+| Screen          | Browser path         | Required content                                                                   |
+| --------------- | -------------------- | ---------------------------------------------------------------------------------- |
+| Sign in         | `/login`             | Email/password form, safe failures, link to password recovery                      |
+| Forgot password | `/forgot-password`   | Email form, generic acknowledgement, same-browser instructions                     |
+| Reset password  | `/reset-password`    | New password and confirmation, expired/invalid context guidance, return to sign-in |
+| Dashboard       | `/dashboard`         | Bounded user/audit snapshots, charts, recent attempts and health signals           |
+| Users           | `/users`             | Paginated safe account table, create action, detail links                          |
+| User details    | `/users/:id`         | Account information and confirmation flows for ban, unban and permanent deletion   |
+| Create user     | Dialog from `/users` | Email/password/explicit policy; `/users/new` compatibility redirect                |
+| Action history  | `/history`           | Paginated durable management attempts, outcomes and safe support identifiers       |
+| Service status  | `/status`            | API liveness, dependency readiness and protected GoTrue version/reachability       |
+| Current account | `/account`           | Signed-in operator UUID/email, session expiry and Logout                           |
 
 ## Complete endpoint coverage
 
@@ -60,7 +61,7 @@ Every current backend endpoint has a frontend use below. A recovery callback is 
 
 ## Password recovery
 
-1. Request recovery from the configured frontend origin and preserve cookies. Display the generic acknowledgement with instructions to open the newest email in the same browser/profile. Locally Mailpit is at `http://localhost:8025`; make any development shortcut clearly local-only.
+1. Request recovery from the configured frontend origin and preserve cookies. Display the generic acknowledgement with instructions to open the newest email in the same browser/profile. Guidance is provider-neutral, including on localhost. Explicit Mailpit capture setup and final Resend setup live in [local infrastructure](../../infrastructure/local/README.md).
 2. The browser follows the email link to GoTrue, which redirects to the backend callback. The backend performs PKCE exchange and redirects to `RECOVERY_RESET_URL`, locally `http://localhost:5173/reset-password`. Ordinary application API requests continue to go only to our API; the email verification navigation is part of GoTrue's recovery flow.
 3. Present new-password and confirmation inputs. Compare confirmation locally and send only `{password}`; there is no confirmation field in the API contract. Apply the referenced new-password limits and explain them before submission.
 4. Successful reset returns 204. Clear frontend session data, explain that normal sign-in is required and link to `/login`. Do not automatically log in or grant operator access.
@@ -81,7 +82,11 @@ Use page 1 initially and backend pagination limits/defaults from the API referen
 
 Require email/password and a deliberate choice between `require_verification` and `operator_confirmed`. Explain that operator confirmation bypasses email ownership verification. Both options create an account without sending an invitation/confirmation email; an unconfirmed account remains unable to complete normal verified login until a supported verification flow exists. Do not add resend/invite buttons.
 
-Validate input using the API's limits, keep server validation authoritative, disable submission while pending, and show duplicate/invalid input errors. On success show the safe created account and refresh the list. Do not display or retain the submitted password in the result/history.
+Open the shadcn Dialog from the Users header or empty-state action, keeping the current table/page/pagination behind it. The breadcrumb remains Users. Provide an accessible title/description, focus trap, first-invalid-field focus and return to the initiating button (or header action for legacy navigation). Long content scrolls within the mobile viewport.
+
+Validate using API limits, keep server validation authoritative and show duplicate/rate-limit/dependency failures. During submission, disable Cancel and repeat submission and block Escape/backdrop dismissal. Explain that navigating away does not cancel or undo creation. Clear the password when the request starts, after completion, on idle close and on route/session loss; reset visibility too.
+
+Creation state lives above routes for the current session. Pending and uncertain/partial outcomes stay blocked through close/reopen/navigation with safe audit/request IDs and read-only history inspection. Closing a confirmed result retains it; only an intentional Create another user action resets the successful form/policy. Success shows safe details, offers Open account and refreshes Users/history/dashboard reads. Session loss clears this state and rejects stale responses. Never retain a password in result/history or claim email delivery.
 
 ### Ban and unban
 

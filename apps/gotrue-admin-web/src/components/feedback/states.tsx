@@ -70,11 +70,13 @@ export function Blank({
   description,
   href = '/users',
   action = 'Return to users',
+  actionElement,
 }: {
   title: string;
   description: string;
   href?: string;
   action?: string;
+  actionElement?: React.ReactNode;
 }) {
   return (
     <Empty>
@@ -85,9 +87,11 @@ export function Blank({
         <EmptyDescription>{description}</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button nativeButton={false} render={<Link to={href} />}>
-          {action}
-        </Button>
+        {actionElement ?? (
+          <Button nativeButton={false} render={<Link to={href} />}>
+            {action}
+          </Button>
+        )}
       </EmptyContent>
     </Empty>
   );

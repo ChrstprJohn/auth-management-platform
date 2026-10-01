@@ -1,10 +1,10 @@
 # Create-user modal and Resend implementation goal
 
-Status: prepared for a future implementation chat. This document does not activate implementation or establish verified delivery.
+Status: active goal. Credential-independent implementation and verification completed on 2026-10-02; final sender/key setup, user-operated restart and authorized live delivery/recovery checks remain pending. Read [GoTrue status](status.md) for evidence and limits. Keep this goal until those required live steps finish.
 
-The current local mail service is Mailpit. The requested replacement is Resend through GoTrue's existing SMTP integration. Resend's [official SMTP instructions](https://resend.com/docs/send-with-smtp) describe the provider settings and verified-domain/API-key prerequisites; verify these again during implementation.
+Resend is prepared as a hosted provider through GoTrue's existing SMTP integration. Current ignored environment values are preserved; no provider is activated by the template. Follow [final SMTP setup](../../infrastructure/local/README.md#final-setup-checklist-user-operated-after-independent-checks) for prerequisites, exact variables and user-operated commands.
 
-Copy the following prompt into a later chat at the repository root:
+Retained implementation instructions for continuing this goal at the repository root:
 
 ```text
 Create an active goal to implement the create-user modal and prepare Resend email delivery in this repository. Complete all code, configuration templates, documentation and credential-independent verification first. Leave real environment values, credentials, provider activation and live delivery verification until the final setup phase with me.

@@ -7,8 +7,10 @@ import { GoTrueRecoveryClient } from '@auth/gotrue-client';
 import { createApp } from '../apps/gotrue-admin-api/src/app.js';
 import { loadConfig } from '../apps/gotrue-admin-api/src/config/env.js';
 import { localOperatorConfig } from './local-operator.js';
+import { assertMailpitCapture } from './mailpit-capture.js';
 
 // Manual API walkthrough only: no DDL, migrations, seeds or infrastructure startup.
+assertMailpitCapture();
 const environment = readFileSync(
   new URL('../apps/gotrue-admin-api/.env', import.meta.url),
   'utf8',

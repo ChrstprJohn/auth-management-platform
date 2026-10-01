@@ -71,7 +71,7 @@ GoTrue proves identity; backend records supply authority. Operator eligibility i
 
 ## Local development and browser connections
 
-Reuse the existing local PostgreSQL server with local GoTrue/Mailpit. Container names, pinned versions, database setup, commands, and verification notes live in the [local infrastructure README](../infrastructure/local/README.md). Use a real email provider on the VM later; create platform data/credentials when the platform phase begins.
+Reuse the existing local PostgreSQL server with GoTrue and its configured SMTP provider. Hosted Resend preparation, explicit Mailpit capture mode, pinned versions, setup, user-operated commands and verification limits live in the [local infrastructure README](../infrastructure/local/README.md). VM provider activation remains separate work; create platform data/credentials when the platform phase begins.
 
 Use separate host ports for the APIs, e.g. admin 3100 and platform 3200. Containers resolve service names; host processes use local ports. Local data/secrets do not synchronize automatically to production.
 

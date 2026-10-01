@@ -19,6 +19,7 @@ const forbiddenImports = [
   'SESSION_ENCRYPTION_KEY',
   'GoTrueAdminClient',
   'OPERATOR_UUID_ALLOWLIST',
+  'GOTRUE_SMTP_PASS',
 ];
 let safe = forbiddenImports.every((marker) => !contents.includes(marker));
 for (const path of [
@@ -34,7 +35,9 @@ for (const path of [
   const values = parseEnv(source);
   for (const [name, value] of Object.entries(values)) {
     if (
-      /TOKEN|SECRET|ENCRYPTION_KEY|DATABASE_URL|PASSWORD/.test(name) &&
+      /TOKEN|SECRET|ENCRYPTION_KEY|DATABASE_URL|PASSWORD|SMTP_PASS/.test(
+        name,
+      ) &&
       value !== undefined &&
       value.length >= 16 &&
       contents.includes(value)

@@ -59,7 +59,9 @@ export function allowVerifiedOperator(
     !identity.email_confirmed_at ||
     !Number.isFinite(Date.parse(identity.email_confirmed_at))
   )
-    throw new LocalSetupError('Verify the account email in Mailpit first.');
+    throw new LocalSetupError(
+      'Verify the account email in your configured mailbox first.',
+    );
   if (
     identity.banned_until &&
     (!Number.isFinite(Date.parse(identity.banned_until)) ||

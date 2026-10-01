@@ -25,7 +25,7 @@ try {
     console.log(
       JSON.stringify({
         message:
-          'Signup submitted. Open Mailpit and verify the email before continuing.',
+          'Signup submitted. Open your configured mailbox and verify the newest email before continuing. This does not confirm delivery.',
       }),
     );
   } else {

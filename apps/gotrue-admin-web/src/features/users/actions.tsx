@@ -11,6 +11,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
+import { UserCreationProvider, useCreateUser } from './creation';
 import type { SafeUser } from '@auth/contracts';
 import { useSession } from '@/app/session';
 import { operatorApi } from '@/lib/api/operator';
@@ -52,8 +53,6 @@ function useActionController() {
   const navigate = useNavigate();
   const [target, setTarget] = useState<Target | null>(null);
   const [open, setOpen] = useState(false);
-  const [creationPending, setCreationPending] = useState(false);
-  const [creationError, setCreationError] = useState<ApiFailure | null>(null);
   const [result, setResult] = useState<{
     auditId: string;
     target: Target;
@@ -93,8 +92,6 @@ function useActionController() {
   const { reset: resetForm } = form;
   useEffect(() => {
     setTarget(null);
-    setCreationPending(false);
-    setCreationError(null);
     setOpen(false);
     setResult(null);
     busy.current = false;
@@ -133,10 +130,6 @@ function useActionController() {
   };
   return {
     target,
-    creationPending,
-    creationError,
-    setCreationPending,
-    setCreationError,
     opener,
     open,
     start,
@@ -165,33 +158,34 @@ function StatefulActions({ children }: { children: ReactNode }) {
   );
 }
 export function UserActionsProvider({ children }: { children: ReactNode }) {
-  return <StatefulActions>{children}</StatefulActions>;
+  return (
+    <UserCreationProvider>
+      <StatefulActions>{children}</StatefulActions>
+    </UserCreationProvider>
+  );
 }
 function useActions() {
   const value = useContext(ActionsContext);
   if (!value) throw new Error('User actions provider is missing.');
   return value;
 }
-export function useCreationSafety() {
-  const m = useActions();
-  return {
-    pending: m.creationPending,
-    error: m.creationError,
-    setPending: m.setCreationPending,
-    setError: m.setCreationError,
-  };
-}
 export function ActionOutcome() {
   const m = useActions();
+  const creation = useCreateUser();
   return (
     <div className="space-y-3 empty:hidden">
-      {m.creationPending && (
+      {!creation.open && creation.pending && (
         <Success title="Account creation pending">
-          The backend may still be creating the account. Navigating away does
-          not cancel it.
+          Navigating away does not cancel account creation.
         </Success>
       )}
-      {m.creationError && <Failure error={m.creationError} />}
+      {!creation.open && creation.error && <Failure error={creation.error} />}
+      {!creation.open && creation.result && (
+        <Success title="Account creation confirmed">
+          User: <CopyId value={creation.result.user.id} label="user UUID" /> ·
+          Audit: <CopyId value={creation.result.auditId} label="audit ID" />
+        </Success>
+      )}
       {m.pending && (
         <Success title="Management action pending">
           The backend may still be applying {m.target?.action}. Navigating away

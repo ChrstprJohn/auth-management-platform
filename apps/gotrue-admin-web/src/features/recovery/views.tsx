@@ -23,20 +23,6 @@ export function ForgotPasswordPage() {
         </>
       }
     >
-      {m.localMail && (
-        <p className="text-sm">
-          For local development, check{' '}
-          <a
-            className="underline"
-            href="http://localhost:8025"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Mailpit
-          </a>{' '}
-          in this browser.
-        </p>
-      )}
       {m.success ? (
         <Success title="Recovery requested">
           If the account can be recovered, a recovery email will be sent. This

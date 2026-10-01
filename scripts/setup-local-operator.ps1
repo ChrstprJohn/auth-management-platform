@@ -125,7 +125,7 @@ function Invoke-OperatorStep {
         $process.StandardInput.Close()
         if (-not $process.WaitForExit(15000)) {
             Stop-OperatorWorker -Process $process
-            Write-Host 'Setup timed out. The signup may already exist; inspect Mailpit before trying again.'
+            Write-Host 'Setup timed out. The signup may already exist; inspect your configured mailbox before trying again.'
             return $false
         }
         $output = $outputTask.GetAwaiter().GetResult()
@@ -173,7 +173,7 @@ try {
         Write-Host 'Open http://localhost:8025, open your confirmation email, and click its verification link.'
         Write-Host 'The frontend redirect may fail because no frontend exists yet; email confirmation can still have completed.'
         if ($guiMode) {
-            $result = [System.Windows.Forms.MessageBox]::Show('Open http://localhost:8025 and click the verification link in the newest email. Then click OK here to verify login and save your operator UUID automatically. If a link fails, you can still try OK: login checks whether verification already succeeded.', 'Verify email in Mailpit', 'OKCancel')
+            $result = [System.Windows.Forms.MessageBox]::Show('Open your configured recipient mailbox (or http://localhost:8025 only in explicit Mailpit capture mode) and click the verification link in the newest email. Then click OK here to verify login and save your operator UUID automatically. If a link fails, you can still try OK: login checks whether verification already succeeded.', 'Verify account email', 'OKCancel')
             if ($result -ne 'OK') { exit 0 }
         } else {
             [void](Read-Host 'After verifying, press Enter to save your operator UUID')
