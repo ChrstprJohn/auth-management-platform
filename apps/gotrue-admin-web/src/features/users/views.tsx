@@ -50,6 +50,7 @@ import {
 } from '@/components/feedback/states';
 import { banStatus } from '@/lib/format/display';
 import { useUsersPage, useUserDetails, useCreateUser } from './hooks';
+import { UserActions } from './actions';
 
 export function UserInformation({ user }: { user: SafeUser }) {
   return (
@@ -257,6 +258,7 @@ export function UserDetailsPage() {
         m.user && (
           <>
             <UserInformation user={m.user} />
+            <UserActions user={m.user} />
             <Separator />
             <p className="text-sm text-muted-foreground">
               Management actions affect this shared identity across

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useSession } from './session';
 import { useAccount } from '@/features/auth/hooks';
+import { ActionOutcome } from '@/features/users/actions';
 import { Failure, Blank, Loading } from '@/components/feedback/states';
 import { Button } from '@/components/ui/button';
 import {
@@ -147,6 +148,7 @@ function ShellContent() {
           tabIndex={-1}
           className="mx-auto w-full max-w-7xl min-w-0 p-4 md:p-8"
         >
+          <ActionOutcome />
           <Outlet />
         </main>
       </SidebarInset>

@@ -4,6 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { SessionProvider } from '@/app/session';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { createSessionRuntime } from '@/lib/query/runtime';
+import { UserActionsProvider } from '@/features/users/actions';
 
 export const fixtureSession = {
   operator: {
@@ -18,7 +19,9 @@ export function renderApp(view: React.ReactNode, route = '/') {
     <QueryClientProvider client={runtime.client}>
       <SessionProvider runtime={runtime}>
         <TooltipProvider>
-          <MemoryRouter initialEntries={[route]}>{view}</MemoryRouter>
+          <MemoryRouter initialEntries={[route]}>
+            <UserActionsProvider>{view}</UserActionsProvider>
+          </MemoryRouter>
         </TooltipProvider>
       </SessionProvider>
     </QueryClientProvider>,
