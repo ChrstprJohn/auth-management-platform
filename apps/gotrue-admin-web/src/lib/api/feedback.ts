@@ -1,0 +1,52 @@
+import { ApiFailure } from './client';
+
+const messages: Record<string, string> = {
+  AUTHENTICATION_REQUIRED: 'Sign in with valid operator credentials.',
+  ACCESS_DENIED:
+    'Access was denied. Check operator eligibility and use the trusted dashboard origin.',
+  RATE_LIMITED: 'Too many requests. Wait before trying again.',
+  DEPENDENCY_UNAVAILABLE:
+    'A required service is unavailable. Try a read again when service is restored.',
+  NETWORK_ERROR: 'The API could not be reached.',
+  INVALID_RESPONSE: 'The API returned an unexpected response.',
+  INVALID_INPUT: 'The request was rejected. Check the fields and their limits.',
+  USER_EXISTS: 'An account with that email already exists.',
+  USER_NOT_FOUND: 'This account is missing or has already been deleted.',
+  INVALID_RECOVERY:
+    'Recovery is missing, expired, already used or unavailable for this account. Request a fresh email in this browser.',
+  DELETION_DISABLED:
+    'Permanent deletion is disabled by the backend. The account remains available for inspection.',
+  LAST_USABLE_OPERATOR:
+    'The backend refused to remove the last usable operator. Another configured, verified and unbanned operator must sign in first.',
+  MUTATION_IN_PROGRESS:
+    'Another management action is active. Refresh the account and history before deciding what to do next.',
+  RECONCILIATION_REQUIRED:
+    'An earlier operation is unresolved. A trusted administrator must reconcile it before further removal actions.',
+  UPSTREAM_OUTCOME_UNKNOWN:
+    'The action may have applied. Inspect the account and durable history; do not repeat this action.',
+  AUDIT_COMPLETION_FAILED:
+    'The upstream result could not be fully recorded. Inspect the account and history; do not repeat this action.',
+  PASSWORD_RESET_OUTCOME_UNKNOWN:
+    'The password may have changed. Try ordinary sign-in or seek trusted assistance; do not repeat reset.',
+  PASSWORD_RESET_COMPLETION_FAILED:
+    'The password changed, but session cleanup could not be confirmed. Try sign-in or seek trusted assistance; do not repeat reset.',
+  UPSTREAM_REJECTED:
+    'GoTrue rejected this request. Check the account and supplied fields.',
+  SESSION_CHANGED: 'The session changed. Sign in again to continue.',
+};
+export function failureMessage(error: unknown) {
+  if (!(error instanceof ApiFailure))
+    return 'The request could not be completed. Try a read again or seek trusted assistance.';
+  const base =
+    messages[error.code] ??
+    'The request could not be completed. Use the request ID for trusted support.';
+  return error.uncertain &&
+    ![
+      'UPSTREAM_OUTCOME_UNKNOWN',
+      'AUDIT_COMPLETION_FAILED',
+      'PASSWORD_RESET_OUTCOME_UNKNOWN',
+      'PASSWORD_RESET_COMPLETION_FAILED',
+    ].includes(error.code)
+    ? `${base} The action may have applied. Inspect current state before any further attempt.`
+    : base;
+}

@@ -3,6 +3,40 @@
 @import 'shadcn/tailwind.css';
 @import '@fontsource-variable/geist';
 
+@layer base {
+  h1 {
+    @apply text-2xl font-semibold tracking-tight;
+  }
+  h2 {
+    @apply text-lg font-semibold;
+  }
+  a {
+    text-underline-offset: 0.2em;
+  }
+  a:focus-visible {
+    @apply rounded-sm outline-2 outline-offset-4 outline-ring;
+  }
+  ::selection {
+    @apply bg-primary text-primary-foreground;
+  }
+}
+@layer components {
+  .public-form {
+    @apply mx-auto my-12 w-full max-w-md space-y-6 px-5;
+  }
+  .skip-link {
+    @apply fixed left-4 top-4 z-[100] -translate-y-24 rounded-md bg-primary p-3 text-primary-foreground focus:translate-y-0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
