@@ -42,6 +42,7 @@ apps/gotrue-admin-web/
       ui/                # Generated shadcn component source
       feedback/          # Shared loading, empty, failure and result presentation
     features/
+      dashboard/         # Bounded read snapshots, pure summaries and lazy-loaded charts
       auth/              # Login/logout/current account and session hooks/views
       recovery/          # Request/reset hooks/views and form schemas
       users/             # List/detail/create/action hooks/views and schemas

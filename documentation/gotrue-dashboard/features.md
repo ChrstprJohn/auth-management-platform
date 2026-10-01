@@ -90,6 +90,8 @@ Operator eligibility comes from a server-controlled allowlist of GoTrue UUIDs. V
 
 ## Required foundations
 
+The user-requested frontend polish adds a bounded operator dashboard, summary counts and varied charts over existing user/audit pages and health reads. [Frontend requirements](frontend-requirements.md#requested-dashboard-extension-implemented-2026-10-01) owns its sample limits and UI behavior. Global analytics/totals remain deferred; this view does not add aggregation endpoints or change backend contracts.
+
 Secure operator sessions, constructor-injected class-based layers, server-side input validation, exact browser origins, CSRF protection for cookie-authenticated mutations, request/body limits, safe errors and logging, bounded Axios timeouts, and durable audit persistence. No unrestricted GoTrue passthrough or direct access to GoTrue tables.
 
 Planned route groups remain `/v1/operator/auth/*`, `/v1/operator/users`, operator audit history, and minimal health. Final methods/payloads, storage, session lifecycle, and recovery callbacks are documented before their implementation.

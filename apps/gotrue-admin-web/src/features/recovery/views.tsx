@@ -4,16 +4,20 @@ import { Button } from '@/components/ui/button';
 import { TextField, PasswordField } from '@/components/form-fields';
 import { Failure, Success, Submit } from '@/components/feedback/states';
 import { useForgotPassword, useResetPassword } from './hooks';
+import { AuthLayout } from '@/components/auth-layout';
 
 export function ForgotPasswordPage() {
   const m = useForgotPassword();
   return (
-    <section className="public-form">
-      <h1>Recover your password</h1>
-      <p className="text-muted-foreground">
-        Request recovery here, then open the newest email in this same browser.
-        Older emails and another browser cannot complete this flow.
-      </p>
+    <AuthLayout
+      title="Recover your password"
+      description={
+        <>
+          Request recovery here, then open the newest email in this same
+          browser. Older emails and another browser cannot complete this flow.
+        </>
+      }
+    >
       {m.localMail && (
         <p className="text-sm">
           For local development, check{' '}
@@ -55,22 +59,25 @@ export function ForgotPasswordPage() {
           </FieldGroup>
         </form>
       )}
-      <Link to="/login" className="underline">
+      <Link to="/login" className="block text-center text-sm underline">
         Return to sign in
       </Link>
-    </section>
+    </AuthLayout>
   );
 }
 export function ResetPasswordPage() {
   const m = useResetPassword();
   return (
-    <section className="public-form">
-      <h1>Set a new password</h1>
-      <p className="text-muted-foreground">
-        Continue after opening your newest recovery email in this browser.
-        Submitting this form checks the recovery context; opening this page
-        alone does not verify it.
-      </p>
+    <AuthLayout
+      title="Set a new password"
+      description={
+        <>
+          Open your newest recovery email in this browser first. Recovery is
+          checked when you submit this form.
+        </>
+      }
+      footer="A submitted reset can invalidate dashboard sessions even if the password update fails. Recovery never grants operator access."
+    >
       {m.success ? (
         <Success title="Password reset confirmed">
           Your dashboard sessions were cleared. Sign in normally with your new
@@ -109,8 +116,12 @@ export function ResetPasswordPage() {
           </FieldGroup>
         </form>
       )}
-      <div className="flex flex-wrap gap-2">
-        <Button nativeButton={false} render={<Link to="/login" />}>
+      <div className="flex flex-col gap-2">
+        <Button
+          variant="outline"
+          nativeButton={false}
+          render={<Link to="/login" />}
+        >
           Return to sign in
         </Button>
         <Button
@@ -121,10 +132,6 @@ export function ResetPasswordPage() {
           Request a fresh recovery email
         </Button>
       </div>
-      <p className="text-sm text-muted-foreground">
-        A submitted reset can invalidate dashboard sessions even if the password
-        update fails. Recovery never grants operator access.
-      </p>
-    </section>
+    </AuthLayout>
   );
 }

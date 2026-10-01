@@ -120,6 +120,10 @@ Service status distinguishes three results: API liveness, combined GoTrue/admin-
 
 ## Acceptance scenarios
 
+### Requested dashboard extension (implemented, 2026-10-01)
+
+The user requested shadcn analytics during UI polish. Add a protected `/dashboard` view using only existing read contracts: first Users page (20 records), first Audit page (20 records), and the three health signals. Show sample confirmation/ban distributions, audit outcome/action distributions, recent attempts and independent health signals with manual refresh. Label record counts and charts as bounded page snapshots, never global totals, growth rates, unique active users or complete time-series analytics. Keep missing/unknown fields separate, preserve pending/unknown outcomes as unresolved, expose readable count tables alongside charts and distinguish empty/error/refresh states. No backend endpoint, credential, mutation, storage schema or login destination change is required. This requested bounded dashboard supersedes the earlier broad analytics deferral only at this scope; verification is recorded in the frontend checklist. Preview tables use five desktop columns and ellipsis action menus; account pages and read-only action-details dialogs retain full records. The dashboard follows dashboard-01 summary-card and area-chart composition, with daily UTC attempt counts restricted to dates represented by its loaded audit page.
+
 These checks govern delivery; their actual verification scope is recorded in the [frontend checklist](frontend-checklist.md):
 
 1. Restore an eligible session on reload; sign in and inspect UUID/email/expiry; deny ordinary accounts; handle expiry, eligibility loss and logout failure honestly.

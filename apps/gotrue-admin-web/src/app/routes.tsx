@@ -4,6 +4,13 @@ import { LoginPage, AccountPage } from '@/features/auth/views';
 import { Blank } from '@/components/feedback/states';
 import { HistoryPage } from '@/features/history/views';
 import { StatusPage } from '@/features/status/views';
+import { lazy, Suspense } from 'react';
+import { Loading } from '@/components/feedback/states';
+const DashboardPage = lazy(() =>
+  import('@/features/dashboard/views').then((module) => ({
+    default: module.DashboardPage,
+  })),
+);
 import { UserActionsProvider } from '@/features/users/actions';
 import {
   UsersPage,
@@ -25,6 +32,14 @@ export function AppRoutes() {
         <Route element={<ProtectedShell />}>
           <Route index element={<Navigate to="/users" replace />} />
           <Route path="/account" element={<AccountPage />} />
+          <Route
+            path="/dashboard"
+            element={
+              <Suspense fallback={<Loading label="Loading dashboard" />}>
+                <DashboardPage />
+              </Suspense>
+            }
+          />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/status" element={<StatusPage />} />
           <Route path="/users" element={<UsersPage />} />

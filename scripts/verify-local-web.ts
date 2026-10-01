@@ -16,10 +16,23 @@ import { mutationSchema } from '../apps/gotrue-admin-web/src/lib/api/schemas.js'
 // and ordinary application queries; never schema/setup SQL or infrastructure startup.
 const live = process.argv.includes('--live');
 const recoveryOnly = process.argv.includes('--recovery-only');
-const base = 'http://localhost:5173';
+const uiReview = process.argv
+  .find((argument) => argument.startsWith('--ui-review='))
+  ?.split('=')[1];
+if (uiReview && !['before', 'after', 'confirm'].includes(uiReview))
+  throw new Error('Invalid UI review label');
+const reviewPort = process.argv.includes('--review-port=5174') ? 5174 : 5173;
+if (live && reviewPort !== 5173)
+  throw new Error(
+    'Live recovery review uses the configured trusted frontend port',
+  );
+const base = `http://localhost:${reviewPort}`;
 const apiBase = 'http://localhost:3101';
 const output = fileURLToPath(
-  new URL('../artifacts/web-review/', import.meta.url),
+  new URL(
+    `../artifacts/web-review/${uiReview ? `polish-${uiReview}/` : ''}`,
+    import.meta.url,
+  ),
 );
 const fixtureId = '00000000-0000-4000-8000-000000000003';
 const fixtureSession = {
@@ -74,6 +87,24 @@ async function login(page: Page, email: string, password: string) {
   await page.getByRole('table').waitFor();
 }
 async function screenshot(page: Page, name: string) {
+  if (process.argv.includes('--behavior-only')) return;
+  if (
+    process.argv.includes('--table-review') &&
+    ![
+      'desktop-users',
+      'desktop-history',
+      'desktop-dashboard',
+      'mobile-users',
+      'mobile-history',
+      'mobile-dashboard',
+      'mobile-action-details',
+      'desktop-user-actions',
+      'desktop-action-menu',
+      'desktop-action-details',
+      'mobile-action-menu',
+    ].includes(name)
+  )
+    return;
   // Fixture-only captures: no real identities, passwords, cookies or mail links.
   check(!live, 'Screenshots require fixtures');
   await page.screenshot({ path: `${output}/${name}.png`, fullPage: true });
@@ -105,7 +136,26 @@ async function fixtureReview(page: Page) {
         };
       } else
         body = {
-          users: scenario === 'empty' ? [] : [fixtureUser],
+          users:
+            scenario === 'empty'
+              ? []
+              : [
+                  fixtureUser,
+                  {
+                    ...fixtureUser,
+                    id: '00000000-0000-4000-8000-000000000011',
+                    email: 'confirmed@example.test',
+                    emailConfirmedAt: fixtureUser.createdAt,
+                    isBanned: false,
+                  },
+                  {
+                    ...fixtureUser,
+                    id: '00000000-0000-4000-8000-000000000012',
+                    email: 'long-address-for-responsive-review@example.test',
+                    isBanned: true,
+                    bannedUntil: '2026-10-02T08:00:00Z',
+                  },
+                ],
           page: 1,
           perPage: 20,
           hasNextPage: false,
@@ -117,9 +167,9 @@ async function fixtureReview(page: Page) {
             id: `00000000-0000-4000-8000-00000000000${i + 4}`,
             actorId: fixtureId,
             targetId: fixtureId,
-            action: 'ban',
+            action: (['create', 'ban', 'unban', 'delete'] as const)[i] ?? 'ban',
             outcome,
-            createdAt: fixtureUser.createdAt,
+            createdAt: `2026-10-0${i + 1}T08:00:00Z`,
             completedAt: null,
             requestId: fixtureId,
           }),
@@ -152,8 +202,23 @@ async function fixtureReview(page: Page) {
   });
   await mkdir(output, { recursive: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
+  if (uiReview === 'before') {
+    for (const name of ['login-03', 'sidebar-07']) {
+      stage = `official shadcn reference ${name}`;
+      const response = await page.goto(
+        `https://ui.shadcn.com/view/new-york-v4/${name}`,
+      );
+      check(response?.ok() ?? false, 'Official block preview available');
+      await page.evaluate(() => document.fonts.ready);
+      await screenshot(page, `reference-${name}`);
+    }
+  }
   for (const [path, title, name] of [
+    ['/login', 'Operator sign in', 'desktop-login'],
+    ['/forgot-password', 'Recover your password', 'desktop-recovery'],
+    ['/reset-password', 'Set a new password', 'desktop-reset'],
     ['/users', 'Users', 'desktop-users'],
+    ['/dashboard', 'Dashboard', 'desktop-dashboard'],
     ['/users/new', 'Create a global user', 'desktop-create'],
     ['/history', 'Action history', 'desktop-history'],
     ['/status', 'Service status', 'desktop-status'],
@@ -162,10 +227,44 @@ async function fixtureReview(page: Page) {
     stage = `fixture ${name}`;
     await navigate(page, path ?? '', title ?? '');
     await page.locator('[data-slot="skeleton"]').waitFor({ state: 'detached' });
+    if (path === '/dashboard')
+      await page
+        .getByRole('heading', { name: 'Activity by day', exact: true })
+        .waitFor();
     await screenshot(page, name ?? 'fixture');
+    if (path === '/users') {
+      await page
+        .getByRole('button', {
+          name: 'Actions for disposable@example.test',
+          exact: true,
+        })
+        .click();
+      await page.getByRole('menuitem', { name: 'View account' }).waitFor();
+      await screenshot(page, 'desktop-user-actions');
+      await page.getByRole('menuitem', { name: 'View account' }).click();
+      await heading(page, 'Account details');
+    }
+    if (path === '/history') {
+      await page
+        .getByRole('button', {
+          name: 'Actions for action 00000000-0000-4000-8000-000000000004',
+          exact: true,
+        })
+        .click();
+      await page
+        .getByRole('menuitem', { name: 'View details' })
+        .waitFor();
+      await screenshot(page, 'desktop-action-menu');
+      await page.getByRole('menuitem', { name: 'View details' }).click();
+      await page.getByRole('dialog', { name: 'Action details' }).waitFor();
+      await screenshot(page, 'desktop-action-details');
+      await page.keyboard.press('Escape');
+      await page.getByRole('dialog').waitFor({ state: 'detached' });
+    }
   }
   stage = 'fixture desktop detail and dialog';
   await navigate(page, `/users/${fixtureId}`, 'Account details');
+  await screenshot(page, 'desktop-details');
   await page.getByRole('button', { name: 'Ban user', exact: true }).click();
   const dialog = page.getByRole('alertdialog');
   await dialog.waitFor();
@@ -194,14 +293,23 @@ async function fixtureReview(page: Page) {
   stage = 'fixture mobile review';
   await page.setViewportSize({ width: 390, height: 844 });
   for (const [path, title, name] of [
+    ['/login', 'Operator sign in', 'mobile-login'],
     ['/users', 'Users', 'mobile-users'],
+    ['/dashboard', 'Dashboard', 'mobile-dashboard'],
     ['/users/new', 'Create a global user', 'mobile-create'],
     ['/history', 'Action history', 'mobile-history'],
     ['/forgot-password', 'Recover your password', 'mobile-recovery'],
     ['/reset-password', 'Set a new password', 'mobile-reset'],
+    [`/users/${fixtureId}`, 'Account details', 'mobile-details'],
+    ['/account', 'Current account', 'mobile-account'],
+    ['/status', 'Service status', 'mobile-status'],
   ]) {
     await navigate(page, path ?? '', title ?? '');
     await page.locator('[data-slot="skeleton"]').waitFor({ state: 'detached' });
+    if (path === '/dashboard')
+      await page
+        .getByRole('heading', { name: 'Activity by day', exact: true })
+        .waitFor();
     check(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth + 1,
@@ -209,11 +317,41 @@ async function fixtureReview(page: Page) {
       'Page width fits mobile',
     );
     await screenshot(page, name ?? 'mobile');
+    if (path === '/history') {
+      stage = 'fixture mobile action details';
+      await page
+        .getByRole('button', {
+          name: `Actions for action 00000000-0000-4000-8000-000000000004`,
+        })
+        .click();
+      await page
+        .getByRole('menuitem', { name: 'View details' })
+        .waitFor();
+      await screenshot(page, 'mobile-action-menu');
+      await page.getByRole('menuitem', { name: 'View details' }).click();
+      await page.getByRole('dialog', { name: 'Action details' }).waitFor();
+      await screenshot(page, 'mobile-action-details');
+      await page.keyboard.press('Escape');
+      await page.getByRole('dialog').waitFor({ state: 'detached' });
+    }
+    if (path === '/users' || path === '/history' || path === '/dashboard') {
+      check(
+        await page
+          .locator('[data-slot="table-container"]')
+          .evaluateAll((elements) =>
+            elements.every(
+              (element) => element.scrollWidth <= element.clientWidth + 1,
+            ),
+          ),
+        'Preview tables fit without horizontal scrolling',
+      );
+    }
   }
   await navigate(page, '/users', 'Users');
   await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
   await page.getByRole('dialog').waitFor();
   await screenshot(page, 'mobile-navigation');
+  stage = 'fixture mobile sidebar Escape';
   await page.keyboard.press('Escape');
   await page.getByRole('dialog').waitFor({ state: 'detached' });
   stage = 'fixture keyboard and read states';
@@ -585,6 +723,7 @@ try {
   web = await createServer({
     root: fileURLToPath(new URL('../apps/gotrue-admin-web', import.meta.url)),
     logLevel: 'silent',
+    server: { port: reviewPort },
   });
   await web.listen();
   stage = 'isolated browser startup';
@@ -617,6 +756,15 @@ try {
   console.log(
     JSON.stringify({ browserRuntimeErrorTypes: [...runtimeErrorNames] }),
   );
+  if (!live && activePage)
+    console.log(
+      JSON.stringify({
+        dialogCount: await activePage.getByRole('dialog').count(),
+        sidebarOpen: await activePage
+          .locator('[data-mobile="true"][data-open]')
+          .count(),
+      }),
+    );
   if (live && activePage)
     console.log(
       JSON.stringify({
@@ -676,3 +824,4 @@ try {
     'Agent-owned browser and foreground servers closed. Real operator configuration unchanged; durable audit retained.',
   );
 }
+

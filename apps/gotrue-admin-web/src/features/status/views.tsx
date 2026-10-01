@@ -5,7 +5,7 @@ import {
   ItemDescription,
   ItemActions,
 } from '@/components/ui/item';
-import { Badge } from '@/components/ui/badge';
+import { HealthBadge } from '@/components/health-badge';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Spinner } from '@/components/ui/spinner';
@@ -45,7 +45,7 @@ export function StatusPage() {
                   role="status"
                   className="flex flex-wrap items-center gap-2"
                 >
-                  <Badge variant="outline">{check.status}</Badge>
+                  <HealthBadge status={check.status} />
                   {check.refreshing && (
                     <Spinner aria-label="Refreshing check" />
                   )}
@@ -73,8 +73,9 @@ export function StatusPage() {
                   variant="outline"
                   disabled={check.refreshing}
                   onClick={check.refresh}
+                  aria-label={`Refresh ${check.label}`}
                 >
-                  Refresh {check.label.toLowerCase()}
+                  Refresh
                 </Button>
               </ItemActions>
             </Item>

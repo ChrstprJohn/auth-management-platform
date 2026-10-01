@@ -5,7 +5,9 @@ import {
   History,
   HeartPulse,
   UserRound,
-  ChevronDown,
+  ChevronsUpDown,
+  LayoutDashboard,
+  LogOut,
 } from 'lucide-react';
 import { useSession } from './session';
 import { useAccount } from '@/features/auth/hooks';
@@ -20,11 +22,13 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
+  SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
@@ -33,16 +37,21 @@ import {
   BreadcrumbList,
   BreadcrumbItem,
   BreadcrumbPage,
+  BreadcrumbLink,
+  BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { BrandMark } from '@/components/brand';
 
 const links = [
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/users', label: 'Users', icon: Users },
   { to: '/history', label: 'Action history', icon: History },
   { to: '/status', label: 'Service status', icon: HeartPulse },
@@ -50,7 +59,7 @@ const links = [
 ];
 function useShell() {
   const location = useLocation();
-  const { setOpenMobile } = useSidebar();
+  const { setOpenMobile, isMobile } = useSidebar();
   const account = useAccount();
   useEffect(() => {
     setOpenMobile(false);
@@ -58,9 +67,15 @@ function useShell() {
   return {
     account,
     active: location.pathname,
+    menuSide: isMobile ? ('bottom' as const) : ('right' as const),
+    userParent: location.pathname.startsWith('/users/'),
     title:
-      links.find((item) => location.pathname.startsWith(item.to))?.label ??
-      'GoTrue Operator',
+      location.pathname === '/users/new'
+        ? 'Create user'
+        : location.pathname.startsWith('/users/')
+          ? 'Account details'
+          : (links.find((item) => location.pathname.startsWith(item.to))
+              ?.label ?? 'GoTrue Operator'),
   };
 }
 function ShellContent() {
@@ -70,23 +85,41 @@ function ShellContent() {
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <Sidebar>
+      <Sidebar variant="inset" collapsible="icon">
         <SidebarHeader>
-          <Link to="/users" className="px-2 py-3 text-lg font-semibold">
-            GoTrue Operator
-          </Link>
-          <p className="px-2 text-xs text-muted-foreground">
-            Shared identity management
-          </p>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                size="lg"
+                render={<Link to="/users" />}
+                tooltip="GoTrue Operator"
+              >
+                <BrandMark />
+                <span className="grid min-w-0 gap-0.5 leading-tight">
+                  <span className="truncate font-semibold">
+                    GoTrue Operator
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    Shared identity management
+                  </span>
+                </span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
+            <SidebarGroupLabel>Workspace</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {links.map((item) => (
                   <SidebarMenuItem key={item.to}>
                     <SidebarMenuButton
                       isActive={m.active.startsWith(item.to)}
+                      tooltip={item.label}
+                      aria-current={
+                        m.active.startsWith(item.to) ? 'page' : undefined
+                      }
                       render={<Link to={item.to} />}
                     >
                       <item.icon />
@@ -99,44 +132,74 @@ function ShellContent() {
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  className="h-auto w-full justify-start"
-                />
-              }
-            >
-              <Avatar>
-                <AvatarFallback>OP</AvatarFallback>
-              </Avatar>
-              <span className="min-w-0 flex-1 truncate text-left">
-                {m.account.session?.operator.email}
-              </span>
-              <ChevronDown />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem render={<Link to="/account" />}>
-                Current account
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={m.account.pending}
-                onClick={m.account.logout}
-              >
-                {m.account.pending ? 'Signing out…' : 'Logout'}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <SidebarMenuButton
+                      size="lg"
+                      className="aria-expanded:bg-sidebar-accent"
+                      aria-label="Operator account menu"
+                      tooltip="Operator account"
+                    />
+                  }
+                >
+                  <Avatar className="rounded-lg">
+                    <AvatarFallback>OP</AvatarFallback>
+                  </Avatar>
+                  <span className="grid min-w-0 flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-medium">Operator</span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {m.account.session?.operator.email}
+                    </span>
+                  </span>
+                  <ChevronsUpDown className="ml-auto size-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  side={m.menuSide}
+                  align="end"
+                  className="min-w-56"
+                >
+                  <DropdownMenuItem render={<Link to="/account" />}>
+                    <UserRound />
+                    Current account
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    disabled={m.account.pending}
+                    onClick={m.account.logout}
+                  >
+                    <LogOut />
+                    {m.account.pending ? 'Signing out…' : 'Logout'}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          </SidebarMenu>
           {m.account.error && <Failure error={m.account.error} />}
         </SidebarFooter>
+        <SidebarRail aria-label="Collapse or expand sidebar" />
       </Sidebar>
       <SidebarInset className="min-w-0">
-        <header className="flex h-14 items-center gap-3 border-b px-4">
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 md:px-6">
           <SidebarTrigger />
-          <Separator orientation="vertical" className="h-5" />
+          <Separator
+            orientation="vertical"
+            className="mr-2 data-vertical:h-4 data-vertical:self-auto"
+          />
           <Breadcrumb>
             <BreadcrumbList>
+              {m.userParent && (
+                <>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink render={<Link to="/users" />}>
+                      Users
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator />
+                </>
+              )}
               <BreadcrumbItem>
                 <BreadcrumbPage>{m.title}</BreadcrumbPage>
               </BreadcrumbItem>
@@ -146,7 +209,7 @@ function ShellContent() {
         <main
           id="main"
           tabIndex={-1}
-          className="mx-auto w-full max-w-7xl min-w-0 p-4 md:p-8"
+          className="mx-auto w-full max-w-[90rem] min-w-0 flex-1 px-4 py-6 md:px-6 md:py-8 xl:px-8"
         >
           <ActionOutcome />
           <Outlet />

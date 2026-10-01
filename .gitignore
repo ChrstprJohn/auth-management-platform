@@ -8,6 +8,7 @@ artifacts/web-review/
 *.tsbuildinfo
 *.log
 .bootstrap.sql
+vm_infrastructure/**/*.pem
 .env
 .env.*
 !.env.example

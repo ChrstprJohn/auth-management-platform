@@ -48,6 +48,15 @@ describe('global account browsing and creation', () => {
     expect(screen.getByText('Ban status unknown')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+    expect(screen.getAllByRole('columnheader')).toHaveLength(5);
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: 'Actions for disposable@example.test',
+      }),
+    );
+    expect(
+      await screen.findByRole('menuitem', { name: 'View account' }),
+    ).toHaveAttribute('href', `/users/${fixtureUser.id}`);
   });
   it('renders a missing detail without suggesting an uncertain delete succeeded', async () => {
     vi.spyOn(operatorApi, 'me').mockResolvedValue(fixtureSession);

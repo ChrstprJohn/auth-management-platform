@@ -30,6 +30,13 @@ import { TextField } from '@/components/form-fields';
 import { Failure, Success } from '@/components/feedback/states';
 import { CopyId } from '@/components/copy-id';
 import { Spinner } from '@/components/ui/spinner';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from '@/components/ui/card';
 
 type Action = 'ban' | 'unban' | 'delete';
 type Target = { id: string; email: string | null; action: Action };
@@ -209,35 +216,41 @@ export function ActionOutcome() {
 export function UserActions({ user }: { user: SafeUser }) {
   const m = useActions();
   return (
-    <div className="space-y-4">
-      <h2>Global management actions</h2>
-      <p className="text-sm text-muted-foreground">
-        Bans and deletion affect this identity across applications. They do not
-        guarantee immediate revocation of every existing token.
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          disabled={m.pending || m.uncertain}
-          onClick={(event) => m.start(user, 'ban', event.currentTarget)}
-        >
-          Ban user
-        </Button>
-        <Button
-          variant="outline"
-          disabled={m.pending || m.uncertain}
-          onClick={(event) => m.start(user, 'unban', event.currentTarget)}
-        >
-          Unban user
-        </Button>
-        <Button
-          variant="destructive"
-          disabled={m.pending || m.uncertain}
-          onClick={(event) => m.start(user, 'delete', event.currentTarget)}
-        >
-          Permanently delete user
-        </Button>
-      </div>
+    <Card>
+      <CardHeader className="border-b">
+        <CardTitle>
+          <h2>Global management actions</h2>
+        </CardTitle>
+        <CardDescription>
+          Bans and deletion affect this identity across applications. They do
+          not guarantee immediate revocation of every existing token.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            disabled={m.pending || m.uncertain}
+            onClick={(event) => m.start(user, 'ban', event.currentTarget)}
+          >
+            Ban user
+          </Button>
+          <Button
+            variant="outline"
+            disabled={m.pending || m.uncertain}
+            onClick={(event) => m.start(user, 'unban', event.currentTarget)}
+          >
+            Unban user
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={m.pending || m.uncertain}
+            onClick={(event) => m.start(user, 'delete', event.currentTarget)}
+          >
+            Permanently delete user
+          </Button>
+        </div>
+      </CardContent>
       <AlertDialog open={m.open} onOpenChange={m.changeOpen}>
         <AlertDialogContent finalFocus={m.opener}>
           <form noValidate onSubmit={m.submit}>
@@ -304,6 +317,6 @@ export function UserActions({ user }: { user: SafeUser }) {
           </form>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </Card>
   );
 }

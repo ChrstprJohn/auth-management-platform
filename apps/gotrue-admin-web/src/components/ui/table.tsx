@@ -6,7 +6,7 @@ function Table({ className, ...props }: React.ComponentProps<'table'>) {
     <div
       data-slot="table-container"
       role="region"
-      aria-label="Data table; scroll horizontally to view all columns"
+      aria-label="Data table"
       tabIndex={0}
       className="relative w-full overflow-x-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >

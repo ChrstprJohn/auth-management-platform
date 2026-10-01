@@ -28,15 +28,6 @@ import {
   ItemTitle,
   ItemDescription,
 } from '@/components/ui/item';
-import { Separator } from '@/components/ui/separator';
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
 import { CopyId } from '@/components/copy-id';
 import { Timestamp } from '@/components/timestamp';
 import { PageControls } from '@/components/page-controls';
@@ -51,59 +42,72 @@ import {
 import { banStatus } from '@/lib/format/display';
 import { useUsersPage, useUserDetails, useCreateUser } from './hooks';
 import { UserActions } from './actions';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Plus, RefreshCw, ArrowLeft } from 'lucide-react';
+import { UserRowActions } from './row-actions';
 
 export function UserInformation({ user }: { user: SafeUser }) {
   return (
-    <div className="grid gap-2 md:grid-cols-2">
-      <Item variant="outline">
-        <ItemContent>
-          <ItemTitle>UUID</ItemTitle>
-          <CopyId value={user.id} label="user UUID" />
-        </ItemContent>
-      </Item>
-      <Item variant="outline">
-        <ItemContent>
-          <ItemTitle>Email</ItemTitle>
-          <ItemDescription className="break-all">
-            {user.email ?? 'Not reported'}
-          </ItemDescription>
-        </ItemContent>
-      </Item>
-      <Item>
-        <ItemContent>
-          <ItemTitle>Email confirmation</ItemTitle>
-          <ItemDescription>
-            {user.emailConfirmedAt ? 'Confirmed' : 'No confirmation reported'} ·{' '}
-            <Timestamp value={user.emailConfirmedAt} />
-          </ItemDescription>
-        </ItemContent>
-      </Item>
-      <Item>
-        <ItemContent>
-          <ItemTitle>Created</ItemTitle>
-          <ItemDescription>
-            <Timestamp value={user.createdAt} />
-          </ItemDescription>
-        </ItemContent>
-      </Item>
-      <Item>
-        <ItemContent>
-          <ItemTitle>Last sign in</ItemTitle>
-          <ItemDescription>
-            <Timestamp value={user.lastSignInAt} />
-          </ItemDescription>
-        </ItemContent>
-      </Item>
-      <Item>
-        <ItemContent>
-          <ItemTitle>Ban status</ItemTitle>
-          <ItemDescription>
-            <Badge variant="outline">{banStatus(user.isBanned)}</Badge> · Ban
-            expiry: <Timestamp value={user.bannedUntil} />
-          </ItemDescription>
-        </ItemContent>
-      </Item>
-    </div>
+    <Card>
+      <CardHeader className="border-b">
+        <CardTitle>
+          <h2>Account information</h2>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-x-6 gap-y-2 md:grid-cols-2">
+        <Item className="px-0">
+          <ItemContent>
+            <ItemTitle>UUID</ItemTitle>
+            <CopyId value={user.id} label="user UUID" />
+          </ItemContent>
+        </Item>
+        <Item className="px-0">
+          <ItemContent>
+            <ItemTitle>Email</ItemTitle>
+            <ItemDescription className="break-all">
+              {user.email ?? 'Not reported'}
+            </ItemDescription>
+          </ItemContent>
+        </Item>
+        <Item className="px-0">
+          <ItemContent>
+            <ItemTitle>Email confirmation</ItemTitle>
+            <ItemDescription>
+              {user.emailConfirmedAt ? (
+                <Timestamp value={user.emailConfirmedAt} />
+              ) : (
+                'No confirmation reported'
+              )}
+            </ItemDescription>
+          </ItemContent>
+        </Item>
+        <Item className="px-0">
+          <ItemContent>
+            <ItemTitle>Created</ItemTitle>
+            <ItemDescription>
+              <Timestamp value={user.createdAt} />
+            </ItemDescription>
+          </ItemContent>
+        </Item>
+        <Item className="px-0">
+          <ItemContent>
+            <ItemTitle>Last sign in</ItemTitle>
+            <ItemDescription>
+              <Timestamp value={user.lastSignInAt} />
+            </ItemDescription>
+          </ItemContent>
+        </Item>
+        <Item className="px-0">
+          <ItemContent>
+            <ItemTitle>Ban status</ItemTitle>
+            <ItemDescription>
+              <Badge variant="outline">{banStatus(user.isBanned)}</Badge> · Ban
+              expiry: <Timestamp value={user.bannedUntil} />
+            </ItemDescription>
+          </ItemContent>
+        </Item>
+      </CardContent>
+    </Card>
   );
 }
 export function UsersPage() {
@@ -111,24 +115,28 @@ export function UsersPage() {
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1>Users</h1>
-        <div className="flex gap-2">
+        <div className="space-y-2">
+          <h1>Users</h1>
+          <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">
+            Global accounts shared across applications. Pages can shift as
+            accounts change.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             disabled={m.refreshing || m.state === 'loading'}
             onClick={m.refresh}
           >
+            <RefreshCw className={m.refreshing ? 'animate-spin' : ''} />
             {m.refreshing ? 'Refreshing…' : 'Refresh users'}
           </Button>
           <Button nativeButton={false} render={<Link to="/users/new" />}>
+            <Plus />
             Create user
           </Button>
         </div>
       </div>
-      <p className="text-muted-foreground">
-        Global accounts shared across applications. Pages can shift as accounts
-        change.
-      </p>
       {m.pagination.invalid && (
         <Success title="Pagination was normalized">
           Invalid page values use safe defaults.{' '}
@@ -150,63 +158,70 @@ export function UsersPage() {
         />
       ) : (
         m.data && (
-          <Table>
-            <TableCaption>
-              Safe account data on page {m.pagination.page}; no total count is
-              provided.
-            </TableCaption>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Email / UUID</TableHead>
-                <TableHead>Confirmation</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Last sign in</TableHead>
-                <TableHead>Ban status / expiry</TableHead>
-                <TableHead>Details</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {m.data.users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="max-w-80 whitespace-normal">
-                    <p className="break-all">
-                      {user.email ?? 'Email not reported'}
-                    </p>
-                    <CopyId value={user.id} label="user UUID" />
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">
-                      {user.emailConfirmedAt ? 'Confirmed' : 'Not reported'}
-                    </Badge>
-                    <div>
-                      <Timestamp value={user.emailConfirmedAt} />
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Timestamp value={user.createdAt} />
-                  </TableCell>
-                  <TableCell>
-                    <Timestamp value={user.lastSignInAt} />
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{banStatus(user.isBanned)}</Badge>
-                    <div>
-                      <Timestamp value={user.bannedUntil} />
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Link
-                      className="underline"
-                      to={`/users/${user.id}`}
-                      aria-label={`View ${user.email ?? user.id}`}
-                    >
-                      View account
-                    </Link>
-                  </TableCell>
+          <div className="overflow-hidden rounded-xl border">
+            <Table className="table-fixed">
+              <TableCaption>
+                Page {m.pagination.page}. Open an account for full details.
+              </TableCaption>
+              <TableHeader className="bg-muted/50">
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead className="hidden sm:table-cell">
+                    Confirmation
+                  </TableHead>
+                  <TableHead className="hidden sm:table-cell">
+                    Ban status
+                  </TableHead>
+                  <TableHead className="hidden sm:table-cell">
+                    Created
+                  </TableHead>
+                  <TableHead className="w-16 text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {m.data.users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="whitespace-normal">
+                      <p className="break-all font-medium">
+                        {user.email ?? 'Email not reported'}
+                      </p>
+                    </TableCell>
+
+                    <TableCell className="hidden sm:table-cell">
+                      <Badge
+                        variant={
+                          user.emailConfirmedAt ? 'secondary' : 'outline'
+                        }
+                      >
+                        {user.emailConfirmedAt ? 'Confirmed' : 'Not reported'}
+                      </Badge>
+                    </TableCell>
+
+                    <TableCell className="hidden sm:table-cell">
+                      <Badge
+                        variant={
+                          user.isBanned === true
+                            ? 'destructive'
+                            : user.isBanned === false
+                              ? 'secondary'
+                              : 'outline'
+                        }
+                      >
+                        {banStatus(user.isBanned)}
+                      </Badge>
+                    </TableCell>
+
+                    <TableCell className="hidden whitespace-normal sm:table-cell">
+                      <Timestamp value={user.createdAt} compact />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <UserRowActions user={user} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )
       )}
       {m.state !== 'loading' && (
@@ -230,17 +245,6 @@ export function UserDetailsPage() {
     );
   return (
     <section className="space-y-6">
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink render={<Link to="/users" />}>Users</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Account details</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1>Account details</h1>
         <Button
@@ -259,11 +263,6 @@ export function UserDetailsPage() {
           <>
             <UserInformation user={m.user} />
             <UserActions user={m.user} />
-            <Separator />
-            <p className="text-sm text-muted-foreground">
-              Management actions affect this shared identity across
-              applications.
-            </p>
           </>
         )
       )}
@@ -274,14 +273,20 @@ export function CreateUserPage() {
   const m = useCreateUser();
   return (
     <section className="max-w-2xl space-y-6">
-      <Link className="underline" to="/users">
+      <Link
+        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+        to="/users"
+      >
+        <ArrowLeft className="size-4" />
         Return to users
       </Link>
-      <h1>Create a global user</h1>
-      <p className="text-muted-foreground">
-        Both policies create an account without sending an invitation or
-        confirmation email.
-      </p>
+      <div className="space-y-2">
+        <h1>Create a global user</h1>
+        <p className="text-muted-foreground">
+          Both policies create an account without sending an invitation or
+          confirmation email.
+        </p>
+      </div>
       {m.result ? (
         <>
           <Success title="Account creation confirmed">
@@ -301,95 +306,104 @@ export function CreateUserPage() {
           </div>
         </>
       ) : (
-        <form noValidate onSubmit={m.submit}>
-          <FieldGroup>
-            <TextField
-              id="create-email"
-              label="Email"
-              type="email"
-              autoComplete="off"
-              registration={m.form.register('email')}
-              error={m.form.formState.errors.email?.message}
-              disabled={m.pending || m.blocked}
-            />
-            <PasswordField
-              id="create-password"
-              label="Password"
-              registration={m.form.register('password')}
-              error={m.form.formState.errors.password?.message}
-              visible={m.visible}
-              toggle={m.toggle}
-              newPassword
-              disabled={m.pending || m.blocked}
-            />
-            <Controller
-              control={m.form.control}
-              name="confirmation"
-              render={({ field, fieldState }) => (
-                <FieldSet>
-                  <FieldLegend>Confirmation policy</FieldLegend>
-                  <FieldDescription id="policy-help">
-                    Make a deliberate choice. Operator confirmation bypasses
-                    email ownership verification.
-                  </FieldDescription>
-                  <RadioGroup
-                    name={field.name}
-                    value={field.value ?? ''}
-                    onValueChange={field.onChange}
-                    onBlur={field.onBlur}
-                    disabled={m.pending || m.blocked}
-                    aria-labelledby="policy-label"
-                    aria-describedby="policy-help policy-error"
-                  >
-                    <span id="policy-label" className="sr-only">
-                      Confirmation policy
-                    </span>
-                    <Field orientation="horizontal">
-                      <RadioGroupItem
-                        id="require-verification"
-                        value="require_verification"
-                        inputRef={field.ref}
-                      />
-                      <FieldLabel htmlFor="require-verification">
-                        Require verification
-                      </FieldLabel>
-                    </Field>
-                    <FieldDescription>
-                      This account remains unconfirmed and cannot complete
-                      normal verified login until a supported verification flow
-                      is available. No email is sent.
-                    </FieldDescription>
-                    <Field orientation="horizontal">
-                      <RadioGroupItem
-                        id="operator-confirmed"
-                        value="operator_confirmed"
-                      />
-                      <FieldLabel htmlFor="operator-confirmed">
-                        Operator confirmed
-                      </FieldLabel>
-                    </Field>
-                    <FieldDescription>
-                      Explicitly bypass email ownership verification. No email
-                      is sent.
-                    </FieldDescription>
-                  </RadioGroup>
-                  {fieldState.error && (
-                    <FieldError id="policy-error">
-                      {fieldState.error.message}
-                    </FieldError>
+        <Card>
+          <CardHeader className="border-b">
+            <CardTitle>
+              <h2>New account details</h2>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form noValidate onSubmit={m.submit}>
+              <FieldGroup>
+                <TextField
+                  id="create-email"
+                  label="Email"
+                  type="email"
+                  autoComplete="off"
+                  registration={m.form.register('email')}
+                  error={m.form.formState.errors.email?.message}
+                  disabled={m.pending || m.blocked}
+                />
+                <PasswordField
+                  id="create-password"
+                  label="Password"
+                  registration={m.form.register('password')}
+                  error={m.form.formState.errors.password?.message}
+                  visible={m.visible}
+                  toggle={m.toggle}
+                  newPassword
+                  disabled={m.pending || m.blocked}
+                />
+                <Controller
+                  control={m.form.control}
+                  name="confirmation"
+                  render={({ field, fieldState }) => (
+                    <FieldSet>
+                      <FieldLegend>Confirmation policy</FieldLegend>
+                      <FieldDescription id="policy-help">
+                        Operator confirmation bypasses email ownership
+                        verification.
+                      </FieldDescription>
+                      <RadioGroup
+                        name={field.name}
+                        value={field.value ?? ''}
+                        onValueChange={field.onChange}
+                        onBlur={field.onBlur}
+                        disabled={m.pending || m.blocked}
+                        aria-labelledby="policy-label"
+                        aria-describedby="policy-help policy-error"
+                      >
+                        <span id="policy-label" className="sr-only">
+                          Confirmation policy
+                        </span>
+                        <Field orientation="horizontal">
+                          <RadioGroupItem
+                            id="require-verification"
+                            value="require_verification"
+                            inputRef={field.ref}
+                          />
+                          <FieldLabel htmlFor="require-verification">
+                            Require verification
+                          </FieldLabel>
+                        </Field>
+                        <FieldDescription>
+                          This account remains unconfirmed and cannot complete
+                          normal verified login until a supported verification
+                          flow is available. No email is sent.
+                        </FieldDescription>
+                        <Field orientation="horizontal">
+                          <RadioGroupItem
+                            id="operator-confirmed"
+                            value="operator_confirmed"
+                          />
+                          <FieldLabel htmlFor="operator-confirmed">
+                            Operator confirmed
+                          </FieldLabel>
+                        </Field>
+                        <FieldDescription>
+                          Explicitly bypass email ownership verification. No
+                          email is sent.
+                        </FieldDescription>
+                      </RadioGroup>
+                      {fieldState.error && (
+                        <FieldError id="policy-error">
+                          {fieldState.error.message}
+                        </FieldError>
+                      )}
+                    </FieldSet>
                   )}
-                </FieldSet>
-              )}
-            />
-            {m.error && <Failure error={m.error} />}
-            <Submit
-              pending={m.pending}
-              disabled={m.blocked}
-              label="Create user"
-              progress="Creating user…"
-            />
-          </FieldGroup>
-        </form>
+                />
+                {m.error && <Failure error={m.error} />}
+                <Submit
+                  pending={m.pending}
+                  disabled={m.blocked}
+                  label="Create user"
+                  progress="Creating user…"
+                />
+              </FieldGroup>
+            </form>
+          </CardContent>
+        </Card>
       )}
     </section>
   );

@@ -508,6 +508,9 @@ function SidebarMenuButton({
     tooltip?: string | React.ComponentProps<typeof TooltipContent>;
   } & VariantProps<typeof sidebarMenuButtonVariants>) {
   const { isMobile, state } = useSidebar();
+  // A CSS-hidden tooltip can still consume Escape inside the mobile sheet.
+  // Only mount tooltip behavior when the collapsed desktop label is needed.
+  const showTooltip = !!tooltip && !isMobile && state === 'collapsed';
   const comp = useRender({
     defaultTagName: 'button',
     props: mergeProps<'button'>(
@@ -516,7 +519,7 @@ function SidebarMenuButton({
       },
       props,
     ),
-    render: !tooltip ? render : <TooltipTrigger render={render} />,
+    render: showTooltip ? <TooltipTrigger render={render} /> : render,
     state: {
       slot: 'sidebar-menu-button',
       sidebar: 'menu-button',
@@ -525,7 +528,7 @@ function SidebarMenuButton({
     },
   });
 
-  if (!tooltip) {
+  if (!showTooltip) {
     return comp;
   }
 

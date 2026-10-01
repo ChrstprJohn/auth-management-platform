@@ -24,6 +24,9 @@
   .public-form {
     @apply mx-auto my-12 w-full max-w-md space-y-6 px-5;
   }
+  [data-slot='table-caption'] {
+    @apply px-4 pb-4 text-left;
+  }
   .skip-link {
     @apply fixed left-4 top-4 z-[100] -translate-y-24 rounded-md bg-primary p-3 text-primary-foreground focus:translate-y-0;
   }

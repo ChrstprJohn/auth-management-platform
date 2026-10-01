@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { operatorApi } from '@/lib/api/operator';
 import { ApiFailure } from '@/lib/api/client';
 import { renderApp, fixtureSession } from '@/test/providers';
@@ -29,8 +30,24 @@ describe('durable history states', () => {
     for (const outcome of ['pending', 'succeeded', 'failed', 'unknown'])
       expect(await screen.findByText(outcome)).toBeVisible();
     expect(screen.getAllByText('Unresolved')).toHaveLength(2);
-    expect(screen.getAllByText('Not known')).toHaveLength(4);
     expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+    const opener = screen.getAllByRole('button', {
+      name: /Actions for action/,
+    })[0];
+    if (!opener) throw new Error('Missing action details trigger');
+    await userEvent.click(opener);
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'View details' }),
+    );
+    expect(await screen.findByRole('dialog')).toHaveTextContent(
+      'Action details',
+    );
+    expect(screen.getByRole('dialog')).toHaveTextContent('Not known');
+    expect(screen.getByText('Request ID')).toBeVisible();
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    );
   });
   it('read errors never render as empty history', async () => {
     vi.spyOn(operatorApi, 'me').mockResolvedValue(fixtureSession);
@@ -46,3 +63,4 @@ describe('durable history states', () => {
     ).not.toBeInTheDocument();
   });
 });
+
