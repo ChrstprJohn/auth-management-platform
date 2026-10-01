@@ -188,7 +188,11 @@ export function ProtectedShell() {
           Protected data remains blocked until the API can verify your session.
         </p>
         <Failure error={session.error} retry={session.retry} />
-        <Button render={<Link to="/forgot-password" />} variant="outline">
+        <Button
+          nativeButton={false}
+          render={<Link to="/forgot-password" />}
+          variant="outline"
+        >
           Password recovery
         </Button>
       </main>

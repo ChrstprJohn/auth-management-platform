@@ -83,7 +83,9 @@ export function Blank({
         <EmptyDescription>{description}</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button render={<Link to={href} />}>{action}</Button>
+        <Button nativeButton={false} render={<Link to={href} />}>
+          {action}
+        </Button>
       </EmptyContent>
     </Empty>
   );
