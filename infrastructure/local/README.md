@@ -16,15 +16,15 @@ Pinned GoTrue [mailmeclient](https://github.com/supabase/auth/blob/v2.196.0/inte
 | `GOTRUE_SMTP_PORT` | `465` |
 | `GOTRUE_SMTP_USER` | `resend` |
 | `GOTRUE_SMTP_PASS` | User-entered Resend sending key, only on the server |
-| `GOTRUE_SMTP_ADMIN_EMAIL` | Sender address on the verified domain |
+| `GOTRUE_SMTP_ADMIN_EMAIL` | `auth@mail.chrbuilds.dev` (proposed sender; confirm before activation) |
 | `GOTRUE_SMTP_SENDER_NAME` | Chosen sender display name |
 
 Keep `GOTRUE_MAILER_AUTOCONFIRM=false` and all `GOTRUE_MAILER_URLPATHS_*=/verify`. Signup confirmation and recovery use this SMTP path. Admin creation from Users sends **no invitation or confirmation email under either policy**, including after Resend activation. An unconfirmed admin-created account still needs a supported verification flow before normal verified login. No invitation/resend controls are introduced.
 
 ## Final setup checklist (user-operated, after independent checks)
 
-1. Add a domain/subdomain you control in Resend. Publish the exact SPF and DKIM records it supplies and wait for verified status. Configure DMARC according to your domain policy. See [domain setup](https://resend.com/docs/dashboard/domains/introduction). Keep click/open tracking disabled for recovery links.
-2. Create a dedicated key with **sending access**, restricted to the sender domain. See [key permissions](https://resend.com/docs/api-reference/api-keys/create-api-key) and [domain restrictions](https://resend.com/docs/dashboard/api-keys/introduction). Enter the key locally, never in chat, frontend configuration or Git.
+1. The user selected `mail.chrbuilds.dev` and reported adding it to Resend on 2026-10-02. Confirm its dashboard status is **verified**; adding the domain alone does not establish DNS verification. Publish the exact SPF and DKIM records Resend supplies and configure DMARC according to your domain policy. See [domain setup](https://resend.com/docs/dashboard/domains/introduction). Keep click/open tracking disabled for recovery links.
+2. Create a dedicated key with **sending access**, restricted to `mail.chrbuilds.dev`. See [key permissions](https://resend.com/docs/api-reference/api-keys/create-api-key) and [domain restrictions](https://resend.com/docs/dashboard/api-keys/introduction). The user will enter the key locally later, never in chat, frontend configuration or Git. `auth@mail.chrbuilds.dev` and display name `Auth` are prepared examples, pending the user's sender identity choice.
 3. Edit the existing ignored **`C:\Users\picar\Desktop\auth-management-platform\infrastructure\local\.env`** using the six SMTP variables above. Do not overwrite existing database/JWT credentials with the full example. No browser mail-mode setting is needed; recovery UI gives provider-neutral same-browser instructions.
 4. Preserve local `API_EXTERNAL_URL=http://localhost:8081`, `GOTRUE_SITE_URL=http://localhost:5173` and existing `GOTRUE_URI_ALLOW_LIST` entries, including `http://localhost:3100/v1/operator/auth/recovery/callback`. Keep hostnames consistent. The API's ignored `apps/gotrue-admin-api/.env` retains matching `FRONTEND_ORIGINS`, `RECOVERY_CALLBACK_URL` and `RECOVERY_RESET_URL=http://localhost:5173/reset-password`; follow [API recovery setup](../../apps/gotrue-admin-api/README.md#password-recovery-setup). Production same-site HTTPS origins/callbacks remain a separate deployment task.
 5. Confirm the existing database is ready, then run the following from `infrastructure/local/` yourself. Recreate, rather than plain restart, loads changed environment values. Use the base file alone to leave capture mode; there is no fallback when Resend fails.
