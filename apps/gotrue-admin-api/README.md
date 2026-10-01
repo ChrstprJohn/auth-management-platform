@@ -12,6 +12,12 @@ Copy this folder's `.env.example` to `.env`, replace every placeholder, generate
 
 Run `pnpm dev` from the root in the foreground. Stop with Ctrl+C. Production runs compiled JavaScript with `pnpm --filter @auth/gotrue-admin-api start`; set HOST to the container bind address, HTTPS same-site frontend origins, and TRUST_PROXY to the actual Caddy IP/subnet. No production deployment is included.
 
+## Local GoTrue admin token
+
+After creating the backend `.env`, run `pnpm admin:token` from the repository root. This local-only helper reads the existing `GOTRUE_JWT_SECRET` and admin-role/audience configuration in `infrastructure/local/.env`, signs a sessionless HS256 `service_role` JWT valid for 30 days, and saves only `GOTRUE_ADMIN_TOKEN` into the backend `.env`. It never prints the token/signing secret, touches a database, or changes other configuration. Existing non-placeholder tokens are preserved; remove the token line deliberately and rerun to regenerate, then restart the API. It requires a loopback HTTP GoTrue URL and refuses production mode. Do not use this helper for VM/production secrets.
+
+The pinned [admin credential middleware](https://github.com/supabase/auth/blob/v2.196.0/internal/api/middleware.go) accepts sessionless admin-role tokens, and the [JWT verifier](https://github.com/supabase/auth/blob/v2.196.0/internal/api/auth.go) supports signing with the configured HS256 secret.
+
 ## Checks
 
 From the root: `pnpm run build`, `pnpm run typecheck`, `pnpm run test`, `pnpm run lint`, and `pnpm run format:check`. Tests substitute upstream/storage adapters and never execute SQL or provision accounts. The build must run before tests because workspace package exports point to compiled files. An isolated passing test does not establish live PostgreSQL or GoTrue behavior.
