@@ -3,6 +3,11 @@ import { ProtectedShell } from './shell';
 import { LoginPage, AccountPage } from '@/features/auth/views';
 import { Blank } from '@/components/feedback/states';
 import {
+  UsersPage,
+  UserDetailsPage,
+  CreateUserPage,
+} from '@/features/users/views';
+import {
   ForgotPasswordPage,
   ResetPasswordPage,
 } from '@/features/recovery/views';
@@ -16,15 +21,9 @@ export function AppRoutes() {
       <Route element={<ProtectedShell />}>
         <Route index element={<Navigate to="/users" replace />} />
         <Route path="/account" element={<AccountPage />} />
-        <Route
-          path="/users"
-          element={
-            <Blank
-              title="Users"
-              description="Account browsing is being implemented."
-            />
-          }
-        />
+        <Route path="/users" element={<UsersPage />} />
+        <Route path="/users/new" element={<CreateUserPage />} />
+        <Route path="/users/:id" element={<UserDetailsPage />} />
       </Route>
       <Route
         path="*"
