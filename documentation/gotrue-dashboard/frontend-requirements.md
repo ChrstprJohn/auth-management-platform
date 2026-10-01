@@ -1,6 +1,6 @@
 # GoTrue operator frontend requirements
 
-Status: requirements for the future `apps/gotrue-admin-web` application; no frontend is implemented by this document. Vite is the agreed build tool. Framework, routing, state management, component libraries, visual design and implementation phases will be decided in a later frontend plan.
+Status: requirements for the future `apps/gotrue-admin-web` application; frontend implementation has not started. The stack and hook/view boundaries are agreed in [frontend architecture](frontend-architecture.md). [Implementation plan](frontend-implementation-plan.md) defines the phases and acceptance gates. Use shadcn components and default styling, as requested by the user.
 
 This document owns screens, interactions and frontend usage of the existing backend. [Product features](features.md) owns V1 scope; [API reference](api.md) owns exact request/response contracts, validation, cookies and error codes. [Delivery checklist](checklist.md) records verified implementation. If a contract changes, update the API reference first and adjust this document's usage mapping.
 
@@ -137,4 +137,4 @@ These are required future checks, not completed frontend tests:
 
 Global search, bulk operations, editing user credentials/metadata, invitation/resend, operator-role management, full session/device administration, analytics, developer projects, provider settings and infrastructure controls remain outside V1.
 
-The later frontend plan will choose the framework/libraries and folder structure, design the interface, define API-client/state/error handling, settle any capability or callback-error integration changes, and divide implementation into reviewable phases with validation and commits. It must preserve all features and endpoint mappings above. Production deployment and natural upstream email-link expiry are separate remaining verification work, not completed by this requirements document.
+The [frontend architecture](frontend-architecture.md) now records the agreed stack, folder boundaries, shared API/session behavior and complete state presentation. The [implementation plan](frontend-implementation-plan.md) divides all features and endpoint mappings above into reviewable phases with validation and commits. No capabilities endpoint, callback-error redirect change or precise rate-limit countdown is required for the current plan. Production deployment and natural upstream email-link expiry remain separate verification work, not completed by these documents.

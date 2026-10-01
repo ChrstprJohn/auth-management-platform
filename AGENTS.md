@@ -6,7 +6,17 @@ Follow this file for coding and delivery. Start at [documentation/README.md](doc
 
 ## Frontend constraint
 
-The user chose Vite for frontend tooling. Do not select a frontend framework, UI libraries, or other frontend architecture yet. Do not introduce Next.js, server rendering, or a Node.js frontend application server. Node.js is the selected backend runtime; any frontend build-tool runtime is a tooling detail, not authorization for a Node-hosted frontend. Keep this constraint here rather than repeating it across backend documents.
+The agreed frontend uses React and strict TypeScript with Vite, shadcn/ui, Tailwind CSS, Axios, React Router, TanStack Query, and React Hook Form with Zod. Follow [frontend architecture](documentation/gotrue-dashboard/frontend-architecture.md) and [frontend requirements](documentation/gotrue-dashboard/frontend-requirements.md). Do not introduce Next.js, server rendering, or a Node.js frontend application server. Node.js remains the backend runtime; Vite is frontend tooling.
+
+### Frontend implementation practices
+
+- Views render props and hook state, compose accessible components, and bind callbacks. Keep API requests, mutations, navigation decisions, form orchestration, derived business state, cache invalidation, session lifecycle and error interpretation in feature hooks or the shared client. Pure display formatting may use shared utilities. Do not put effects, request calls or business rules into page JSX.
+- Feature hooks compose React Hook Form and TanStack Query; the Axios client owns HTTP configuration and safe response parsing. Keep server state in query caches, local interaction state in hooks, and pagination in validated URL parameters. Do not mirror query data in another global store or create generic feature frameworks.
+- Every asynchronous flow needs deliberate initial/loading, refreshing, empty, success, validation, missing, forbidden, expired-session, rate-limited, dependency/network-error and ambiguous-outcome UI where applicable. Distinguish error from empty and pending/unknown from success. Disable duplicate submissions; never automatically retry mutations or claim an aborted request rolled back.
+- Send credentialed cookie requests and the agreed CSRF header. Never put privileged credentials, passwords, cookies or recovery codes into frontend configuration, persistent storage, logs, telemetry or URLs. Clear account-specific caches on session loss, logout and reset. Guard stale in-flight responses from repopulating cleared state.
+- Reuse shadcn components and theme tokens. Use semantic labels, keyboard/focus support, accessible dialog descriptions, status announcements, visible focus, sufficient contrast and text alongside status colors. Respect reduced motion. Ensure long IDs, tables and forms remain usable at mobile widths; preserve all information rather than hiding essential columns.
+- Keep form validation aligned with the backend, including UTF-8 password byte limits and explicit destructive confirmation. Backend permissions are authoritative; frontend guards do not grant authority. Present safe request/audit IDs and deliberate read-only inspection for uncertain results.
+- Test user behavior and security-relevant state transitions: session restoration/loss, validation, cookie/CSRF requests, 204 handling, mutation concurrency/retry rules, empty/error states and cache cleanup. Verify desktop and mobile rendering and keyboard interactions in a bounded review. Do not mark frontend scenarios complete from build success alone.
 
 ## Node / Next.js hygiene (Windows)
 
@@ -28,13 +38,18 @@ This rulebook governs implementation, review, and documentation for this reposit
 - `documentation/architecture-and-deployment.md`: shared boundaries, environment, and deployment.
 - `documentation/gotrue-dashboard/features.md`: operator V1 scope.
 - `documentation/gotrue-dashboard/backend-architecture.md`: stack, layers, session/audit policies, provisioning, and remaining upstream checks.
+- `documentation/gotrue-dashboard/frontend-requirements.md`: screens, UI behavior and complete endpoint usage.
+- `documentation/gotrue-dashboard/frontend-architecture.md`: agreed stack, hook/view boundaries, session/API behavior and state presentation.
+- `documentation/gotrue-dashboard/frontend-implementation-plan.md`: implementation phases and frontend acceptance gates.
+- `documentation/gotrue-dashboard/frontend-checklist.md`: frontend feature, endpoint, UI-state and verification delivery tracking.
+- `documentation/gotrue-dashboard/frontend-components.md`: current shadcn component choices and screen/state mapping.
 - Each product's checklist: implementation and verification status.
 
 Edit the document that owns the changed topic; link to it elsewhere rather than repeating its details. Update other documents only when their actual scope, verification status, or integration instructions are affected. Document unresolved upstream behavior honestly and verify it against the pinned version before relying on it. Do not reopen agreed choices unnecessarily or silently change scope. Do not introduce new services, frameworks, abstractions, or features without a concrete requirement.
 
 ### Architecture and separation of concerns
 
-Follow the layer boundaries, class/constructor-injection convention, folder structure, and storage ownership in [backend architecture](documentation/gotrue-dashboard/backend-architecture.md). Keep business logic out of controllers and HTTP concerns out of services. Do not duplicate that architecture specification here.
+For backend code, follow the layer boundaries, class/constructor-injection convention, folder structure, and storage ownership in [backend architecture](documentation/gotrue-dashboard/backend-architecture.md). Keep business logic out of controllers and HTTP concerns out of services. Frontend code follows function components, feature hooks and thin views in [frontend architecture](documentation/gotrue-dashboard/frontend-architecture.md). Do not duplicate those architecture specifications here.
 
 ### Readable code, DRY, and simplicity
 
