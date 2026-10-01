@@ -184,7 +184,7 @@ export function useCreationSafety() {
 export function ActionOutcome() {
   const m = useActions();
   return (
-    <div className="mb-6 space-y-3">
+    <div className="space-y-3 empty:hidden">
       {m.creationPending && (
         <Success title="Account creation pending">
           The backend may still be creating the account. Navigating away does
@@ -198,7 +198,7 @@ export function ActionOutcome() {
           does not cancel it.
         </Success>
       )}
-      {m.error && <Failure error={m.error} />}{' '}
+      {m.error && <Failure error={m.error} />}
       {m.result && (
         <Success
           title={`${m.result.target.action === 'delete' ? 'Permanent deletion' : m.result.target.action === 'ban' ? 'Ban' : 'Unban'} confirmed`}

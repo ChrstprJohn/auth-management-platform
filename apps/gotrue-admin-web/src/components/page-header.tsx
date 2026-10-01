@@ -10,7 +10,7 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div className="min-w-0 max-w-prose space-y-2">
         <h1 className="text-balance">{title}</h1>
         {description && (

@@ -89,7 +89,7 @@ export function DailyActivity({
         </ChartContainer>
         <dl
           aria-label="Daily activity counts"
-          className="grid gap-2 border-t pt-4 text-sm sm:grid-cols-2"
+          className="grid gap-x-8 gap-y-2 border-t pt-4 text-sm sm:grid-cols-2"
         >
           {data.map((day) => (
             <div

@@ -126,11 +126,11 @@ export function DashboardPage() {
         <DailyActivity data={m.audit.summary.daily} />
       )}
       <section aria-labelledby="dashboard-health" className="space-y-3">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="dashboard-health">Service signals</h2>
           <Link
             to="/status"
-            className="inline-flex items-center gap-1 text-sm underline"
+            className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-sm underline"
           >
             View service status
             <ArrowUpRight className="size-3.5" />
