@@ -15,5 +15,5 @@ export interface PasswordSession {
 export interface OperatorIdentityClient {
   passwordLogin(email: string, password: string): Promise<PasswordSession>;
   getIdentity(accessToken: string): Promise<Identity>;
-  health(): Promise<void>;
+  health(): Promise<{ version: string }>;
 }

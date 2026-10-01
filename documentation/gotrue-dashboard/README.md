@@ -1,6 +1,6 @@
 # GoTrue Operator Dashboard
 
-Design documentation; implementation has not started. Start with the backend, then the frontend. Follow [AGENTS.md](../../AGENTS.md) for coding and delivery rules.
+The operator backend has health, secure sessions, user management and audit implemented with isolated tests. Live database/GoTrue verification and password recovery remain pending; no frontend has been built. Follow [backend setup](../../apps/gotrue-admin-api/README.md) and [AGENTS.md](../../AGENTS.md).
 
 | Document | Owns |
 |---|---|

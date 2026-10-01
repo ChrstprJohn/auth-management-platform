@@ -36,6 +36,13 @@ class MemorySessions implements SessionStore {
     for (const [hash, row] of this.rows)
       if (row.operatorId === id) this.rows.delete(hash);
   }
+  async findForOperator(id: string) {
+    return [...this.rows.values()]
+      .filter(
+        (row) => row.operatorId === id && row.expiresAt.getTime() > Date.now(),
+      )
+      .slice(0, 5);
+  }
 }
 class FakeGoTrue implements OperatorIdentityClient {
   user: Identity = {
@@ -62,6 +69,7 @@ class FakeGoTrue implements OperatorIdentityClient {
   }
   async health() {
     if (this.error) throw this.error;
+    return { version: 'v2.196.0' };
   }
 }
 const resources: Array<ReturnType<typeof createApp>> = [];
@@ -72,6 +80,7 @@ function setup(production = false) {
   const sessions = new MemorySessions();
   const upstream = new FakeGoTrue();
   const config = loadConfig({
+    GOTRUE_ADMIN_TOKEN: 'test-admin-token',
     NODE_ENV: production ? 'production' : 'test',
     GOTRUE_URL: 'http://localhost:8081',
     ADMIN_DATABASE_URL: 'postgresql://unused:unused@localhost/admin_test',
@@ -101,13 +110,26 @@ async function login(
     .send({ email: 'operator@example.test', password: 'controlled-password' });
 }
 function cookieOf(response: Awaited<ReturnType<typeof login>>): string {
+  return cookieHeaderOf(response).split(';')[0] ?? '';
+}
+function cookieHeaderOf(response: Awaited<ReturnType<typeof login>>): string {
   const header: unknown = response.headers['set-cookie'];
   if (!Array.isArray(header) || typeof header[0] !== 'string')
     throw new Error('Expected cookie');
-  return header[0].split(';')[0] ?? '';
+  return header[0];
 }
 
 describe('operator HTTP boundary', () => {
+  it('protects safe upstream version information behind an operator session', async () => {
+    const { app } = setup();
+    expect((await request(app).get('/v1/operator/health')).status).toBe(401);
+    const cookie = cookieOf(await login(app));
+    const response = await request(app)
+      .get('/v1/operator/health')
+      .set('Cookie', cookie);
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ status: 'reachable', version: 'v2.196.0' });
+  });
   it('stores only a hash/encrypted token, returns safe identity, and revalidates every request', async () => {
     const { app, sessions, upstream } = setup();
     const response = await login(app);
@@ -122,8 +144,8 @@ describe('operator HTTP boundary', () => {
     expect(
       (row?.expiresAt.getTime() ?? 0) - (row?.createdAt.getTime() ?? 0),
     ).toBe(3600000);
-    expect(response.headers['set-cookie'][0]).toContain('HttpOnly');
-    expect(response.headers['set-cookie'][0]).toContain('SameSite=Lax');
+    expect(cookieHeaderOf(response)).toContain('HttpOnly');
+    expect(cookieHeaderOf(response)).toContain('SameSite=Lax');
     expect(
       (await request(app).get('/v1/operator/auth/me').set('Cookie', cookie))
         .status,
@@ -286,9 +308,7 @@ describe('operator HTTP boundary', () => {
     sessions.fail = false;
     const response = await logout();
     expect(response.status).toBe(204);
-    expect(response.headers['set-cookie'][0]).toContain(
-      'Expires=Thu, 01 Jan 1970',
-    );
+    expect(cookieHeaderOf(response)).toContain('Expires=Thu, 01 Jan 1970');
     expect((await logout()).status).toBe(204);
     expect(
       (await request(app).get('/v1/operator/auth/me').set('Cookie', cookie))
@@ -314,7 +334,7 @@ describe('operator HTTP boundary', () => {
   it('sets a secure host-only production cookie', async () => {
     const { app } = setup(true);
     const response = await login(app, 'https://admin.chrbuilds.dev');
-    const header: string = response.headers['set-cookie'][0];
+    const header = cookieHeaderOf(response);
     expect(header).toContain('__Host-operator_session=');
     expect(header).toContain('Secure');
     expect(header).not.toContain('Domain=');

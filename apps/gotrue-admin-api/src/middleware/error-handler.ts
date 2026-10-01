@@ -28,6 +28,7 @@ export function errorHandler(logger: Logger): ErrorRequestHandler {
         'Request failed',
       );
     res.status(safe.status).json({
+      ...(safe.outcomeDetails ?? {}),
       error: { code: safe.code, message: safe.message },
       requestId: res.locals.requestId,
     });

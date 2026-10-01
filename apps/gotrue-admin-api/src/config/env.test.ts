@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadConfig } from './env.js';
 const valid = {
+  GOTRUE_ADMIN_TOKEN: 'test-admin-token',
   GOTRUE_URL: 'http://localhost:8081',
   ADMIN_DATABASE_URL: 'postgresql://unused:secret@localhost/admin_test',
   OPERATOR_UUID_ALLOWLIST: '00000000-0000-4000-8000-000000000001',

@@ -3,6 +3,10 @@ export class ApiError extends Error {
     public readonly status: number,
     public readonly code: string,
     message: string,
+    public readonly outcomeDetails?: {
+      auditId: string;
+      outcome: 'succeeded' | 'failed' | 'unknown';
+    },
   ) {
     super(message);
   }

@@ -7,3 +7,25 @@ export interface ApiErrorResponse {
   error: { code: string; message: string };
   requestId: string;
 }
+
+export interface SafeUser {
+  id: string;
+  email: string | null;
+  createdAt: string | null;
+  emailConfirmedAt: string | null;
+  lastSignInAt: string | null;
+  bannedUntil: string | null;
+  isBanned: boolean | null;
+}
+export type AuditAction = 'create' | 'ban' | 'unban' | 'delete';
+export type AuditOutcome = 'pending' | 'succeeded' | 'failed' | 'unknown';
+export interface AuditEntry {
+  id: string;
+  actorId: string;
+  targetId: string | null;
+  action: AuditAction;
+  outcome: AuditOutcome;
+  createdAt: string;
+  completedAt: string | null;
+  requestId: string;
+}

@@ -1,4 +1,4 @@
-import axios, { type AxiosInstance } from 'axios';
+import { GoTrueHttp } from './http.js';
 import { z } from 'zod';
 import { UpstreamError } from './errors.js';
 import {
@@ -9,6 +9,8 @@ import {
 } from './types.js';
 
 export { UpstreamError } from './errors.js';
+export { GoTrueAdminClient } from './admin-users.js';
+export type { AdminUser, AdminUsersClient } from './admin-users.js';
 export type {
   Identity,
   OperatorIdentityClient,
@@ -16,16 +18,9 @@ export type {
 } from './types.js';
 
 export class GoTrueClient implements OperatorIdentityClient {
-  private readonly http: AxiosInstance;
+  private readonly http: GoTrueHttp;
   constructor(baseUrl: string, timeoutMs: number) {
-    this.http = axios.create({
-      baseURL: baseUrl.replace(/\/$/, '') + '/',
-      timeout: timeoutMs,
-      maxRedirects: 0,
-      maxContentLength: 1024 * 1024,
-      maxBodyLength: 16384,
-      proxy: false,
-    });
+    this.http = new GoTrueHttp(baseUrl, timeoutMs);
   }
 
   private async request(
@@ -34,29 +29,7 @@ export class GoTrueClient implements OperatorIdentityClient {
     data?: unknown,
     accessToken?: string,
   ): Promise<unknown> {
-    try {
-      const result = await this.http.request<unknown>({
-        method,
-        url: path,
-        data,
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-      });
-      return result.data;
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        const status = error.response?.status;
-        if (
-          status === 400 ||
-          status === 401 ||
-          status === 403 ||
-          status === 422
-        )
-          throw new UpstreamError('identity');
-        if (status === 404) throw new UpstreamError('not_found');
-        throw new UpstreamError('unavailable', status === undefined);
-      }
-      throw new UpstreamError('unavailable');
-    }
+    return this.http.request(method, path, data, accessToken, true);
   }
 
   async passwordLogin(
@@ -97,12 +70,18 @@ export class GoTrueClient implements OperatorIdentityClient {
     return result.data;
   }
 
-  async health(): Promise<void> {
+  async health(): Promise<{ version: string }> {
     const body = await this.request('GET', 'health');
-    if (
-      !z.object({ version: z.string(), name: z.string() }).safeParse(body)
-        .success
-    )
-      throw new UpstreamError('unavailable');
+    const result = z
+      .object({
+        version: z
+          .string()
+          .max(64)
+          .regex(/^v?\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/),
+        name: z.string().max(64),
+      })
+      .safeParse(body);
+    if (!result.success) throw new UpstreamError('unavailable');
+    return { version: result.data.version };
   }
 }

@@ -101,4 +101,33 @@ export class OperatorAuthService {
     if (typeof cookie === 'string' && /^[A-Za-z0-9_-]{43}$/.test(cookie))
       await this.sessions.delete(this.crypto.hash(cookie));
   }
+  async hasUsableSession(operatorId: string): Promise<boolean> {
+    if (!this.allowlist.has(operatorId.toLowerCase())) return false;
+    for (const session of await this.sessions.findForOperator(operatorId)) {
+      if (session.expiresAt.getTime() <= Date.now()) continue;
+      let token: string;
+      try {
+        token = this.crypto.decrypt(session.token, operatorId);
+      } catch {
+        continue;
+      }
+      try {
+        const identity = await this.upstream.getIdentity(token);
+        if (
+          identity.id === operatorId &&
+          this.usable(identity) &&
+          session.expiresAt.getTime() > Date.now()
+        )
+          return true;
+      } catch (error) {
+        if (
+          error instanceof UpstreamError &&
+          (error.kind === 'identity' || error.kind === 'not_found')
+        )
+          continue;
+        throw unavailable();
+      }
+    }
+    return false;
+  }
 }

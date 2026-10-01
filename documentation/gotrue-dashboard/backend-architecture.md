@@ -1,6 +1,6 @@
 # GoTrue Admin API: Backend Architecture
 
-The initial health/operator-session backend is implemented with isolated tests. Live PostgreSQL/GoTrue verification awaits user setup. Later modules remain planned unless their API reference says otherwise. Read alongside [V1 features](features.md) and [shared architecture](../architecture-and-deployment.md).
+Health/operator sessions, user management and durable audit are implemented with isolated tests. Live PostgreSQL/GoTrue verification awaits user setup. Recovery remains planned until its required pinned-local flow checks. Read alongside [V1 features](features.md) and [shared architecture](../architecture-and-deployment.md).
 
 This file owns backend structure, technology choices, and agreed session/audit/provisioning policies. [API reference](api.md) owns endpoint contracts and usage. [AGENTS.md](../../AGENTS.md) owns coding and delivery rules.
 
@@ -195,6 +195,8 @@ Reconciliation is a trusted manual procedure in V1: inspect the intent, check cu
 If every operator loses access, a trusted server administrator uses supported GoTrue recovery/admin operations to recover or provision a verified usable account, updates the allowlist, and restarts the API. Keep privileged GoTrue credentials outside browser bundles, logs, and the repository. No public emergency-access endpoint is added. Document commands against the pinned upstream version during implementation; provisioning has not yet been performed.
 
 Last-usable-operator protection for later ban/delete operations remains required by the feature specification, including concurrency handling and failing closed when usability cannot be established.
+
+Implementation policy for ban/delete: use a session-level PostgreSQL advisory lock on a dedicated connection, serialize destructive operations across instances, and hold it through intent, eligibility checks, upstream call and audit completion. Refuse additional configured-operator removals while a pending/unknown destructive operator intent exists. GoTrue's pinned public admin user JSON does not expose password presence; count another operator only when verified/unbanned and backed by a current dashboard password-login session revalidated upstream. This is deliberately conservative: a configured operator may need to sign in before another can be removed. Require identical database and allowlist configuration across API instances. Production permanent deletion stays disabled by default until platform-reference reconciliation has been reviewed.
 
 ### API contracts
 

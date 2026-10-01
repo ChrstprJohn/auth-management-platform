@@ -15,6 +15,8 @@ Implementation checks are marked only after verification. Decision checks below 
 
 Initial implementation evidence (2026-10-01): workspace/backend build and 14 isolated configuration/HTTP tests pass for auth boundaries, expiry, encryption, CSRF, rate limits, logout, production-cookie attributes and readiness failure. No SQL was executed. Delivery boxes below stay unchecked until controlled live PostgreSQL/GoTrue walkthroughs establish them. See [backend setup](../../apps/gotrue-admin-api/README.md).
 
+Second phase evidence: 48 isolated tests now cover user-list/details contracts, confirmations, bounded pagination, durable-intent failure/partial/unknown outcomes, last-operator/session-proof rules, simulated concurrency, mocked pg connection/lock failures, adapter timeout/error/payload/identity boundaries, protected safe-version health and static full-schema/migration consistency. Strict TypeScript includes the tests. Live PostgreSQL advisory-lock contention, persistence across restart, upstream mutations, email and recovery are still unverified. Migration 0002 is prepared only.
+
 - [ ] Eligible operator can sign in and retrieve current ID/email.
 - [ ] Wrong credentials return a safe error; valid ordinary accounts receive no operator session.
 - [ ] Every protected endpoint rejects absent/invalid/expired sessions and rechecks operator eligibility.

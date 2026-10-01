@@ -16,6 +16,11 @@ const schema = z
       .enum(['development', 'test', 'production'])
       .default('development'),
     HOST: z.string().default('127.0.0.1'),
+    GOTRUE_ADMIN_TOKEN: z.string().min(1),
+    ALLOW_GLOBAL_USER_DELETION: z
+      .enum(['false', 'true'])
+      .default('false')
+      .transform((value) => value === 'true'),
     PORT: z.coerce.number().int().min(1).max(65535).default(3100),
     GOTRUE_URL: z.url().refine((value) => {
       if (!URL.canParse(value)) return false;

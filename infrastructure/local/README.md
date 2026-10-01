@@ -49,6 +49,6 @@ Host-run local APIs use `http://localhost:8081`. Containerized APIs use the GoTr
 
 On the VM, reuse the existing GoTrue/PostgreSQL; do not run this local Compose stack. Configure the chosen real email provider there using that provider's SMTP/authentication requirements, or an explicitly implemented alternative delivery integration. Mailpit is development-only. Keep confirmation required and test delivery/callbacks before launch.
 
-`platform_db`, operator onboarding, and the admin API are not yet implemented. No VM configuration has been changed.
+`platform_db` and operator onboarding remain pending. The [admin API](../../apps/gotrue-admin-api/README.md) is implemented with isolated tests; its database setup and live verification await the user. No VM configuration has been changed.
 
 Configuration reference: [pinned upstream example](https://github.com/supabase/auth/blob/v2.196.0/example.env).

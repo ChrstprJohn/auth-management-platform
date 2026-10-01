@@ -12,4 +12,8 @@ export class HealthController {
       .status(ready ? 200 : 503)
       .json({ status: ready ? 'ready' : 'unavailable' });
   };
+  upstream = async (_req: Request, res: Response): Promise<void> => {
+    const result = await this.service.upstreamStatus();
+    res.status(result.status === 'reachable' ? 200 : 503).json(result);
+  };
 }

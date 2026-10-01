@@ -12,4 +12,15 @@ export class HealthService {
     ]);
     return results.every((result) => result.status === 'fulfilled');
   }
+  async upstreamStatus(): Promise<{
+    status: 'reachable' | 'unavailable';
+    version: string | null;
+  }> {
+    try {
+      const health = await this.upstream.health();
+      return { status: 'reachable', version: health.version };
+    } catch {
+      return { status: 'unavailable', version: null };
+    }
+  }
 }

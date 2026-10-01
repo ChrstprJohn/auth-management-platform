@@ -15,6 +15,7 @@ export interface SessionStore {
   find(hash: string): Promise<StoredSession | null>;
   delete(hash: string): Promise<void>;
   deleteForOperator(operatorId: string): Promise<void>;
+  findForOperator(operatorId: string): Promise<StoredSession[]>;
 }
 const rowSchema = z.object({
   session_hash: z.string(),
@@ -28,6 +29,30 @@ const rowSchema = z.object({
 
 export class SessionRepository implements SessionStore {
   constructor(private readonly pool: Pool) {}
+  async findForOperator(operatorId: string): Promise<StoredSession[]> {
+    try {
+      const result = await this.pool.query<Record<string, unknown>>(
+        'SELECT session_hash, operator_id, created_at, expires_at, token_ciphertext, token_nonce, token_tag FROM operator_sessions WHERE operator_id=$1 AND expires_at > CURRENT_TIMESTAMP ORDER BY created_at DESC LIMIT 5',
+        [operatorId],
+      );
+      return result.rows.map((value) => {
+        const row = rowSchema.parse(value);
+        return {
+          hash: row.session_hash,
+          operatorId: row.operator_id,
+          createdAt: row.created_at,
+          expiresAt: row.expires_at,
+          token: {
+            ciphertext: row.token_ciphertext,
+            nonce: row.token_nonce,
+            tag: row.token_tag,
+          },
+        };
+      });
+    } catch {
+      throw unavailable();
+    }
+  }
   async create(session: StoredSession): Promise<void> {
     try {
       await this.pool.query(

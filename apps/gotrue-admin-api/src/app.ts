@@ -8,7 +8,12 @@ import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { pinoHttp } from 'pino-http';
 import { Pool } from 'pg';
-import { GoTrueClient, type OperatorIdentityClient } from '@auth/gotrue-client';
+import {
+  GoTrueClient,
+  GoTrueAdminClient,
+  type AdminUsersClient,
+  type OperatorIdentityClient,
+} from '@auth/gotrue-client';
 import type { Config } from './config/env.js';
 import { createLogger } from './shared/logging/logger.js';
 import {
@@ -23,11 +28,27 @@ import { HealthController } from './modules/health/health.controller.js';
 import { CsrfMiddleware } from './middleware/csrf.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { ApiError, forbidden } from './shared/errors/api-error.js';
+import { AuthenticateMiddleware } from './middleware/authenticate.js';
+import {
+  AuditRepository,
+  type AuditStore,
+} from './modules/audit/audit.repository.js';
+import { AuditService } from './modules/audit/audit.service.js';
+import { AuditController } from './modules/audit/audit.controller.js';
+import {
+  MutationLockRepository,
+  type MutationLock,
+} from './modules/users/mutation-lock.repository.js';
+import { UsersService } from './modules/users/users.service.js';
+import { UsersController } from './modules/users/users.controller.js';
 
 export interface AppDependencies {
   upstream?: OperatorIdentityClient;
   sessions?: SessionStore;
   checkDatabase?: () => Promise<void>;
+  admin?: AdminUsersClient;
+  audit?: AuditStore;
+  mutationLock?: MutationLock;
 }
 export function createApp(
   config: Config,
@@ -62,6 +83,26 @@ export function createApp(
     authService,
     config.NODE_ENV === 'production',
   );
+  const authenticate = new AuthenticateMiddleware(authService, auth.cookieName);
+  const auditService = new AuditService(
+    dependencies.audit ?? new AuditRepository(pool),
+  );
+  const audit = new AuditController(auditService);
+  const users = new UsersController(
+    new UsersService(
+      dependencies.admin ??
+        new GoTrueAdminClient(
+          config.GOTRUE_URL,
+          config.UPSTREAM_TIMEOUT_MS,
+          config.GOTRUE_ADMIN_TOKEN,
+        ),
+      auditService,
+      dependencies.mutationLock ?? new MutationLockRepository(pool),
+      authService,
+      config.OPERATOR_UUID_ALLOWLIST,
+      config.ALLOW_GLOBAL_USER_DELETION,
+    ),
+  );
   const health = new HealthController(
     new HealthService(
       upstream,
@@ -71,6 +112,7 @@ export function createApp(
           await pool.query(
             'SELECT session_hash FROM operator_sessions LIMIT 0',
           );
+          await pool.query('SELECT id FROM management_audit LIMIT 0');
         }),
     ),
   );
@@ -119,7 +161,7 @@ export function createApp(
     cors({
       origin: config.FRONTEND_ORIGINS,
       credentials: true,
-      methods: ['GET', 'POST', 'OPTIONS'],
+      methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'X-CSRF-Protection'],
       exposedHeaders: ['X-Request-ID'],
     }),
@@ -153,6 +195,18 @@ export function createApp(
   );
   app.get('/v1/operator/auth/me', auth.me);
   app.post('/v1/operator/auth/logout', csrf.handle, auth.logout);
+  const usersRouter = express.Router();
+  usersRouter.use(authenticate.handle);
+  usersRouter.get('/', users.list);
+  usersRouter.get('/:id', users.get);
+  const jsonBody = express.json({ limit: '16kb', strict: true });
+  usersRouter.post('/', csrf.handle, jsonBody, users.create);
+  usersRouter.post('/:id/ban', csrf.handle, jsonBody, users.ban);
+  usersRouter.post('/:id/unban', csrf.handle, jsonBody, users.unban);
+  usersRouter.delete('/:id', csrf.handle, jsonBody, users.delete);
+  app.use('/v1/operator/users', usersRouter);
+  app.get('/v1/operator/audit', authenticate.handle, audit.list);
+  app.get('/v1/operator/health', authenticate.handle, health.upstream);
   app.use((_req, _res, next) =>
     next(new ApiError(404, 'NOT_FOUND', 'Route not found.')),
   );
