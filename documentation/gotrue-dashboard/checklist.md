@@ -13,6 +13,8 @@ Implementation checks are marked only after verification. Decision checks below 
 
 ## Latest local backend evidence
 
+Frontend delivery (2026-10-01): the complete React/Vite operator frontend is implemented. Fifty-four frontend behavior tests, aggregate repository checks and asset safety scan pass; the bounded desktop/mobile/keyboard fixture review and disposable-account live browser walkthrough cover all 16 endpoint flows. This supersedes earlier notes that UI/reset-page verification was pending. See the [frontend checklist](frontend-checklist.md) for exact scope, phase commits, callback test routing and separate production prerequisites. No database setup, infrastructure startup, deployment or real operator changes occurred.
+
 Restricted-role verification (2026-10-01): after the user updated credentials and restarted the API, read-only metadata confirmed admin_api_runtime is the connected role and has no superuser, database/role creation, RLS bypass or schema CREATE privileges. The full management and successful recovery walkthroughs passed with this connection, including restart persistence, concurrent single-use reset, last-operator contention, session expiry and dependency failure checks. The running API returned ready. Disposable accounts/mail were removed; audit history was retained. This supersedes earlier restricted-role pending notes below. Natural upstream email-link expiry and production checks remain unverified.
 
 On 2026-10-01, `scripts/verify-local-management.ts` passed against existing PostgreSQL and pinned GoTrue using disposable accounts. It verified operator login/me, wrong-password and ordinary-account rejection, bounded safe pagination/details, both creation modes without email, duplicate handling, ban duration and existing-access-token rejection during ban, unban, permanent deletion/not-found, audit/session persistence through gateway reconstruction, two-instance destructive contention and last-usable-operator rejection, eligibility removal, and logout. The real allowlist and credentials were unchanged; accounts were removed and audit history retained. This used the configured privileged database role; restricted-role operation, natural ban/session/OTP expiry walkthroughs, UI and production deployment remain unverified. Route extraction preserved endpoint contracts and all 76 isolated tests pass. Earlier phase evidence below records the checks available at that phase.
@@ -46,29 +48,29 @@ Recovery boundary evidence (2026-10-01): the gateway walkthrough now rejects abs
 ## Browse users
 
 - [x] List uses bounded upstream pagination and supports navigation without implying global search.
-- [ ] List shows safe account fields with loading, empty, and error states.
+- [x] List shows safe account fields with loading, empty, and error states.
 - [x] Details show verification, creation, available last-sign-in, and ban information accurately.
-- [ ] Missing/deleted users show not-found; unavailable fields are represented honestly.
+- [x] Missing/deleted users show not-found; unavailable fields are represented honestly.
 
 ## Create users
 
-- [ ] Email/password and explicit confirmation policy are validated on the backend.
-- [ ] Operator-confirmed creation clearly explains bypassing email verification.
-- [ ] Duplicate and upstream failures produce safe errors; UI prevents repeated pending submissions.
+- [x] Email/password and explicit confirmation policy are validated on the backend.
+- [x] Operator-confirmed creation clearly explains bypassing email verification.
+- [x] Duplicate and upstream failures produce safe errors; UI prevents repeated pending submissions.
 - [x] Creation returns safe account details and records an audit outcome.
-- [ ] UI accurately explains whether email was sent; account creation is not labeled as an invitation.
+- [x] UI accurately explains whether email was sent; account creation is not labeled as an invitation.
 
 ## Ban and unban
 
-- [ ] Ban requires confirmation, explains global impact, and validates the agreed duration policy.
+- [x] Ban requires confirmation, explains global impact, and validates the agreed duration policy.
 - [x] Ban/unban refresh account status and record outcomes.
 - [ ] Existing-token/session effects and ban expiry are accurately documented and tested.
 
 ## Delete
 
-- [ ] Confirmation identifies the target and explicitly explains permanent global identity deletion.
+- [x] Confirmation identifies the target and explicitly explains permanent global identity deletion.
 - [x] The supported deletion operation matches the promised permanent behavior.
-- [ ] Successful deletion updates the list and records the outcome; ambiguous failure is not blindly retried.
+- [x] Successful deletion updates the list and records the outcome; ambiguous failure is not blindly retried.
 - [ ] Platform-reference reconciliation is defined before enabling deletion against production platform users.
 
 ## Last-operator protection
@@ -80,8 +82,8 @@ Recovery boundary evidence (2026-10-01): the gateway walkthrough now rejects abs
 
 ## Health and history
 
-- [ ] Health distinguishes API liveness from reachable/unreachable GoTrue and exposes safe version information.
-- [ ] Timeouts are clear; health is not presented as proof of working email/database/login flows.
+- [x] Health distinguishes API liveness from reachable/unreachable GoTrue and exposes safe version information.
+- [x] Timeouts are clear; health is not presented as proof of working email/database/login flows.
 - [x] Operators can browse a bounded/paginated recent history of create/ban/unban/delete attempts.
 - [x] History includes actor, target, action, outcome, time, and request ID without credentials.
 - [x] Audit survives restart and distinguishes completed, failed, and unknown/partial outcomes.

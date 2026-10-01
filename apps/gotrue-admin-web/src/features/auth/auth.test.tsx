@@ -41,24 +41,34 @@ describe('operator forms and account', () => {
     expect(safeReturn('/users?password=secret')).toBe('/users');
     expect(safeReturn('/history')).toBe('/history');
   });
-  it('shows login failure and releases password state without establishing a session', async () => {
-    vi.spyOn(operatorApi, 'me').mockRejectedValue(
-      new ApiFailure('AUTHENTICATION_REQUIRED', 401, false),
-    );
-    const login = vi
-      .spyOn(operatorApi, 'login')
-      .mockRejectedValue(new ApiFailure('ACCESS_DENIED', 403, false));
-    mount(<LoginPage />);
-    const user = userEvent.setup();
-    await user.type(screen.getByLabelText('Email'), 'controlled@example.test');
-    await user.type(screen.getByLabelText('Password'), 'short');
-    await user.click(screen.getByRole('button', { name: /^Sign in$/ }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Access was denied',
-    );
-    expect(login).toHaveBeenCalledTimes(1);
-    expect(screen.getByLabelText('Password')).toHaveValue('');
-  });
+  it.each([
+    ['ACCESS_DENIED', 403, 'Access was denied'],
+    ['AUTHENTICATION_REQUIRED', 401, 'valid operator credentials'],
+    ['RATE_LIMITED', 429, 'Wait before trying again'],
+    ['DEPENDENCY_UNAVAILABLE', 503, 'unavailable'],
+    ['NETWORK_ERROR', 0, 'could not be reached'],
+  ] as const)(
+    'shows %s and releases password state without establishing a session',
+    async (code, status, message) => {
+      vi.spyOn(operatorApi, 'me').mockRejectedValue(
+        new ApiFailure('AUTHENTICATION_REQUIRED', 401, false),
+      );
+      const login = vi
+        .spyOn(operatorApi, 'login')
+        .mockRejectedValue(new ApiFailure(code, status, false));
+      mount(<LoginPage />);
+      const user = userEvent.setup();
+      await user.type(
+        screen.getByLabelText('Email'),
+        'controlled@example.test',
+      );
+      await user.type(screen.getByLabelText('Password'), 'short');
+      await user.click(screen.getByRole('button', { name: /^Sign in$/ }));
+      expect(await screen.findByRole('alert')).toHaveTextContent(message);
+      expect(login).toHaveBeenCalledTimes(1);
+      expect(screen.getByLabelText('Password')).toHaveValue('');
+    },
+  );
   it('restores account information and leaves failed logout visible with data intact', async () => {
     vi.spyOn(operatorApi, 'me').mockResolvedValue(session);
     vi.spyOn(operatorApi, 'logout').mockRejectedValue(

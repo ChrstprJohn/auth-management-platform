@@ -1,6 +1,6 @@
 # GoTrue operator frontend requirements
 
-Status: requirements for the future `apps/gotrue-admin-web` application; frontend implementation has not started. The stack and hook/view boundaries are agreed in [frontend architecture](frontend-architecture.md). [Implementation plan](frontend-implementation-plan.md) defines the phases and acceptance gates. Use shadcn components and default styling, as requested by the user.
+Status: implemented in `apps/gotrue-admin-web`. The [frontend checklist](frontend-checklist.md) records local test/browser evidence and separate launch prerequisites. The stack and hook/view boundaries are agreed in [frontend architecture](frontend-architecture.md). [Implementation plan](frontend-implementation-plan.md) defines the phases and acceptance gates. Use shadcn components and default styling, as requested by the user.
 
 This document owns screens, interactions and frontend usage of the existing backend. [Product features](features.md) owns V1 scope; [API reference](api.md) owns exact request/response contracts, validation, cookies and error codes. [Delivery checklist](checklist.md) records verified implementation. If a contract changes, update the API reference first and adjust this document's usage mapping.
 
@@ -118,9 +118,9 @@ Service status distinguishes three results: API liveness, combined GoTrue/admin-
 - Show field errors beside controls and global/dependency failures visibly. Announce asynchronous results accessibly, move focus sensibly in dialogs, provide keyboard access, and keep success/failure messages readable without color alone. Tables must remain usable on narrow screens.
 - Keep passwords, cookies, credentials and recovery URL values out of logs, analytics, error capture, URLs and persistent caches. Clear account-specific state on logout, session loss and successful reset. Production origin/cookie requirements remain owned by the API reference and shared deployment document.
 
-## Acceptance scenarios for the later frontend plan
+## Acceptance scenarios
 
-These are required future checks, not completed frontend tests:
+These checks govern delivery; their actual verification scope is recorded in the [frontend checklist](frontend-checklist.md):
 
 1. Restore an eligible session on reload; sign in and inspect UUID/email/expiry; deny ordinary accounts; handle expiry, eligibility loss and logout failure honestly.
 2. Complete same-browser Mailpit recovery through backend callback and reset; normal login is required afterward. Exercise invalid/expired context, direct reset-page access, replay, CSRF and uncertain-result messaging.

@@ -28,6 +28,8 @@ export function createSessionRuntime() {
         throw new ApiFailure('SESSION_CHANGED', 0, false);
       return result;
     } catch (error) {
+      if (started !== generation)
+        throw new ApiFailure('SESSION_CHANGED', 0, false);
       if (
         started === generation &&
         error instanceof ApiFailure &&

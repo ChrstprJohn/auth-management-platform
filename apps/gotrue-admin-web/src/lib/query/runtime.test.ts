@@ -3,6 +3,31 @@ import { createSessionRuntime } from './runtime';
 import { ApiFailure } from '../api/client';
 
 describe('private session isolation', () => {
+  it('drops old-session error metadata as well as successful responses', async () => {
+    const runtime = createSessionRuntime();
+    let reject: (value: Error) => void = () => {};
+    const delayed = runtime.protectedCall(
+      () =>
+        new Promise<string>((_resolve, fail) => {
+          reject = fail;
+        }),
+    );
+    runtime.clear();
+    reject(
+      new ApiFailure(
+        'UPSTREAM_OUTCOME_UNKNOWN',
+        503,
+        true,
+        'old-request',
+        'old-audit',
+      ),
+    );
+    await expect(delayed).rejects.toMatchObject({
+      code: 'SESSION_CHANGED',
+      requestId: undefined,
+      auditId: undefined,
+    });
+  });
   it('clears sensitive caches and rejects a response from an old session', async () => {
     const runtime = createSessionRuntime();
     runtime.client.setQueryData(['private', 0, 'users'], ['private fixture']);

@@ -4,6 +4,7 @@ dist/
 .next/
 .vercel/
 coverage/
+artifacts/web-review/
 *.tsbuildinfo
 *.log
 .bootstrap.sql

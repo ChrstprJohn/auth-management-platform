@@ -1,6 +1,6 @@
 # Frontend shadcn component map
 
-Status: component selection and usage guidance, checked against the official documentation on 2026-10-01. Components have not been installed or implemented. Use this map with [frontend architecture](frontend-architecture.md), [requirements](frontend-requirements.md) and [delivery checklist](frontend-checklist.md).
+Status: implemented using shadcn CLI 4.21.0, Base UI `base-nova`, neutral default tokens and Lucide. Registry guidance was checked on 2026-10-01; generated source and configuration live in `apps/gotrue-admin-web`. Use this map with [frontend architecture](frontend-architecture.md), [requirements](frontend-requirements.md) and [delivery checklist](frontend-checklist.md).
 
 ## Current official guidance
 

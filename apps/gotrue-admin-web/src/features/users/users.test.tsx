@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Link } from 'react-router-dom';
 import { operatorApi } from '@/lib/api/operator';
 import { ApiFailure } from '@/lib/api/client';
 import { parsePagination } from '@/lib/query/pagination';
@@ -118,5 +118,37 @@ describe('global account browsing and creation', () => {
     expect(screen.getByRole('button', { name: 'Create user' })).toBeDisabled();
     expect(create).toHaveBeenCalledTimes(1);
     expect(screen.getByLabelText('Password')).toHaveValue('');
+  });
+  it('keeps uncertain creation blocked after leaving and returning to the form', async () => {
+    vi.spyOn(operatorApi, 'me').mockResolvedValue(fixtureSession);
+    const create = vi
+      .spyOn(operatorApi, 'create')
+      .mockRejectedValue(new ApiFailure('UPSTREAM_OUTCOME_UNKNOWN', 503, true));
+    renderApp(
+      <>
+        <Link to="/elsewhere">Leave form</Link>
+        <Link to="/users/new">Return to form</Link>
+        <Routes>
+          <Route path="/users/new" element={<CreateUserPage />} />
+          <Route path="/elsewhere" element={<p>Elsewhere</p>} />
+        </Routes>
+      </>,
+      '/users/new',
+    );
+    await userEvent.type(screen.getByLabelText('Email'), fixtureUser.email);
+    await userEvent.type(screen.getByLabelText('Password'), 'valid-password');
+    await userEvent.click(
+      screen.getByRole('radio', { name: 'Operator confirmed' }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Create user' }));
+    await screen.findByRole('alert');
+    await userEvent.click(screen.getByRole('link', { name: 'Leave form' }));
+    await screen.findByText('Elsewhere');
+    await userEvent.click(screen.getByRole('link', { name: 'Return to form' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'may have applied',
+    );
+    expect(screen.getByRole('button', { name: 'Create user' })).toBeDisabled();
+    expect(create).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,6 +1,6 @@
 # Operator frontend implementation plan
 
-Status: documentation complete; frontend implementation has not started. This plan describes the work to perform after the documentation phase. Each phase is committed after its applicable checks; a planned check is not a passed check.
+Status: local implementation phases are complete. The [frontend checklist](frontend-checklist.md) records phase commits, actual checks and separate launch prerequisites. This plan retains the sequence and acceptance gates. Each phase is committed after its applicable checks; a planned check is not a passed check.
 
 Read [requirements](frontend-requirements.md) for features and the complete 16-endpoint mapping, [architecture](frontend-architecture.md) for the agreed stack and hook/view boundaries, [API reference](api.md) for contracts, and [AGENTS.md](../../AGENTS.md) for delivery rules. This plan owns sequencing, decisions and acceptance gates rather than repeating endpoint schemas.
 

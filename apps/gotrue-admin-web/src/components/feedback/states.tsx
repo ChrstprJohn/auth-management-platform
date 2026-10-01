@@ -79,7 +79,9 @@ export function Blank({
   return (
     <Empty>
       <EmptyHeader>
-        <EmptyTitle>{title}</EmptyTitle>
+        <EmptyTitle role="heading" aria-level={2}>
+          {title}
+        </EmptyTitle>
         <EmptyDescription>{description}</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>

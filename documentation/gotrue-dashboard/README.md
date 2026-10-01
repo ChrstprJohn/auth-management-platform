@@ -1,6 +1,6 @@
 # GoTrue Operator Dashboard
 
-The operator backend has health, secure sessions, user management, audit and recovery implemented with isolated tests. Local management and recovery walkthroughs passed using the restricted database role and disposable accounts. Frontend requirements are documented; frontend implementation and production verification remain pending. Follow [backend setup](../../apps/gotrue-admin-api/README.md) and [AGENTS.md](../../AGENTS.md).
+The operator backend and React/Vite frontend implement health, secure sessions, user management, audit and recovery. Local browser management/recovery walkthroughs passed using the existing restricted-role database connection and disposable accounts. Production verification remains separate. Follow [frontend setup](../../apps/gotrue-admin-web/README.md), [backend setup](../../apps/gotrue-admin-api/README.md), [verification evidence](frontend-checklist.md) and [AGENTS.md](../../AGENTS.md).
 
 | Document | Owns |
 |---|---|
@@ -9,7 +9,7 @@ The operator backend has health, secure sessions, user management, audit and rec
 | [Features](features.md) | Product scope and user-facing requirements |
 | [Frontend requirements](frontend-requirements.md) | Screens, interactions, all existing endpoint uses and acceptance scenarios |
 | [Frontend architecture](frontend-architecture.md) | Agreed stack, hook/view boundaries, API/session integration and complete UI states |
-| [Frontend implementation plan](frontend-implementation-plan.md) | Ordered phases, decisions, validation and completion evidence; implementation has not started |
+| [Frontend implementation plan](frontend-implementation-plan.md) | Ordered phases, decisions and acceptance gates; phase evidence is in the frontend checklist |
 | [Frontend components](frontend-components.md) | Current official shadcn component selection and screen/state mapping |
 | [Frontend checklist](frontend-checklist.md) | Feature, UI state, endpoint and verification delivery checks |
 | [AI implementation goal](frontend-ai-goal.md) | Copyable implementation task with pointers, autonomy boundaries and frequent commits |

@@ -45,11 +45,14 @@ function useActionController() {
   const navigate = useNavigate();
   const [target, setTarget] = useState<Target | null>(null);
   const [open, setOpen] = useState(false);
+  const [creationPending, setCreationPending] = useState(false);
+  const [creationError, setCreationError] = useState<ApiFailure | null>(null);
   const [result, setResult] = useState<{
     auditId: string;
     target: Target;
   } | null>(null);
   const busy = useRef(false);
+  const opener = useRef<HTMLElement | null>(null);
   const form = useForm({
     resolver: zodResolver(durationSchema),
     defaultValues: { durationHours: 24 },
@@ -83,15 +86,18 @@ function useActionController() {
   const { reset: resetForm } = form;
   useEffect(() => {
     setTarget(null);
+    setCreationPending(false);
+    setCreationError(null);
     setOpen(false);
     setResult(null);
     busy.current = false;
     resetMutation();
     resetForm({ durationHours: 24 });
   }, [generation, resetMutation, resetForm]);
-  const start = (user: SafeUser, action: Action) => {
+  const start = (user: SafeUser, action: Action, element: HTMLElement) => {
     if (busy.current || uncertain) return;
     mutation.reset();
+    opener.current = element;
     setResult(null);
     form.reset({ durationHours: 24 });
     setTarget({ id: user.id, email: user.email, action });
@@ -120,6 +126,11 @@ function useActionController() {
   };
   return {
     target,
+    creationPending,
+    creationError,
+    setCreationPending,
+    setCreationError,
+    opener,
     open,
     start,
     changeOpen,
@@ -154,10 +165,26 @@ function useActions() {
   if (!value) throw new Error('User actions provider is missing.');
   return value;
 }
+export function useCreationSafety() {
+  const m = useActions();
+  return {
+    pending: m.creationPending,
+    error: m.creationError,
+    setPending: m.setCreationPending,
+    setError: m.setCreationError,
+  };
+}
 export function ActionOutcome() {
   const m = useActions();
   return (
     <div className="mb-6 space-y-3">
+      {m.creationPending && (
+        <Success title="Account creation pending">
+          The backend may still be creating the account. Navigating away does
+          not cancel it.
+        </Success>
+      )}
+      {m.creationError && <Failure error={m.creationError} />}
       {m.pending && (
         <Success title="Management action pending">
           The backend may still be applying {m.target?.action}. Navigating away
@@ -192,27 +219,27 @@ export function UserActions({ user }: { user: SafeUser }) {
         <Button
           variant="outline"
           disabled={m.pending || m.uncertain}
-          onClick={() => m.start(user, 'ban')}
+          onClick={(event) => m.start(user, 'ban', event.currentTarget)}
         >
           Ban user
         </Button>
         <Button
           variant="outline"
           disabled={m.pending || m.uncertain}
-          onClick={() => m.start(user, 'unban')}
+          onClick={(event) => m.start(user, 'unban', event.currentTarget)}
         >
           Unban user
         </Button>
         <Button
           variant="destructive"
           disabled={m.pending || m.uncertain}
-          onClick={() => m.start(user, 'delete')}
+          onClick={(event) => m.start(user, 'delete', event.currentTarget)}
         >
           Permanently delete user
         </Button>
       </div>
       <AlertDialog open={m.open} onOpenChange={m.changeOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent finalFocus={m.opener}>
           <form noValidate onSubmit={m.submit}>
             <AlertDialogHeader>
               <AlertDialogTitle>

@@ -1,6 +1,6 @@
 # Operator frontend architecture
 
-Status: agreed design, not implemented frontend code. This file owns the stack and implementation boundaries for `apps/gotrue-admin-web`. [Frontend requirements](frontend-requirements.md) owns screens and all 16 endpoint mappings; [implementation plan](frontend-implementation-plan.md) owns phases and acceptance gates; [API reference](api.md) owns HTTP contracts; [AGENTS.md](../../AGENTS.md) owns coding and delivery rules.
+Status: implemented in `apps/gotrue-admin-web`; local verification and remaining launch prerequisites are recorded in the [frontend checklist](frontend-checklist.md). This file owns the stack and implementation boundaries. [Frontend requirements](frontend-requirements.md) owns screens and all 16 endpoint mappings; [implementation plan](frontend-implementation-plan.md) owns phases and acceptance gates; [API reference](api.md) owns HTTP contracts; [AGENTS.md](../../AGENTS.md) owns coding and delivery rules.
 
 ## Stack
 

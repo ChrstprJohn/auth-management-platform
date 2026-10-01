@@ -34,7 +34,7 @@ export function useStatusPage() {
       label: 'GoTrue reachability',
       description: 'Authenticated upstream health and safe version.',
       query: upstream,
-      version: upstream.data?.version ?? null,
+      version: upstream.error ? null : (upstream.data?.version ?? null),
     },
   ].map(({ query, ...check }) => ({
     ...check,
@@ -45,7 +45,7 @@ export function useStatusPage() {
         ? 'Check failed'
         : (query.data?.status ?? 'Not checked'),
     refreshing: query.isFetching,
-    checkedAt: query.dataUpdatedAt || query.errorUpdatedAt,
+    checkedAt: Math.max(query.dataUpdatedAt, query.errorUpdatedAt),
     refresh: () => {
       void query.refetch();
     },

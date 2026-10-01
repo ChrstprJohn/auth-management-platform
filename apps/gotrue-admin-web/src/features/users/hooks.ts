@@ -9,6 +9,7 @@ import { operatorApi } from '@/lib/api/operator';
 import { ApiFailure } from '@/lib/api/client';
 import { emailSchema, newPasswordSchema } from '@/features/auth/schemas';
 import { usePagination } from '@/lib/query/pagination';
+import { useCreationSafety } from './actions';
 
 export const createSchema = z.object({
   email: emailSchema,
@@ -82,6 +83,7 @@ export function useUserDetails() {
   };
 }
 export function useCreateUser() {
+  const safety = useCreationSafety();
   const { runtime, generation } = useSession();
   const busy = useRef(false);
   const [visible, setVisible] = useState(false);
@@ -97,6 +99,14 @@ export function useCreateUser() {
         queryKey: ['private', generation],
       });
     },
+    onError: (error) => {
+      if (
+        runtime.generation() === generation &&
+        error instanceof ApiFailure &&
+        error.uncertain
+      )
+        safety.setError(error);
+    },
   });
   const { resetField } = form;
   const { reset } = mutation;
@@ -109,10 +119,12 @@ export function useCreateUser() {
   );
   const blocked =
     mutation.isSuccess ||
+    safety.error !== null ||
     (mutation.error instanceof ApiFailure && mutation.error.uncertain);
   const submit = form.handleSubmit(async () => {
-    if (busy.current || blocked) return;
+    if (busy.current || safety.pending || blocked) return;
     busy.current = true;
+    safety.setPending(true);
     try {
       await mutation.mutateAsync();
     } catch {
@@ -120,6 +132,7 @@ export function useCreateUser() {
     } finally {
       form.resetField('password');
       busy.current = false;
+      if (runtime.generation() === generation) safety.setPending(false);
     }
   });
   const newAccount = () => {
@@ -129,9 +142,9 @@ export function useCreateUser() {
   return {
     form,
     submit,
-    pending: mutation.isPending,
+    pending: mutation.isPending || safety.pending,
     blocked,
-    error: mutation.error,
+    error: safety.error ?? mutation.error,
     result: mutation.data,
     visible,
     toggle: () => setVisible(!visible),
