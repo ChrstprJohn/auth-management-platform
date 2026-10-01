@@ -1,6 +1,6 @@
 # GoTrue Admin API: Backend Architecture
 
-Health/operator sessions, user management, durable audit and password recovery are implemented with isolated tests. Pinned local GoTrue/Mailpit recovery was verified separately. The user applied migration 0003 and reloaded callback configuration; the local PostgreSQL recovery gateway flow passed, including restart persistence and concurrent single-use reset. Broader management verification remains pending. Read alongside [V1 features](features.md) and [shared architecture](../architecture-and-deployment.md).
+Health/operator sessions, user management, durable audit and password recovery are implemented with isolated tests. Pinned local GoTrue/Mailpit recovery was verified separately. The user applied migration 0003 and reloaded callback configuration; the local PostgreSQL recovery gateway flow passed, including restart persistence and concurrent single-use reset. Controlled local management verification passed, including persistence and two-instance last-operator protection. Restricted-role and production checks remain pending. Read alongside [V1 features](features.md) and [shared architecture](../architecture-and-deployment.md).
 
 This file owns backend structure, technology choices, and agreed session/audit/provisioning policies. [API reference](api.md) owns endpoint contracts and usage. [AGENTS.md](../../AGENTS.md) owns coding and delivery rules.
 
@@ -61,6 +61,8 @@ router.get(
 
 The example assumes bound arrow handlers and separate validation/error handling. Keep `app.ts` independent of listening for HTTP tests; `server.ts` owns startup and graceful shutdown.
 
+Feature-specific `*.routes.ts` factories receive controllers and middleware explicitly and own route registration, body parsing, and feature rate limits. `app.ts` wires dependencies, installs global middleware, mounts these routers, and installs final error handlers. Shared rate-limit response handling lives in `middleware/rate-limit.ts`. Recovery has its own module and router, mounted alongside operator authentication under `/v1/operator/auth`.
+
 ## Folder structure
 
 ```text
@@ -78,6 +80,12 @@ apps/
           operator-auth.service.ts
           operator-auth.schemas.ts
           operator-auth.types.ts
+        recovery/
+          recovery.routes.ts
+          recovery.controller.ts
+          recovery.service.ts
+          recovery.schemas.ts
+          recovery.repository.ts
         users/
           users.routes.ts
           users.controller.ts

@@ -5,7 +5,7 @@ import type { Logger } from 'pino';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import helmet from 'helmet';
-import { rateLimit } from 'express-rate-limit';
+import { createRateLimiter } from './middleware/rate-limit.js';
 import { pinoHttp } from 'pino-http';
 import { Pool } from 'pg';
 import {
@@ -50,6 +50,11 @@ import {
 import { RecoveryService } from './modules/recovery/recovery.service.js';
 import { RecoveryController } from './modules/recovery/recovery.controller.js';
 
+import { createOperatorAuthRoutes } from './modules/operator-auth/operator-auth.routes.js';
+import { createRecoveryRoutes } from './modules/recovery/recovery.routes.js';
+import { createUsersRoutes } from './modules/users/users.routes.js';
+import { createAuditRoutes } from './modules/audit/audit.routes.js';
+import { createHealthRoutes } from './modules/health/health.routes.js';
 export interface AppDependencies {
   upstream?: OperatorIdentityClient;
   sessions?: SessionStore;
@@ -193,67 +198,13 @@ export function createApp(
       exposedHeaders: ['X-Request-ID'],
     }),
   );
-  const limiter = (limit: number, windowMs: number) =>
-    rateLimit({
-      limit,
-      windowMs,
-      standardHeaders: 'draft-8',
-      legacyHeaders: false,
-      handler: (_req, res) => {
-        res.status(429).json({
-          error: {
-            code: 'RATE_LIMITED',
-            message: 'Too many requests. Try again later.',
-          },
-          requestId: res.locals.requestId,
-        });
-      },
-    });
-  app.use(limiter(300, 60000));
+  app.use(createRateLimiter(300, 60000));
   app.use(cookieParser());
-  app.get('/health/live', health.live);
-  app.get('/health/ready', health.ready);
-  app.post(
-    '/v1/operator/auth/login',
-    csrf.handle,
-    limiter(10, 15 * 60000),
-    express.json({ limit: '16kb', strict: true }),
-    auth.login,
-  );
-  app.get('/v1/operator/auth/me', auth.me);
-  app.post('/v1/operator/auth/logout', csrf.handle, auth.logout);
-  const recoveryLimiter = limiter(5, 15 * 60000);
-  app.post(
-    '/v1/operator/auth/forgot-password',
-    csrf.handle,
-    recoveryLimiter,
-    express.json({ limit: '16kb', strict: true }),
-    recovery.request,
-  );
-  app.get(
-    '/v1/operator/auth/recovery/callback',
-    limiter(10, 15 * 60000),
-    recovery.callback,
-  );
-  app.post(
-    '/v1/operator/auth/reset-password',
-    csrf.handle,
-    limiter(10, 15 * 60000),
-    express.json({ limit: '16kb', strict: true }),
-    recovery.reset,
-  );
-  const usersRouter = express.Router();
-  usersRouter.use(authenticate.handle);
-  usersRouter.get('/', users.list);
-  usersRouter.get('/:id', users.get);
-  const jsonBody = express.json({ limit: '16kb', strict: true });
-  usersRouter.post('/', csrf.handle, jsonBody, users.create);
-  usersRouter.post('/:id/ban', csrf.handle, jsonBody, users.ban);
-  usersRouter.post('/:id/unban', csrf.handle, jsonBody, users.unban);
-  usersRouter.delete('/:id', csrf.handle, jsonBody, users.delete);
-  app.use('/v1/operator/users', usersRouter);
-  app.get('/v1/operator/audit', authenticate.handle, audit.list);
-  app.get('/v1/operator/health', authenticate.handle, health.upstream);
+  app.use(createHealthRoutes(health, authenticate));
+  app.use('/v1/operator/auth', createOperatorAuthRoutes(auth, csrf));
+  app.use('/v1/operator/auth', createRecoveryRoutes(recovery, csrf));
+  app.use('/v1/operator/users', createUsersRoutes(users, authenticate, csrf));
+  app.use('/v1/operator/audit', createAuditRoutes(audit, authenticate));
   app.use((_req, _res, next) =>
     next(new ApiError(404, 'NOT_FOUND', 'Route not found.')),
   );
