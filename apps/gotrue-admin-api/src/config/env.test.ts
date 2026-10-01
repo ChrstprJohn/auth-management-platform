@@ -15,6 +15,14 @@ describe('configuration', () => {
       { FRONTEND_ORIGINS: '*' },
       { TRUST_PROXY: 'true' },
       { OPERATOR_UUID_ALLOWLIST: 'secret' },
+      { RECOVERY_CALLBACK_URL: 'secret' },
+      { RECOVERY_CALLBACK_URL: 'http://localhost:3100/not-the-callback' },
+      {
+        RECOVERY_CALLBACK_URL:
+          'http://localhost:3100/v1/operator/auth/recovery/callback?redirect=secret',
+      },
+      { RECOVERY_RESET_URL: 'https://untrusted.test/reset-password' },
+      { RECOVERY_RESET_URL: 'javascript:secret' },
     ]) {
       expect(() => loadConfig({ ...valid, ...override })).toThrow(
         'Invalid configuration fields:',
@@ -33,6 +41,9 @@ describe('configuration', () => {
         ...valid,
         NODE_ENV: 'production',
         FRONTEND_ORIGINS: 'https://admin.chrbuilds.dev',
+        RECOVERY_CALLBACK_URL:
+          'https://admin-api.chrbuilds.dev/v1/operator/auth/recovery/callback',
+        RECOVERY_RESET_URL: 'https://admin.chrbuilds.dev/reset-password',
         TRUST_PROXY: '172.20.0.0/16',
       }).TRUST_PROXY,
     ).toBe('172.20.0.0/16');

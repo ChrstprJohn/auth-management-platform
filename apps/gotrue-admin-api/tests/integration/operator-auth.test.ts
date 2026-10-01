@@ -87,6 +87,12 @@ function setup(production = false) {
     OPERATOR_UUID_ALLOWLIST: operatorId,
     SESSION_ENCRYPTION_KEY: Buffer.alloc(32, 17).toString('base64'),
     FRONTEND_ORIGINS: production ? 'https://admin.chrbuilds.dev' : origin,
+    RECOVERY_CALLBACK_URL: production
+      ? 'https://admin-api.chrbuilds.dev/v1/operator/auth/recovery/callback'
+      : 'http://localhost:3100/v1/operator/auth/recovery/callback',
+    RECOVERY_RESET_URL: production
+      ? 'https://admin.chrbuilds.dev/reset-password'
+      : `${origin}/reset-password`,
     LOG_LEVEL: 'silent',
   });
   const resource = createApp(config, {

@@ -1,6 +1,6 @@
 # Operator API Reference
 
-Status: health, operator sessions, user management and audit are implemented and verified with isolated tests. Live PostgreSQL/GoTrue walkthrough is pending user setup; examples below describe implemented contracts, not captured live responses. Recovery remains unimplemented pending its pinned-local verification. This file is the source of truth for endpoint contracts and usage. [Backend architecture](backend-architecture.md#agreed-v1-decisions) owns internal session, audit, and provisioning policies.
+Status: health, operator sessions, user management, audit and recovery are implemented with isolated verification. Pinned local GoTrue/Mailpit recovery was verified separately with a disposable account. After user migration/callback setup, the local recovery gateway walkthrough passed against PostgreSQL, including restart persistence, concurrent single use and login/logout. Broader management/security verification remains pending. Examples illustrate contracts; they are not captured production responses. This file is the source of truth for endpoint contracts and usage. [Backend architecture](backend-architecture.md#agreed-v1-decisions) owns internal session, audit, and provisioning policies.
 
 ## Connection and browser policy
 
@@ -149,7 +149,7 @@ Known mutation failures include top-level `auditId`/`outcome` alongside the comm
 }
 ```
 
-Other management errors include `400 UPSTREAM_REJECTED`, `404 USER_NOT_FOUND`, `403 DELETION_DISABLED`, validation/content-type/body/auth/rate errors from the common policy, and safe `503 DEPENDENCY_UNAVAILABLE`. Readiness now checks both owned tables. Migration 0002 and SELECT/INSERT/UPDATE audit grants are required; follow the [database ledger](../../packages/database/admin/README.md).
+Other management errors include `400 UPSTREAM_REJECTED`, `404 USER_NOT_FOUND`, `403 DELETION_DISABLED`, validation/content-type/body/auth/rate errors from the common policy, and safe `503 DEPENDENCY_UNAVAILABLE`. Readiness now checks sessions, audit and recovery tables. Migrations 0002/0003 and their runtime grants are required; follow the [database ledger](../../packages/database/admin/README.md).
 
 ## Usage flow (isolated contract verified; live verification pending)
 
@@ -226,12 +226,65 @@ No upstream calls are automatically retried. Login may create an upstream sessio
 
 Environment names, generation instructions and defaults are in [`.env.example`](../../apps/gotrue-admin-api/.env.example). Required manual SQL is [admin schema/migration setup](../../packages/database/admin/README.md); no SQL has been executed by the agent. Pinned password-grant and user-validation semantics were checked against [GoTrue v2.196.0 token handler](https://github.com/supabase/auth/blob/v2.196.0/internal/api/token.go) and [user handler](https://github.com/supabase/auth/blob/v2.196.0/internal/api/user.go). Live operator/login verification remains pending.
 
+## Password recovery (implemented; isolated verification)
+
+Prerequisites: user-executed admin migration `0003_operator_recovery.sql` and runtime-table grants, the backend's `RECOVERY_CALLBACK_URL` in GoTrue's URI allowlist, and a reset-page URL using a configured frontend origin. See [setup instructions](../../apps/gotrue-admin-api/README.md#password-recovery-setup). Existing databases at 0002 execute only migration 0003; never replay full initialization. New production URL settings require explicit HTTPS same-site values. Readiness now checks the recovery table; it remains unavailable until setup is applied.
+
+All POSTs require JSON, exact trusted Origin and `X-CSRF-Protection: 1`. No current operator session is required. Recovery never establishes one or grants eligibility. Body/query unknown fields are rejected. A supplied upstream token, verification type or redirect is not accepted. The common safe error envelope, request IDs and `Cache-Control: no-store` apply; request bodies, cookies and token-bearing URLs are omitted from API logs. Proxies and external logging must also avoid recording callback query strings.
+
+| Method | Path                                  | Input and identity                                                                                                                        | Success                                                                                                                 |
+| ------ | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/v1/operator/auth/forgot-password`   | `{email}`; valid email, max 254 characters; no session                                                                                    | 202 `{"message":"If the account can be recovered, a recovery email will be sent."}` and recovery cookie                 |
+| GET    | `/v1/operator/auth/recovery/callback` | Exact `{code,state}` query; code UUID and 43-character base64url state; matching recovery cookie from the browser that requested recovery | 303 with fixed `Location: RECOVERY_RESET_URL` and shortened recovery-cookie expiry; no response body or upstream tokens |
+| POST   | `/v1/operator/auth/reset-password`    | `{password}`; minimum 8 characters, maximum 72 UTF-8 bytes; ready unexpired recovery cookie                                               | 204; all local sessions invalidated, recovery and current operator cookies cleared; normal login required               |
+
+Forgot-password is limited to 5 requests/IP/15 minutes; callback and reset each have 10 requests/IP/15 minutes. The global limiter still applies. These limits are process-local and reset on restart. Rate-limit failures return 429 and Retry-After. Invalid email/body/query/password returns 400 `INVALID_INPUT`; JSON media-type failures return 415; rejected Origin/CSRF returns 403. Missing, expired, mismatched, consumed or ineligible recovery returns generic 400 `INVALID_RECOVERY`. Storage failures and non-identity exchange outages return safe 503 responses. Expired/banned/missing upstream recovery identities cannot reset through this gateway.
+
+Forgot-password creates a fresh browser state and server-only PKCE verifier for every valid email, regardless of account existence or operator status. Only the state/email hashes and encrypted verifier are stored; no email/password or refresh token is persisted. The callback URL is constructed solely from server configuration plus random state. The API sends a recovery request to GoTrue for all valid email inputs, including ordinary accounts, and returns the same 202 body/cookie policy even if GoTrue rejects delivery or is unavailable. Storage failure returns 503 before sending. This response is not delivery confirmation and does not authorize ordinary accounts. Upstream timing and mail receipt are outside the generic-response guarantee.
+
+GoTrue's normal recovery email link goes to `/verify?type=recovery`; GoTrue verifies it and redirects with a PKCE authorization code and preserved state to our gateway. The gateway requires the same browser cookie, atomically claims the pending context, exchanges the code with the encrypted server-held verifier, validates identity/email binding and configured eligible-operator status, and stores only the encrypted recovery access token. A general login token or unrelated signup/magic-link code cannot substitute for this server-generated recovery flow. Callback navigation uses proof from the cookie/state/code rather than POST Origin/CSRF headers. Error redirects from GoTrue are rejected as invalid query input; request a fresh flow if needed. Callback success redirects to the fixed reset page with no token/code/state forwarded. `Referrer-Policy: no-referrer` protects the redirect. Pending contexts expire within one hour; ready contexts expire within ten minutes, capped by the initial context and upstream access-token expiry. GoTrue also enforces its own earlier link/code expiry.
+
+Reset atomically claims the ready context and deletes all local sessions for its UUID in one admin transaction **before** the password mutation. It then revalidates the upstream identity and operator eligibility and sends only the new password to GoTrue. After confirmed success another transaction deletes local sessions again and removes identified recovery contexts. No management audit event is written for password recovery; GoTrue retains its own recovery/password-change history. Old dashboard sessions may be invalidated even when password reset later fails. A competing request cannot reuse a claimed context; a rejected upstream password also consumes it. Obtain a new recovery flow to correct the password; do not automatically retry the mutation.
+
+Timeout/ambiguous update returns 503 `PASSWORD_RESET_OUTCOME_UNKNOWN`: password may have changed, so try ordinary sign-in or seek trusted assistance. Successful upstream update followed by failed local cleanup returns 503 `PASSWORD_RESET_COMPLETION_FAILED`: password changed, but cleanup could not be confirmed. Neither response claims rollback or invites repeating reset. Failed completion keeps its consumed context, even across restart. Read-only administrator reconciliation must establish current state before any deliberate corrective operation.
+
+### Complete recovery usage
+
+From the configured frontend origin, preserve cookies throughout:
+
+```ts
+const apiBaseUrl = 'http://localhost:3100';
+const headers = {
+  'Content-Type': 'application/json',
+  'X-CSRF-Protection': '1',
+};
+const requested = await fetch(
+  `${apiBaseUrl}/v1/operator/auth/forgot-password`,
+  {
+    method: 'POST',
+    credentials: 'include',
+    headers,
+    body: JSON.stringify({ email: 'controlled-operator@example.test' }),
+  },
+);
+if (requested.status !== 202) throw await requested.json();
+// Open Mailpit's newest recovery email in this SAME browser.
+// Follow its GoTrue link; the gateway exchanges the code and redirects
+// to the configured /reset-password page without credentials in the URL.
+const reset = await fetch(`${apiBaseUrl}/v1/operator/auth/reset-password`, {
+  method: 'POST',
+  credentials: 'include',
+  headers,
+  body: JSON.stringify({ password: newControlledPassword }),
+});
+if (reset.status !== 204) throw await reset.json();
+// Now use the documented login -> me -> logout flow with the new password.
+```
+
+The frontend/reset page is not implemented; this example is an integration contract. For a backend-only manual walkthrough, a cookie-preserving client can request recovery with the same trusted Origin/header, follow the mail link and callback without following the final frontend redirect, then POST reset with that cookie jar. Do not put email links, codes, passwords or cookies into shell history or test logs.
+
+Observed pinned upstream evidence: Mailpit recovery email, PKCE exchange/state preservation, code replay and invalid-link rejection, password update, old-password/old-access/old-refresh rejection and new-password login passed with a disposable local account. The recovery access token remained valid after update; the gateway discards it after cleanup and does not return it to the browser. Do not claim universal revocation across products or out-of-band resets. See pinned [recovery handler](https://github.com/supabase/auth/blob/v2.196.0/internal/api/recover.go), [PKCE handler](https://github.com/supabase/auth/blob/v2.196.0/internal/api/token.go), and [password update handler](https://github.com/supabase/auth/blob/v2.196.0/internal/api/user.go). After user migration/callback setup, the complete local gateway/PostgreSQL recovery probe passed, including persistence through gateway restart, one winner under concurrent reset, old-session invalidation and new-password login/logout. A real wait-until-link-expiry test remains pending; isolated tests cover local context expiry, replay and storage failures.
+
 ## Documentation required during implementation
 
-## Recovery contracts (planned implementation)
-
-The recovery flow adds `POST /v1/operator/auth/forgot-password` with strict `{email}`, `GET /v1/operator/auth/recovery/callback` with a PKCE `code` and browser-bound `state`, and `POST /v1/operator/auth/reset-password` with strict `{password}`. POSTs require trusted Origin, `X-CSRF-Protection: 1`, and JSON. Forgot-password returns the same 202 message for all valid emails, including upstream send failures; it does not prove delivery. Both POSTs and callback are rate-limited. A separate opaque HttpOnly recovery cookie binds the same browser to a server-generated PKCE verifier; its hash and encrypted recovery material live in prepared admin migration 0003. No supplied redirect or upstream access token is accepted.
-
-The gateway callback is configured server-side, exchanges the one-time GoTrue code, rechecks eligible identity, and redirects without tokens to a configured reset page. Ready recovery contexts expire after ten minutes, capped by upstream expiry; pending contexts expire after one hour, with GoTrue's shorter code/link expiry still enforced. Callback and reset claims are atomic and single-use. Reset invalidates local sessions before the upstream mutation and again after confirmed success, then requires normal login. Ambiguous upstream outcomes consume the context and must not be retried automatically. Full endpoint examples and observed verification evidence will replace this planned section with implementation.
-
-Update this file whenever endpoint behavior changes. Password recovery is not implemented: its exact callback/token exchange contracts require the pinned-local recovery-link, expiry, password-update and Mailpit walkthrough required by backend architecture. User-management/audit contracts above are implemented with isolated tests, but live mutation and PostgreSQL concurrency/persistence verification remain pending. No deployment or end-to-end completion is implied.
+Update this reference whenever endpoint behavior changes. The local upstream and recovery gateway probes establish only their recorded controlled flows. They do not establish complete V1 management/security verification, production delivery, or deployment.

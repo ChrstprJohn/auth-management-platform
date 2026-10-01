@@ -1,12 +1,9 @@
 import { z } from 'zod';
+import { newPasswordSchema } from '../../shared/http/password-schema.js';
 export const userIdSchema = z.uuid().transform((value) => value.toLowerCase());
-const passwordSchema = z
-  .string()
-  .min(8)
-  .refine((value) => Buffer.byteLength(value, 'utf8') <= 72);
 export const createUserSchema = z.strictObject({
   email: z.email().max(254),
-  password: passwordSchema,
+  password: newPasswordSchema,
   confirmation: z.enum(['require_verification', 'operator_confirmed']),
 });
 export const banSchema = z.strictObject({

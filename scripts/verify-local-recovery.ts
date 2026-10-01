@@ -74,6 +74,14 @@ async function json(
     );
   return response.json();
 }
+async function removeMessage(id: string): Promise<void> {
+  const result = await request(
+    'http://localhost:8025/api/v1/messages',
+    'DELETE',
+    { IDs: [id] },
+  );
+  if (!result.ok) throw new Error('Disposable message cleanup failed.');
+}
 try {
   const health = z
     .object({ version: z.literal('v2.196.0') })
@@ -232,12 +240,7 @@ try {
   }
   for (const id of messageIds) {
     try {
-      const result = await request(
-        'http://localhost:8025/api/v1/messages',
-        'DELETE',
-        { IDs: [id] },
-      );
-      if (!result.ok) throw new Error('cleanup');
+      await removeMessage(id);
     } catch {
       console.error(
         'Disposable Mailpit message cleanup awaits manual inspection.',

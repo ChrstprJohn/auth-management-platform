@@ -26,6 +26,16 @@ After creating the backend `.env`, run `pnpm admin:token` from the repository ro
 
 The pinned [admin credential middleware](https://github.com/supabase/auth/blob/v2.196.0/internal/api/middleware.go) accepts sessionless admin-role tokens, and the [JWT verifier](https://github.com/supabase/auth/blob/v2.196.0/internal/api/auth.go) supports signing with the configured HS256 secret.
 
+## Password recovery setup
+
+For an existing admin database at baseline 0002, the user executes only `packages/database/admin/migrations/0003_operator_recovery.sql` and grants the runtime role access as described in the [database README](../../packages/database/admin/README.md). Do not rerun the full schema on existing tables. Readiness now checks `operator_recovery`, so an unapplied migration returns unavailable.
+
+Locally `RECOVERY_CALLBACK_URL` defaults to `http://localhost:3100/v1/operator/auth/recovery/callback`, and `RECOVERY_RESET_URL` defaults to `http://localhost:5173/reset-password`. The callback must be in GoTrue's URI allowlist; follow the [local infrastructure instructions](../../infrastructure/local/README.md#backend-and-later-deployment), preserving existing entries. The user restarts GoTrue for changed infrastructure configuration and restarts the API after database/configuration setup. Production requires explicit HTTPS same-site callback/reset URLs and an existing permitted frontend origin; old production configuration without them will fail validation. Defaults support the current local port only; configure the callback explicitly for another port.
+
+Endpoint requests and cookie-preserving examples live in the [recovery API reference](../../documentation/gotrue-dashboard/api.md#password-recovery-implemented-isolated-verification). Open the email in the same browser that requested recovery. A different browser has no recovery cookie and is rejected. The final reset page is a frontend integration contract; it has not been built. No reset UI or deployment is included here. A generic forgot-password response does not guarantee delivery.
+
+The manual `pnpm exec tsx scripts/verify-local-recovery.ts` probe validates the pinned upstream flow using its existing local frontend callback, a disposable account, and Mailpit. It never uses SQL or changes the configured operator account; it is not part of the automatic test suite. The upstream walkthrough passed on 2026-10-01. After user migration/callback setup, `pnpm exec tsx scripts/verify-local-gateway-recovery.ts` passed the actual gateway/PostgreSQL recovery flow, restart persistence, concurrent reset, session invalidation and new-password login/logout. Both manual probes use disposable accounts; they never apply schema SQL or edit the real operator allowlist.
+
 ## Checks
 
 From the root: `pnpm run build`, `pnpm run typecheck`, `pnpm run test`, `pnpm run lint`, and `pnpm run format:check`. Tests substitute upstream/storage adapters and never execute SQL or provision accounts. The build must run before tests because workspace package exports point to compiled files. An isolated passing test does not establish live PostgreSQL or GoTrue behavior.

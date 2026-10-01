@@ -11,6 +11,8 @@ import { Pool } from 'pg';
 import {
   GoTrueClient,
   GoTrueAdminClient,
+  GoTrueRecoveryClient,
+  type RecoveryClient,
   type AdminUsersClient,
   type OperatorIdentityClient,
 } from '@auth/gotrue-client';
@@ -41,6 +43,12 @@ import {
 } from './modules/users/mutation-lock.repository.js';
 import { UsersService } from './modules/users/users.service.js';
 import { UsersController } from './modules/users/users.controller.js';
+import {
+  RecoveryRepository,
+  type RecoveryStore,
+} from './modules/recovery/recovery.repository.js';
+import { RecoveryService } from './modules/recovery/recovery.service.js';
+import { RecoveryController } from './modules/recovery/recovery.controller.js';
 
 export interface AppDependencies {
   upstream?: OperatorIdentityClient;
@@ -49,6 +57,8 @@ export interface AppDependencies {
   admin?: AdminUsersClient;
   audit?: AuditStore;
   mutationLock?: MutationLock;
+  recovery?: RecoveryClient;
+  recoveryStore?: RecoveryStore;
 }
 export function createApp(
   config: Config,
@@ -84,6 +94,20 @@ export function createApp(
     config.NODE_ENV === 'production',
   );
   const authenticate = new AuthenticateMiddleware(authService, auth.cookieName);
+  const recovery = new RecoveryController(
+    new RecoveryService(
+      dependencies.recovery ??
+        new GoTrueRecoveryClient(config.GOTRUE_URL, config.UPSTREAM_TIMEOUT_MS),
+      upstream,
+      dependencies.recoveryStore ?? new RecoveryRepository(pool),
+      new SessionCrypto(config.SESSION_ENCRYPTION_KEY),
+      config.OPERATOR_UUID_ALLOWLIST,
+      config.RECOVERY_CALLBACK_URL,
+    ),
+    config.NODE_ENV === 'production',
+    config.RECOVERY_RESET_URL,
+    auth.cookieName,
+  );
   const auditService = new AuditService(
     dependencies.audit ?? new AuditRepository(pool),
   );
@@ -113,6 +137,9 @@ export function createApp(
             'SELECT session_hash FROM operator_sessions LIMIT 0',
           );
           await pool.query('SELECT id FROM management_audit LIMIT 0');
+          await pool.query(
+            'SELECT recovery_hash FROM operator_recovery LIMIT 0',
+          );
         }),
     ),
   );
@@ -195,6 +222,26 @@ export function createApp(
   );
   app.get('/v1/operator/auth/me', auth.me);
   app.post('/v1/operator/auth/logout', csrf.handle, auth.logout);
+  const recoveryLimiter = limiter(5, 15 * 60000);
+  app.post(
+    '/v1/operator/auth/forgot-password',
+    csrf.handle,
+    recoveryLimiter,
+    express.json({ limit: '16kb', strict: true }),
+    recovery.request,
+  );
+  app.get(
+    '/v1/operator/auth/recovery/callback',
+    limiter(10, 15 * 60000),
+    recovery.callback,
+  );
+  app.post(
+    '/v1/operator/auth/reset-password',
+    csrf.handle,
+    limiter(10, 15 * 60000),
+    express.json({ limit: '16kb', strict: true }),
+    recovery.reset,
+  );
   const usersRouter = express.Router();
   usersRouter.use(authenticate.handle);
   usersRouter.get('/', users.list);

@@ -6,6 +6,7 @@ import {
 } from 'node:http';
 import { afterEach, describe, expect, it } from 'vitest';
 import { GoTrueClient, GoTrueAdminClient, UpstreamError } from './client.js';
+import { GoTrueRecoveryClient } from './recovery.js';
 
 const id = '00000000-0000-4000-8000-000000000001';
 const user = {
@@ -41,6 +42,101 @@ function json(res: ServerResponse, body: unknown, status = 200) {
   res.end(JSON.stringify(body));
 }
 describe('bounded GoTrue adapter', () => {
+  it('uses purpose-bound recovery PKCE payloads and sends only password on update', async () => {
+    const calls: Array<{
+      path: string | undefined;
+      body: unknown;
+      authorization: string | undefined;
+    }> = [];
+    const expiry = Math.floor(Date.now() / 1000) + 30;
+    const url = await fixture((req, res) => {
+      let body = '';
+      req.setEncoding('utf8');
+      req.on('data', (chunk: string) => {
+        body += chunk;
+      });
+      req.on('end', () => {
+        calls.push({
+          path: req.url,
+          body: JSON.parse(body),
+          authorization: req.headers.authorization,
+        });
+        json(
+          res,
+          req.url?.startsWith('/token')
+            ? {
+                user,
+                access_token: 'access-secret',
+                refresh_token: 'discard-me',
+                expires_in: 3600,
+                expires_at: expiry,
+              }
+            : req.url === '/user'
+              ? user
+              : {},
+        );
+      });
+    });
+    const client = new GoTrueRecoveryClient(url, 1000);
+    await client.sendRecovery(
+      user.email,
+      'challenge',
+      'http://localhost:3100/v1/operator/auth/recovery/callback?state=state',
+    );
+    const session = await client.exchangeRecovery(
+      'one-time-code',
+      'server-verifier',
+    );
+    await client.updatePassword(session.accessToken, 'new-password', id);
+    expect(calls).toEqual([
+      {
+        path: expect.stringContaining('/recover?redirect_to='),
+        body: {
+          email: user.email,
+          code_challenge: 'challenge',
+          code_challenge_method: 's256',
+        },
+        authorization: undefined,
+      },
+      {
+        path: '/token?grant_type=pkce',
+        body: { auth_code: 'one-time-code', code_verifier: 'server-verifier' },
+        authorization: undefined,
+      },
+      {
+        path: '/user',
+        body: { password: 'new-password' },
+        authorization: 'Bearer access-secret',
+      },
+    ]);
+    expect(session.expiresAt).toBe(expiry * 1000);
+    expect(JSON.stringify(session)).not.toContain('discard-me');
+  });
+  it('treats malformed password-update success as uncertain and hides upstream failure payloads', async () => {
+    const url = await fixture((_req, res) =>
+      json(res, { ...user, id: '33333333-3333-4333-8333-333333333333' }),
+    );
+    await expect(
+      new GoTrueRecoveryClient(url, 1000).updatePassword(
+        'token',
+        'password',
+        id,
+      ),
+    ).rejects.toMatchObject({ kind: 'unavailable', ambiguous: true });
+    const rejected = await fixture((_req, res) =>
+      json(res, { message: 'private upstream detail' }, 422),
+    );
+    await expect(
+      new GoTrueRecoveryClient(rejected, 1000).updatePassword(
+        'token',
+        'password',
+        id,
+      ),
+    ).rejects.toMatchObject({
+      kind: 'identity',
+      message: 'GoTrue request failed',
+    });
+  });
   it('rejects mismatched user identities and marks mutation responses uncertain', async () => {
     const url = await fixture((_req, res) =>
       json(res, { ...user, id: '00000000-0000-4000-8000-000000000002' }),

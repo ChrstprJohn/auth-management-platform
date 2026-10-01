@@ -1,19 +1,24 @@
 # Admin database
 
-SQL is prepared only; no database/role has been created and no SQL has been executed by the agent. Target a separate `admin_local_db` locally or `admin_db` in production, never GoTrue's database. The user supplies connection credentials and executes every setup/migration operation.
+The agent prepared schema/migration SQL and never executed it or provisioned databases/roles. The user reported local migration 0003 applied on 2026-10-01; ordinary application queries then verified local recovery storage and session invalidation. Target a separate `admin_local_db` locally or `admin_db` in production, never GoTrue's database. The user supplies connection credentials and executes every setup/migration operation.
 
 Prerequisites: a user-provisioned PostgreSQL database, schema owner, and restricted runtime role. Execute as the owner with `ON_ERROR_STOP`; the API role requires SELECT/INSERT/DELETE on `operator_sessions`, SELECT/INSERT/UPDATE on `management_audit`, and no access to GoTrue/platform tables. No extension or cross-database foreign key is needed. Set the runtime role's search path to the admin-owned schema and prevent untrusted roles from creating objects there. Do not grant DDL to the runtime API. Session-level advisory locking requires a direct PostgreSQL connection or session pooling; transaction-pooling proxies are unsupported.
 
 ## Initialization versus upgrade
 
-For an empty database, execute current `schema.sql` once and record baseline 0002. Alternatively execute migration 0001 then 0002 once. Do not execute both approaches. For an existing database at 0001, execute only `migrations/0002_management_audit.sql`. The API never executes schema or migration files, including at startup or in tests.
+For an empty database, execute current `schema.sql` once and record baseline 0003. Alternatively execute migrations 0001, 0002, then 0003 once. Do not execute both approaches. For an existing database at 0001, execute migrations 0002 then 0003; at 0002, execute only `migrations/0003_operator_recovery.sql`. The API never executes schema or migration files, including at startup or in tests.
 
-| Migration                               | Change                                                      | Execution status                 |
-| --------------------------------------- | ----------------------------------------------------------- | -------------------------------- |
-| `migrations/0001_operator_sessions.sql` | Opaque session hashes and AES-GCM encrypted upstream tokens | Prepared; user execution pending |
-| `migrations/0002_management_audit.sql`  | Durable mutation intent/outcomes and history indexes        | Prepared; user execution pending |
+| Migration                               | Change                                                      | Execution status                               |
+| --------------------------------------- | ----------------------------------------------------------- | ---------------------------------------------- |
+| `migrations/0001_operator_sessions.sql` | Opaque session hashes and AES-GCM encrypted upstream tokens | Execution history not recorded                 |
+| `migrations/0002_management_audit.sql`  | Durable mutation intent/outcomes and history indexes        | Execution history not recorded                 |
+| `migrations/0003_operator_recovery.sql` | Encrypted, browser-bound single-use PKCE recovery contexts  | User reports applied locally; gateway verified |
 
-All SQL files use an explicit transaction. There is no backfill, destructive drop, or seed. Migration 0001 is preserved as the original session baseline; only the current full schema includes 0002. SQL cannot establish that the live database is current. Session encryption key replacement invalidates old sessions; after changing it, the user can remove old session rows as a deliberate maintenance operation. Expired rows do not authorize requests; periodically removing expired rows is user-managed maintenance in V1.
+Migration 0003 targets only the owned admin database already at baseline 0002. It creates `operator_recovery` and two indexes in one explicit transaction, with no data backfill, account creation, destructive changes, or changes to GoTrue tables. The user executes it as the schema owner, then grants the existing runtime role SELECT/INSERT/UPDATE/DELETE on the new table. No DDL privileges are needed by the API. Updated readiness checks require this table; restart the API after applying it. Existing 0001/0002 migrations are unchanged. Do not rerun the full schema over existing tables.
+
+Recovery stores only hashes of opaque state and normalized email plus AES-GCM encrypted verifier/access-token material. Pending contexts expire within one hour; ready contexts are capped at ten minutes and upstream expiry. Atomic phase claims prevent replay. Reset claims and local-session deletion share a transaction before the upstream password change; confirmed completion deletes local sessions again and removes all identified recovery contexts for the operator in another transaction. An ambiguous/crashed operation can leave `exchanging`/`resetting` rows; they cannot be reused. After expiry the user may delete them during deliberate maintenance. No automatic retention cleanup is implemented. These transaction/claim semantics have isolated mocked-pg coverage; live PostgreSQL recovery contention and restart persistence passed after the user applied migration 0003.
+
+All SQL files use an explicit transaction. There is no backfill, destructive drop, or seed. Migration 0001 is preserved as the original session baseline; the current full schema includes 0002 and 0003. SQL cannot establish that the live database is current. Session encryption key replacement invalidates old sessions; after changing it, the user can remove old session rows as a deliberate maintenance operation. Expired rows do not authorize requests; periodically removing expired rows is user-managed maintenance in V1.
 
 ## Trusted audit reconciliation
 

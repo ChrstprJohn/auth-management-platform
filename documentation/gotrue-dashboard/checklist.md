@@ -8,7 +8,7 @@ Implementation checks are marked only after verification. Decision checks below 
 - [x] Select restricted durable audit storage, retention, and intent/completion failure handling.
 - [x] Document first-operator provisioning and trusted recovery from lockout.
 - [x] Define initial health/login/current-operator/logout methods, payloads, and safe error envelope.
-- [ ] Define exact recovery and later user-management/audit contracts, including pagination limits.
+- [x] Define exact recovery and later user-management/audit contracts, including pagination limits.
 - [ ] Verify GoTrue recovery, creation/confirmation/email behavior, ban duration, and permanent deletion against the pinned version.
 
 ## Login and session
@@ -16,6 +16,8 @@ Implementation checks are marked only after verification. Decision checks below 
 Initial implementation evidence (2026-10-01): workspace/backend build and 14 isolated configuration/HTTP tests pass for auth boundaries, expiry, encryption, CSRF, rate limits, logout, production-cookie attributes and readiness failure. No SQL was executed. Delivery boxes below stay unchecked until controlled live PostgreSQL/GoTrue walkthroughs establish them. See [backend setup](../../apps/gotrue-admin-api/README.md).
 
 Second phase evidence: 48 isolated tests now cover user-list/details contracts, confirmations, bounded pagination, durable-intent failure/partial/unknown outcomes, last-operator/session-proof rules, simulated concurrency, mocked pg connection/lock failures, adapter timeout/error/payload/identity boundaries, protected safe-version health and static full-schema/migration consistency. Strict TypeScript includes the tests. Live PostgreSQL advisory-lock contention, persistence across restart, upstream mutations, email and recovery are still unverified. Migration 0002 is prepared only.
+
+Recovery implementation evidence (2026-10-01): 76 isolated tests pass across the backend, including separate recovery cookies, generic responses, Origin/CSRF, encrypted material, expiry, identity binding, replay/concurrent claims, session invalidation ordering, ambiguous outcomes and mocked transaction failures. A disposable-account pinned GoTrue/Mailpit walkthrough verified email, PKCE exchange/state preservation, code replay/invalid-link rejection, password change and old/new password/token effects. After the user reported migration 0003 applied and GoTrue restarted, the complete gateway/PostgreSQL recovery flow passed: context survived gateway restart, concurrent reset produced one 204 and one 400, old dashboard session/password failed, and new-password login/logout worked. Readiness returned 200 ready. These probes applied no schema SQL and removed their accounts/mail. A real wait-until-OTP-expiry check and frontend reset page remain pending; broader V1 management/security delivery remains separate work.
 
 - [ ] Eligible operator can sign in and retrieve current ID/email.
 - [ ] Wrong credentials return a safe error; valid ordinary accounts receive no operator session.
@@ -25,11 +27,11 @@ Second phase evidence: 48 isolated tests now cover user-list/details contracts, 
 
 ## Recovery
 
-- [ ] Forgot-password responses do not reveal operator/account existence and are rate-limited.
-- [ ] Mailpit receives the local recovery message and its trusted callback supports password reset.
+- [x] Forgot-password responses do not reveal operator/account existence and are rate-limited.
+- [x] Mailpit receives the local recovery message and its trusted callback supports password reset.
 - [ ] Invalid/expired recovery context and untrusted redirects are rejected safely.
-- [ ] Recovery does not grant operator eligibility or automatically establish a management session.
-- [ ] Existing-session effects of password reset are documented and tested; reset tokens stay out of logs/history.
+- [x] Recovery does not grant operator eligibility or automatically establish a management session.
+- [x] Existing-session effects of password reset are documented and tested; reset tokens stay out of logs/history.
 
 ## Browse users
 

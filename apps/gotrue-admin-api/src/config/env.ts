@@ -49,6 +49,10 @@ const schema = z
       .transform((value) => Buffer.from(value, 'base64'))
       .refine((value) => value.length === 32),
     FRONTEND_ORIGINS: csv.pipe(z.array(origin).min(1)),
+    RECOVERY_CALLBACK_URL: z
+      .url()
+      .default('http://localhost:3100/v1/operator/auth/recovery/callback'),
+    RECOVERY_RESET_URL: z.url().default('http://localhost:5173/reset-password'),
     UPSTREAM_TIMEOUT_MS: z.coerce
       .number()
       .int()
@@ -82,6 +86,49 @@ const schema = z
       .default('info'),
   })
   .superRefine((value, context) => {
+    if (
+      !URL.canParse(value.RECOVERY_CALLBACK_URL) ||
+      !URL.canParse(value.RECOVERY_RESET_URL)
+    )
+      return;
+    const callback = new URL(value.RECOVERY_CALLBACK_URL);
+    const reset = new URL(value.RECOVERY_RESET_URL);
+    for (const [name, url] of [
+      ['RECOVERY_CALLBACK_URL', callback],
+      ['RECOVERY_RESET_URL', reset],
+    ] as const) {
+      if (
+        !['http:', 'https:'].includes(url.protocol) ||
+        url.username ||
+        url.password ||
+        url.search ||
+        url.hash ||
+        (value.NODE_ENV === 'production' &&
+          (url.protocol !== 'https:' ||
+            !(
+              url.hostname === 'chrbuilds.dev' ||
+              url.hostname.endsWith('.chrbuilds.dev')
+            )))
+      )
+        context.addIssue({
+          code: 'custom',
+          path: [name],
+          message:
+            'Expected a trusted HTTP(S) URL without credentials, query or fragment',
+        });
+    }
+    if (callback.pathname !== '/v1/operator/auth/recovery/callback')
+      context.addIssue({
+        code: 'custom',
+        path: ['RECOVERY_CALLBACK_URL'],
+        message: 'Expected the recovery gateway callback path',
+      });
+    if (!value.FRONTEND_ORIGINS.includes(reset.origin))
+      context.addIssue({
+        code: 'custom',
+        path: ['RECOVERY_RESET_URL'],
+        message: 'Reset page must use a configured frontend origin',
+      });
     if (value.NODE_ENV !== 'production') return;
     for (const item of value.FRONTEND_ORIGINS) {
       if (!URL.canParse(item)) continue;

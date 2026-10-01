@@ -45,10 +45,12 @@ If the existing database container/network is renamed, update Compose and `DATAB
 
 ## Backend and later deployment
 
+For operator password recovery, add `http://localhost:3100/v1/operator/auth/recovery/callback` to the existing comma-separated `GOTRUE_URI_ALLOW_LIST` in the ignored infrastructure `.env`, preserving other entries. The pinned GoTrue URI matcher preserves the callback's state query (verified with the existing frontend callback). The user recreates/restarts GoTrue to load this setting after confirming its own database setup; the agent does not run infrastructure setup. Keep normal GoTrue `/verify` email links: recovery uses PKCE and GoTrue redirects to the gateway with a one-time code. Follow [backend recovery setup](../../apps/gotrue-admin-api/README.md#password-recovery-setup). No credentials, templates, signup behavior, or VM configuration are changed by this implementation.
+
 Host-run local APIs use `http://localhost:8081`. Containerized APIs use the GoTrue service name on the local network. Current email links go directly to local `/verify`; frontend redirects may not open until the frontend exists. Later route links through the implemented public backend callbacks.
 
 On the VM, reuse the existing GoTrue/PostgreSQL; do not run this local Compose stack. Configure the chosen real email provider there using that provider's SMTP/authentication requirements, or an explicitly implemented alternative delivery integration. Mailpit is development-only. Keep confirmation required and test delivery/callbacks before launch.
 
-`platform_db` and operator onboarding remain pending. The [admin API](../../apps/gotrue-admin-api/README.md) is implemented with isolated tests; its database setup and live verification await the user. No VM configuration has been changed.
+`platform_db` and operator onboarding remain pending. The [admin API](../../apps/gotrue-admin-api/README.md) is implemented with isolated tests; after user database/callback setup, the controlled local recovery gateway walkthrough passed. Other product delivery and deployment verification remain pending. No VM configuration has been changed.
 
 Configuration reference: [pinned upstream example](https://github.com/supabase/auth/blob/v2.196.0/example.env).

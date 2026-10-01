@@ -11,6 +11,7 @@ import {
 } from '../../shared/errors/api-error.js';
 import type { SessionStore } from './session.repository.js';
 import { SessionCrypto } from './session-crypto.js';
+import { isUsableOperator } from './operator-eligibility.js';
 
 export class OperatorAuthService {
   constructor(
@@ -21,14 +22,7 @@ export class OperatorAuthService {
   ) {}
 
   private usable(user: Identity): boolean {
-    if (!this.allowlist.has(user.id.toLowerCase()) || !user.email_confirmed_at)
-      return false;
-    if (!Number.isFinite(Date.parse(user.email_confirmed_at))) return false;
-    return (
-      !user.banned_until ||
-      (Number.isFinite(Date.parse(user.banned_until)) &&
-        Date.parse(user.banned_until) <= Date.now())
-    );
+    return isUsableOperator(user, this.allowlist);
   }
   private translate(error: unknown): never {
     if (error instanceof UpstreamError) {
