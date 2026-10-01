@@ -14,6 +14,8 @@ Run `pnpm dev` from the root in the foreground. Stop with Ctrl+C. Production run
 
 ## First local operator
 
+The setup command uses built-in Windows PowerShell (`powershell.exe`); PowerShell 7 (`pwsh`) is not required. Its execution-policy override applies only to this command's process and does not change the machine policy.
+
 With local GoTrue/Mailpit running, run `pnpm operator:setup` from the repository root in your own PowerShell terminal. It prompts for a controlled test email and hidden password, submits the supported signup flow, then waits while you verify the email at `http://localhost:8025`. After pressing Enter, it validates password login/identity and saves the verified UUID in `OPERATOR_UUID_ALLOWLIST`, preserving existing configured operators and other `.env` values. It does not save the password, display tokens, apply SQL or provision databases/roles. Restart the API afterward.
 
 If signup already succeeded but setup was interrupted, use `pnpm operator:setup -ExistingAccount` after verifying the email; this skips signup and verifies the existing account instead. Failed/uncertain signup is never automatically repeated. Confirmation redirects may fail until a frontend exists; login is the check that confirms verification actually succeeded. This is a trusted local-only tool, not a public signup/permission endpoint. Production and remote upstream URLs are refused.

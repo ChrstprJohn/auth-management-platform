@@ -7,6 +7,16 @@ $secureConfirmation = $null
 $plainPassword = $null
 $confirmation = $null
 
+function Stop-OperatorWorker {
+    param([System.Diagnostics.Process]$Process)
+    if (-not $Process.HasExited) {
+        # Windows PowerShell's .NET runtime lacks Kill(entireProcessTree).
+        & taskkill.exe /PID $Process.Id /T /F 2>&1 | Out-Null
+        if (-not $Process.HasExited) { $Process.Kill() }
+        $Process.WaitForExit()
+    }
+}
+
 function Invoke-OperatorStep {
     param([string]$Action, [string]$Email, [string]$Password)
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
@@ -17,9 +27,9 @@ function Invoke-OperatorStep {
     $startInfo.RedirectStandardInput = $true
     $startInfo.RedirectStandardOutput = $true
     $startInfo.RedirectStandardError = $true
-    $startInfo.ArgumentList.Add('--import')
-    $startInfo.ArgumentList.Add('tsx')
-    $startInfo.ArgumentList.Add('scripts/setup-local-operator.ts')
+    # Fixed arguments work in Windows PowerShell 5.1 as well as PowerShell 7.
+    # Credentials are passed only over stdin, never through command arguments.
+    $startInfo.Arguments = '--import tsx scripts/setup-local-operator.ts'
     $process = [System.Diagnostics.Process]::new()
     $process.StartInfo = $startInfo
     $started = $false
@@ -31,8 +41,7 @@ function Invoke-OperatorStep {
         $process.StandardInput.WriteLine((@{ action = $Action; email = $Email; password = $Password } | ConvertTo-Json -Compress))
         $process.StandardInput.Close()
         if (-not $process.WaitForExit(15000)) {
-            $process.Kill($true)
-            $process.WaitForExit()
+            Stop-OperatorWorker -Process $process
             Write-Host 'Setup timed out. The signup may already exist; inspect Mailpit before trying again.'
             return $false
         }
@@ -43,8 +52,7 @@ function Invoke-OperatorStep {
         return $process.ExitCode -eq 0
     } finally {
         if ($started -and -not $process.HasExited) {
-            $process.Kill($true)
-            $process.WaitForExit()
+            Stop-OperatorWorker -Process $process
         }
         $process.Dispose()
     }
