@@ -98,6 +98,15 @@ importers:
         specifier: 4.6.5
         version: 4.6.5
 
+  scripts:
+    dependencies:
+      '@auth/gotrue-client':
+        specifier: workspace:*
+        version: link:../packages/gotrue-client
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
+
 packages:
 
   '@cacheable/memory@2.2.0':

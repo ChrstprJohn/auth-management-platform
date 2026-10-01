@@ -1,5 +1,6 @@
 import { createHmac } from 'node:crypto';
 import { parseEnv } from 'node:util';
+import { writeEnvValue } from './env-file.js';
 
 export class LocalSetupError extends Error {}
 
@@ -58,24 +59,5 @@ export function generateLocalAdminToken(
 }
 
 export function writeAdminToken(environment: string, token: string): string {
-  const newline = environment.includes('\r\n') ? '\r\n' : '\n';
-  let written = false;
-  const lines = environment
-    .split(/\r?\n/)
-    .filter((line) => {
-      if (!/^\s*(?:export\s+)?GOTRUE_ADMIN_TOKEN\s*=/.test(line)) return true;
-      if (written) return false;
-      written = true;
-      return true;
-    })
-    .map((line) =>
-      /^\s*(?:export\s+)?GOTRUE_ADMIN_TOKEN\s*=/.test(line)
-        ? `GOTRUE_ADMIN_TOKEN=${token}`
-        : line,
-    );
-  if (!written) {
-    if (lines.at(-1) === '') lines.pop();
-    lines.push(`GOTRUE_ADMIN_TOKEN=${token}`, '');
-  }
-  return lines.join(newline);
+  return writeEnvValue(environment, 'GOTRUE_ADMIN_TOKEN', token);
 }

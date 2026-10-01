@@ -187,6 +187,8 @@ Reconciliation is a trusted manual procedure in V1: inspect the intent, check cu
 
 ### First operator and lockout recovery
 
+For local provisioning commands, use the [backend setup helper instructions](../../apps/gotrue-admin-api/README.md#first-local-operator). The helper is covered by isolated boundary tests; the actual signup, Mailpit verification, and operator login walkthrough still await user execution.
+
 1. Create a controlled account in the environment's GoTrue using its supported signup/setup flow, and verify its email. Locally, use Mailpit.
 2. Obtain its UUID from a trusted GoTrue response or supported admin operation.
 3. Add the UUID to `OPERATOR_UUID_ALLOWLIST`, a server-controlled comma-separated environment setting. Validate it at API startup. No public signup, user metadata, or browser request may edit eligibility.

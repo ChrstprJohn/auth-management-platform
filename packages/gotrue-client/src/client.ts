@@ -10,6 +10,7 @@ import {
 
 export { UpstreamError } from './errors.js';
 export { GoTrueAdminClient } from './admin-users.js';
+export { GoTrueHttp } from './http.js';
 export type { AdminUser, AdminUsersClient } from './admin-users.js';
 export type {
   Identity,

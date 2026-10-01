@@ -1,4 +1,8 @@
 {
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@auth/gotrue-client": "workspace:*",
+    "zod": "4.6.5"
+  }
 }

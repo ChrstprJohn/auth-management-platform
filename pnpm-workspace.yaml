@@ -2,6 +2,7 @@ packages:
   - apps/*
   - packages/gotrue-client
   - packages/contracts
+  - scripts
 allowBuilds:
   esbuild: true
 minimumReleaseAge: 1440

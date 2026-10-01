@@ -12,6 +12,12 @@ Copy this folder's `.env.example` to `.env`, replace every placeholder, generate
 
 Run `pnpm dev` from the root in the foreground. Stop with Ctrl+C. Production runs compiled JavaScript with `pnpm --filter @auth/gotrue-admin-api start`; set HOST to the container bind address, HTTPS same-site frontend origins, and TRUST_PROXY to the actual Caddy IP/subnet. No production deployment is included.
 
+## First local operator
+
+With local GoTrue/Mailpit running, run `pnpm operator:setup` from the repository root in your own PowerShell terminal. It prompts for a controlled test email and hidden password, submits the supported signup flow, then waits while you verify the email at `http://localhost:8025`. After pressing Enter, it validates password login/identity and saves the verified UUID in `OPERATOR_UUID_ALLOWLIST`, preserving existing configured operators and other `.env` values. It does not save the password, display tokens, apply SQL or provision databases/roles. Restart the API afterward.
+
+If signup already succeeded but setup was interrupted, use `pnpm operator:setup -ExistingAccount` after verifying the email; this skips signup and verifies the existing account instead. Failed/uncertain signup is never automatically repeated. Confirmation redirects may fail until a frontend exists; login is the check that confirms verification actually succeeded. This is a trusted local-only tool, not a public signup/permission endpoint. Production and remote upstream URLs are refused.
+
 ## Local GoTrue admin token
 
 After creating the backend `.env`, run `pnpm admin:token` from the repository root. This local-only helper reads the existing `GOTRUE_JWT_SECRET` and admin-role/audience configuration in `infrastructure/local/.env`, signs a sessionless HS256 `service_role` JWT valid for 30 days, and saves only `GOTRUE_ADMIN_TOKEN` into the backend `.env`. It never prints the token/signing secret, touches a database, or changes other configuration. Existing non-placeholder tokens are preserved; remove the token line deliberately and rerun to regenerate, then restart the API. It requires a loopback HTTP GoTrue URL and refuses production mode. Do not use this helper for VM/production secrets.
