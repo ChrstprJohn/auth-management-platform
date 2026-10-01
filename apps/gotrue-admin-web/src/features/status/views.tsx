@@ -1,13 +1,22 @@
+import { MoreHorizontal, RefreshCw } from 'lucide-react';
+import { PageHeader } from '@/components/page-header';
 import {
-  Item,
-  ItemContent,
-  ItemTitle,
-  ItemDescription,
-  ItemActions,
-} from '@/components/ui/item';
+  Card,
+  CardAction,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import { HealthBadge } from '@/components/health-badge';
 import { Button } from '@/components/ui/button';
-import { ButtonGroup } from '@/components/ui/button-group';
 import { Spinner } from '@/components/ui/spinner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Failure } from '@/components/feedback/states';
@@ -17,72 +26,94 @@ import { useStatusPage } from './hooks';
 export function StatusPage() {
   const m = useStatusPage();
   return (
-    <section className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1>Service status</h1>
-        <ButtonGroup>
+    <section className="min-w-0 space-y-6">
+      <PageHeader
+        title="Service status"
+        description="Health checks are separate signals. They do not prove email delivery, sign-in or end-to-end persistence."
+        actions={
           <Button
             variant="outline"
             onClick={m.refreshAll}
             disabled={m.refreshing}
           >
-            {m.refreshing && <Spinner />}Refresh all checks
+            {m.refreshing ? <Spinner /> : <RefreshCw />}Refresh all checks
           </Button>
-        </ButtonGroup>
-      </div>
-      <p className="max-w-prose text-muted-foreground">
-        Health checks are separate signals. They do not prove email delivery,
-        sign-in or end-to-end persistence.
-      </p>
-      <div className="space-y-4">
+        }
+      />
+      <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-3">
         {m.checks.map((check) => (
-          <section key={check.label} aria-label={check.label}>
-            <Item variant="outline">
-              <ItemContent>
-                <ItemTitle>{check.label}</ItemTitle>
-                <ItemDescription>{check.description}</ItemDescription>
-                <div
-                  role="status"
-                  className="flex flex-wrap items-center gap-2"
-                >
-                  <HealthBadge status={check.status} />
-                  {check.refreshing && (
-                    <Spinner aria-label="Refreshing check" />
-                  )}
-                </div>
-                {check.status === 'Checking…' ? (
-                  <Skeleton className="h-4 w-32" />
-                ) : (
-                  <p className="text-sm">
-                    Last check:{' '}
-                    <Timestamp
-                      value={
-                        check.checkedAt
-                          ? new Date(check.checkedAt).toISOString()
-                          : null
-                      }
-                    />
-                  </p>
-                )}
-                {check.version && (
-                  <p className="text-sm">GoTrue version: {check.version}</p>
-                )}
-              </ItemContent>
-              <ItemActions>
-                <Button
-                  variant="outline"
-                  disabled={check.refreshing}
-                  onClick={check.refresh}
-                  aria-label={`Refresh ${check.label}`}
-                >
-                  Refresh
-                </Button>
-              </ItemActions>
-            </Item>
-            {check.error && (
-              <Failure error={check.error} retry={check.refresh} />
-            )}
-          </section>
+          <Card
+            key={check.label}
+            className="min-w-0"
+            role="region"
+            aria-label={check.label}
+          >
+            <CardHeader>
+              <CardTitle>
+                <h2 className="text-base">{check.label}</h2>
+              </CardTitle>
+              <CardDescription className="min-w-0 leading-relaxed">
+                {check.description}
+              </CardDescription>
+              <CardAction>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={<Button variant="ghost" size="icon-sm" />}
+                    aria-label={`Actions for ${check.label}`}
+                  >
+                    <MoreHorizontal />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      disabled={check.refreshing}
+                      onClick={check.refresh}
+                    >
+                      <RefreshCw />
+                      Refresh check
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </CardAction>
+            </CardHeader>
+            <CardContent className="min-w-0 flex-1 space-y-4">
+              <div role="status" className="flex flex-wrap items-center gap-2">
+                <HealthBadge status={check.status} />
+                {check.refreshing && <Spinner aria-label="Refreshing check" />}
+              </div>
+              {check.status === 'Checking…' ? (
+                <Skeleton className="h-4 w-32" />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Last check:{' '}
+                  <Timestamp
+                    value={
+                      check.checkedAt
+                        ? new Date(check.checkedAt).toISOString()
+                        : null
+                    }
+                  />
+                </p>
+              )}
+              {check.version && (
+                <p className="break-words text-sm">
+                  GoTrue version: {check.version}
+                </p>
+              )}
+              {check.error && (
+                <Failure error={check.error} retry={check.refresh} />
+              )}
+            </CardContent>
+            <CardFooter className="justify-end">
+              <Button
+                variant="outline"
+                disabled={check.refreshing}
+                onClick={check.refresh}
+                aria-label={`Refresh ${check.label}`}
+              >
+                {check.refreshing ? <Spinner /> : <RefreshCw />}Refresh
+              </Button>
+            </CardFooter>
+          </Card>
         ))}
       </div>
     </section>
