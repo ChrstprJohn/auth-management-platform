@@ -1,18 +1,31 @@
 # Project Documentation
 
-Planned basic scope. All checklist items start unchecked; documentation does not imply completed implementation.
+Start here. Build the GoTrue operator dashboard first, then the developer auth platform. Application implementation has not started. Documented design decisions are not delivery completion.
 
-Build **GoTrue dashboard first**, then **developer auth platform**. Each project has its own API on the VM and frontend on Vercel. Both use one shared GoTrue.
+## Where to make changes
 
-| Project | Features | Checklist |
-|---|---|---|
-| GoTrue operator dashboard | [Basic V1](gotrue-dashboard/features.md) | [Delivery checks](gotrue-dashboard/checklist.md) |
-| Developer auth platform | [Basic V1](platform/features.md) | [Delivery checks](platform/checklist.md) |
+Each topic has one authoritative home. Edit that file when the topic changes; other documents should link to it instead of copying its details.
 
-[Shared architecture and deployment](architecture-and-deployment.md) contains the repository/VM structure, database ownership, permissions, local setup, and private GoTrue migration. Keep cross-project infrastructure decisions there instead of duplicating them in each spec.
+| Topic | Edit here |
+|---|---|
+| Agent behavior, readable code, DRY, verification, documentation workflow, Windows process rules, frontend constraint, full-schema/migration maintenance and manual execution | [AGENTS.md](../AGENTS.md) |
+| Shared repository layout, database boundaries, VM routing, deployment, GoTrue privacy | [Shared architecture and deployment](architecture-and-deployment.md) |
+| Operator backend stack, layers, sessions, encryption, audit policy, provisioning | [Operator backend architecture](gotrue-dashboard/backend-architecture.md) |
+| Operator endpoint methods, payloads, status codes, cookies/CSRF, usage examples | [Operator API reference](gotrue-dashboard/api.md) |
+| Operator product scope and user-facing behavior | [Operator features](gotrue-dashboard/features.md) |
+| Operator verified delivery status | [Operator checklist](gotrue-dashboard/checklist.md) |
+| Developer platform product scope | [Platform features](platform/features.md) |
+| Developer platform verified delivery status | [Platform checklist](platform/checklist.md) |
+| Local infrastructure commands, pinned images, setup and email verification notes | [Local infrastructure](../infrastructure/local/README.md) |
+| Existing VM operational references | [VM reference](../vm_infrastructure/vm-infrastructure-reference-updated.md) |
 
-Environment goal: local APIs use local GoTrue and the existing local PostgreSQL. On the VM, pull the whole repository and deploy only the APIs using the existing GoTrue/PostgreSQL; do not run local infrastructure there. Frontends deploy separately to Vercel. See the guide's [local-versus-VM table](architecture-and-deployment.md#local-versus-vm-what-runs).
+## Maintenance rules
 
-Existing operational documents stay in [vm_infrastructure](../vm_infrastructure/vm-infrastructure-reference-updated.md).
+- An endpoint change normally updates code and the API reference. Update the checklist only when verification status changes.
+- An internal backend design change belongs in backend architecture; update the API reference only if clients see changed behavior.
+- Coding rules belong in `AGENTS.md`; do not repeat architecture, package lists, or endpoint contracts there.
+- Feature documents describe product requirements. Checklists track evidence of completion rather than providing another implementation specification.
+- README files are navigation. Avoid repeating changing configuration, contracts, or policy in them.
+- VM reference files describe existing infrastructure/history. New application deployment decisions belong in shared architecture; local setup belongs in the local infrastructure README.
 
-[GoTrue admin backend architecture](gotrue-dashboard/backend-architecture.md) documents the proposed stack, modular layers, programming style, folder structure, request flows, and decisions to settle before implementation.
+The operator stack and V1 decisions are consolidated in backend architecture. Endpoint contracts and examples live together in the API reference. No separate `.agent` rulebook is required; agents follow the root `AGENTS.md`.

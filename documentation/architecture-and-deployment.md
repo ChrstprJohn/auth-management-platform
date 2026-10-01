@@ -13,7 +13,7 @@ apps/
 packages/
   gotrue-client/          # Shared server-only upstream adapter
   contracts/              # API types, separated by application
-  database/               # Platform schema/migrations
+  database/               # Separate admin/platform full schemas and migrations
 infrastructure/
   local/                  # Local GoTrue setup using existing PostgreSQL
   vm/                     # API Docker/Compose templates
@@ -63,21 +63,21 @@ Both APIs use the existing single GoTrue. One email/password identity can be an 
 |---|---|
 | `auth_db` | GoTrue identities, password hashes, verification, upstream sessions; GoTrue-managed migrations |
 | `platform_db` | Platform profiles/workspaces/projects/memberships/keys/scoped sessions; platform-managed migrations |
-| Admin configuration and durable audit sink | Explicit operator eligibility and global management action history; no duplicate password store |
+| `admin_local_db` locally / `admin_db` on VM (planned) | Admin-owned operator sessions and durable audit history, with a restricted role; eligibility comes from server configuration, no duplicate password store |
 
-Both databases can use one PostgreSQL server. Reference GoTrue UUIDs without copying hashes or assuming cross-database foreign keys. APIs use separate runtime credentials. Do not give the admin API unrestricted access to platform tables.
+All databases can use one PostgreSQL server. Reference GoTrue UUIDs without copying password hashes or assuming cross-database foreign keys. APIs use separate runtime credentials. Do not give the admin API unrestricted access to platform tables. The admin database/role has not been provisioned; see [agreed admin V1 decisions](gotrue-dashboard/backend-architecture.md#agreed-v1-decisions).
 
 GoTrue proves identity; backend records supply authority. Operator eligibility is server-controlled. Developers manage workspace projects, never global identities. Project sessions/keys cannot authorize console/operator actions. Global bans/deletion can affect all products and need explicit impact handling.
 
 ## Local development and browser connections
 
-Use the existing local PostgreSQL 17 container, `local-database-server-postgres-1`, on `local-database-server_default`. The [local Compose setup](../infrastructure/local/README.md) runs one development GoTrue container on that network; it does not create another PostgreSQL server. The dedicated `auth_local_db` and `auth_local` role are prepared. Local GoTrue and Mailpit are running; signup requires email verification and messages appear at `http://localhost:8025`. Automatic confirmation is disabled. Use a real provider on the VM later; create platform data/credentials when the platform phase begins.
+Reuse the existing local PostgreSQL server with local GoTrue/Mailpit. Container names, pinned versions, database setup, commands, and verification notes live in the [local infrastructure README](../infrastructure/local/README.md). Use a real email provider on the VM later; create platform data/credentials when the platform phase begins.
 
 Use separate host ports for the APIs, e.g. admin 3100 and platform 3200. Containers resolve service names; host processes use local ports. Local data/secrets do not synchronize automatically to production.
 
-Each API configures its private/local GoTrue URL; the platform additionally configures its restricted database connection and session encryption key. Admin credentials and operator eligibility remain server-side. Follow the supplied foreground Node and orphan-worker cleanup rules.
+Each API configures its private/local GoTrue URL, restricted owned database connection, and dedicated session encryption key. Admin credentials and operator eligibility remain server-side. Follow the supplied foreground Node and orphan-worker cleanup rules.
 
-Vercel frontends call public HTTPS API URLs. Configure exact trusted origins, cookie credentials, HttpOnly/Secure settings, and CSRF protection. `vercel.app` and the API domain are cross-site: test browser cookie behavior. Prefer production frontend custom domains under `chrbuilds.dev`; do not give arbitrary preview origins production operator access.
+Vercel frontends call public HTTPS API URLs. Browser origins, cookies, CSRF requirements, and the operator frontend custom-domain requirement live in the [operator API reference](gotrue-dashboard/api.md#connection-and-browser-policy). Test production browser behavior and do not give arbitrary preview origins production operator access. Platform cookie policy is specified in its own implementation phase.
 
 ## Local versus VM: what runs
 
@@ -93,7 +93,7 @@ Vercel frontends call public HTTPS API URLs. Configure exact trusted origins, co
 
 The goal is the same code with environment-specific configuration: locally test without calling the VM; later deploy backends that call private VM GoTrue/PostgreSQL. `infrastructure/local/` may exist in the VM checkout but is never started there. `infrastructure/vm/` is reserved for backend deployment configuration, not replacement GoTrue/PostgreSQL services.
 
-Deployment means pull code, build/recreate the relevant API, apply platform migrations when needed, and verify health/auth flows. Pull alone does not deploy, migrate, or transfer local users.
+Deployment means pull code, build/recreate the relevant API, have the user apply its owned database migrations when needed, and verify health/auth flows. Follow [database execution rules](../AGENTS.md#database-schema-and-migrations); agents prepare database changes and do not execute them. Pull alone does not deploy, migrate, or transfer local users.
 
 ## Deployment order and GoTrue privacy
 

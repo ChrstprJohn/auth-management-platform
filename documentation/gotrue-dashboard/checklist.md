@@ -1,13 +1,14 @@
 # GoTrue Dashboard — V1 Delivery Checklist
 
-Check only after implementation and verification; all items below are planned checks. Existing local setup is documented separately in [local README](../../infrastructure/local/README.md). See [feature descriptions](features.md).
+Implementation checks are marked only after verification. Decision checks below track documented design, not working code. Existing local setup is documented separately in [local README](../../infrastructure/local/README.md). See [feature descriptions](features.md) and [agreed V1 decisions](backend-architecture.md#agreed-v1-decisions).
 
 ## Decisions before coding
 
-- [ ] Specify operator session storage, cookie settings, encryption, expiry, refresh, and logout behavior.
-- [ ] Select restricted durable audit storage, retention, and intent/completion failure handling.
-- [ ] Document first-operator provisioning and trusted recovery from lockout.
-- [ ] Define API methods, payloads, safe error envelope, and pagination limits.
+- [x] Specify operator session storage, cookie settings, encryption, expiry, refresh, and logout behavior.
+- [x] Select restricted durable audit storage, retention, and intent/completion failure handling.
+- [x] Document first-operator provisioning and trusted recovery from lockout.
+- [x] Define initial health/login/current-operator/logout methods, payloads, and safe error envelope.
+- [ ] Define exact recovery and later user-management/audit contracts, including pagination limits.
 - [ ] Verify GoTrue recovery, creation/confirmation/email behavior, ban duration, and permanent deletion against the pinned version.
 
 ## Login and session

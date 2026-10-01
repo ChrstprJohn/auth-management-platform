@@ -1,6 +1,6 @@
 # GoTrue Dashboard — Basic V1 Features
 
-Agreed product scope; not an implementation report. Build `gotrue-admin-api` and `gotrue-admin-web` first. See [backend architecture](backend-architecture.md), [tech stack](tech-stack.md), and [shared deployment](../architecture-and-deployment.md).
+Agreed product scope; not an implementation report. Build `gotrue-admin-api` and `gotrue-admin-web` first. See [backend architecture](backend-architecture.md), [technology stack](backend-architecture.md#technology-stack), and [shared deployment](../architecture-and-deployment.md).
 
 ## What this dashboard manages
 
@@ -14,7 +14,7 @@ Operator eligibility comes from a server-controlled allowlist of GoTrue UUIDs. V
 - Reject ordinary accounts even when their password is correct.
 - Show the signed-in operator's ID and email through a current-account endpoint.
 - Authenticate the session and check current operator eligibility on every protected request.
-- Handle session expiry with a clear sign-in requirement; define refresh behavior before implementation.
+- Handle session expiry with a clear sign-in requirement; the session policy is defined in [backend architecture](backend-architecture.md#operator-sessions).
 - Logout invalidates the dashboard session and clears its cookie. Document the scope of any upstream logout separately.
 
 ## 2. Operator password recovery
@@ -24,7 +24,7 @@ Operator eligibility comes from a server-controlled allowlist of GoTrue UUIDs. V
 - Allow only trusted recovery destinations and use expiring, purpose-bound recovery context.
 - Let the account owner set a new password through GoTrue's supported recovery flow; invalid/expired links show a safe error.
 - Require an ordinary operator login after reset. Recovery must never grant operator eligibility or a management session by itself.
-- Do not expose recovery tokens in history, logs, or ordinary API responses. Define the effect on existing sessions before implementation.
+- Do not expose recovery tokens in history, logs, or ordinary API responses. Follow [recovery policy and remaining upstream checks](backend-architecture.md#password-recovery).
 
 ## 3. Paginated user list
 
@@ -83,7 +83,7 @@ Operator eligibility comes from a server-controlled allowlist of GoTrue UUIDs. V
 - Show recent user creation, ban, unban, and deletion attempts with pagination or a bounded recent view.
 - Record actor UUID, target UUID where known, action, outcome, timestamp, and request ID.
 - Keep records durable across API restarts and restrict viewing to eligible operators.
-- Distinguish success, failure, and unknown/partial outcomes. GoTrue mutation and audit storage are not one transaction; define intent/completion records and reconciliation before implementation.
+- Distinguish success, failure, and unknown/partial outcomes. Follow the [durable audit policy](backend-architecture.md#durable-audit-history) for intent/completion records and reconciliation.
 - Never record passwords, cookies, tokens, or raw upstream payloads. Operational Pino logs are separate from this history.
 
 ## Required foundations
