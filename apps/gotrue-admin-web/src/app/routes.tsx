@@ -2,6 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedShell } from './shell';
 import { LoginPage, AccountPage } from '@/features/auth/views';
 import { Blank } from '@/components/feedback/states';
+import { HistoryPage } from '@/features/history/views';
+import { StatusPage } from '@/features/status/views';
 import { UserActionsProvider } from '@/features/users/actions';
 import {
   UsersPage,
@@ -23,6 +25,8 @@ export function AppRoutes() {
         <Route element={<ProtectedShell />}>
           <Route index element={<Navigate to="/users" replace />} />
           <Route path="/account" element={<AccountPage />} />
+          <Route path="/history" element={<HistoryPage />} />
+          <Route path="/status" element={<StatusPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/users/new" element={<CreateUserPage />} />
           <Route path="/users/:id" element={<UserDetailsPage />} />
