@@ -1,3 +1,5 @@
+import { PageHeader } from '@/components/page-header';
+import { Card, CardContent } from '@/components/ui/card';
 import { ActionDetails } from './details';
 import { Timestamp } from '@/components/timestamp';
 import {
@@ -21,24 +23,20 @@ export function HistoryPage() {
   const m = useHistoryPage();
   return (
     <section className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-2">
-          <h1>Action history</h1>
-          <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">
-            Durable management attempts. Pending and unknown results remain
-            unresolved and require trusted administrator reconciliation. A
-            deleted target may lead to an account-not-found page.
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          disabled={m.refreshing || m.state === 'loading'}
-          onClick={m.refresh}
-        >
-          <RefreshCw className={m.refreshing ? 'animate-spin' : ''} />
-          {m.refreshing ? 'Refreshing…' : 'Refresh history'}
-        </Button>
-      </div>
+      <PageHeader
+        title="Action history"
+        description="Durable management attempts. Pending and unknown results remain unresolved and require trusted administrator reconciliation. A deleted target may lead to an account-not-found page."
+        actions={
+          <Button
+            variant="outline"
+            disabled={m.refreshing || m.state === 'loading'}
+            onClick={m.refresh}
+          >
+            <RefreshCw className={m.refreshing ? 'animate-spin' : ''} />
+            {m.refreshing ? 'Refreshing…' : 'Refresh history'}
+          </Button>
+        }
+      />
       {m.pagination.invalid && (
         <Success title="Pagination was normalized">
           Invalid values use safe defaults.{' '}
@@ -58,67 +56,75 @@ export function HistoryPage() {
         />
       ) : (
         m.data && (
-          <div className="overflow-hidden rounded-xl border">
-            <Table className="table-fixed">
-              <TableCaption>
-                Durable records on page {m.pagination.page}. No frontend
-                reconciliation operation is available.
-              </TableCaption>
-              <TableHeader className="bg-muted/50">
-                <TableRow>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Outcome</TableHead>
-                  <TableHead className="hidden sm:table-cell">Target</TableHead>
-                  <TableHead className="hidden sm:table-cell">
-                    Created
-                  </TableHead>
-                  <TableHead className="w-16 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {m.data.entries.map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell>
-                      <p className="capitalize">{entry.action}</p>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          entry.outcome === 'failed'
-                            ? 'destructive'
-                            : entry.outcome === 'succeeded'
-                              ? 'secondary'
-                              : 'outline'
-                        }
-                      >
-                        {entry.outcome}
-                      </Badge>
-                      {(entry.outcome === 'pending' ||
-                        entry.outcome === 'unknown') && (
-                        <p className="text-xs">Unresolved</p>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <span
-                        title={entry.targetId ?? undefined}
-                        className="font-mono text-xs"
-                      >
-                        {entry.targetId
-                          ? `${entry.targetId.slice(0, 8)}…`
-                          : 'Not known'}
-                      </span>
-                    </TableCell>
-                    <TableCell className="hidden whitespace-normal sm:table-cell">
-                      <Timestamp value={entry.createdAt} compact />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <ActionDetails entry={entry} />
-                    </TableCell>
+          <Card className="gap-0 py-0">
+            <CardContent className="p-0">
+              <Table className="table-fixed">
+                <TableCaption>
+                  Durable records on page {m.pagination.page}. No frontend
+                  reconciliation operation is available.
+                </TableCaption>
+                <TableHeader className="bg-muted/50">
+                  <TableRow>
+                    <TableHead>Action</TableHead>
+                    <TableHead>Outcome</TableHead>
+                    <TableHead className="hidden lg:table-cell">
+                      Target
+                    </TableHead>
+                    <TableHead className="hidden lg:table-cell">
+                      Created
+                    </TableHead>
+                    <TableHead className="w-16 text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {m.data.entries.map((entry) => (
+                    <TableRow key={entry.id}>
+                      <TableCell>
+                        <p className="whitespace-nowrap capitalize font-medium">
+                          {entry.action}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            entry.outcome === 'failed'
+                              ? 'destructive'
+                              : entry.outcome === 'succeeded'
+                                ? 'secondary'
+                                : 'outline'
+                          }
+                        >
+                          {entry.outcome}
+                        </Badge>
+                        {(entry.outcome === 'pending' ||
+                          entry.outcome === 'unknown') && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Unresolved
+                          </p>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        <span
+                          title={entry.targetId ?? undefined}
+                          className="font-mono text-xs"
+                        >
+                          {entry.targetId
+                            ? `${entry.targetId.slice(0, 8)}…`
+                            : 'Not known'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="hidden whitespace-normal lg:table-cell">
+                        <Timestamp value={entry.createdAt} compact />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <ActionDetails entry={entry} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         )
       )}
       {m.state !== 'loading' && (
