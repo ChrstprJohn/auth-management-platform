@@ -35,9 +35,11 @@ Recovery implementation evidence (2026-10-01): 76 isolated tests pass across the
 
 - [x] Forgot-password responses do not reveal operator/account existence and are rate-limited.
 - [x] Mailpit receives the local recovery message and its trusted callback supports password reset.
-- [ ] Invalid/expired recovery context and untrusted redirects are rejected safely.
+- [x] Invalid/expired recovery context and untrusted redirects are rejected safely.
 - [x] Recovery does not grant operator eligibility or automatically establish a management session.
 - [x] Existing-session effects of password reset are documented and tested; reset tokens stay out of logs/history.
+
+Recovery boundary evidence (2026-10-01): the gateway walkthrough now rejects absent browser proof, mismatched state, arbitrary redirect fields, reset before callback, callback replay, missing CSRF and untrusted Origin, while the successful recovery flow still passes. Its separate `--expiry` mode caps only the probe's returned upstream recovery-token lifetime to two seconds, reconstructs the gateway and waits for persisted ready-context expiry. Reset returns 400 `INVALID_RECOVERY`; the old password and existing dashboard session still work. This establishes local context-expiry enforcement, not natural upstream OTP expiry. Disposable accounts/messages were removed; no setup SQL was executed.
 
 ## Browse users
 
@@ -84,6 +86,8 @@ Recovery implementation evidence (2026-10-01): 76 isolated tests pass across the
 - [ ] Audit persistence failure follows the documented policy and never claims an applied GoTrue change rolled back.
 
 ## Security and reliability
+
+Local dependency-failure evidence (2026-10-01): the management probe used temporary process-only URLs pointing at a closed local port, independently for GoTrue and PostgreSQL. In both cases liveness remained 200, readiness returned 503, and operator login returned safe correlated 503 without a dashboard cookie or credential-bearing response. Existing infrastructure and real configuration were unchanged. Adapter tests separately verify bounded Axios timeout behavior against local HTTP fixtures; these connection-refusal checks do not simulate a long-running database statement or network partition.
 
 - [ ] Protected operations enforce operator authority, input validation, and allowed fields.
 - [ ] Cookie/CSRF/exact-origin rules and login/recovery/general request limits work.

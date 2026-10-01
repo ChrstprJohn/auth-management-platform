@@ -16,9 +16,9 @@ Run `pnpm dev` from the root in the foreground. Stop with Ctrl+C. Production run
 
 The manual `pnpm exec tsx scripts/verify-local-management.ts` walkthrough passed on 2026-10-01 against existing PostgreSQL and pinned GoTrue. It uses disposable accounts and a temporary process-only allowlist/deletion flag; it never edits real operator configuration or runs setup SQL. It verifies operator authorization, safe bounded list/details, both creation modes without invitation email, ban duration and existing-token rejection, unban, permanent deletion, audit/session restart persistence, two-instance last-operator protection, eligibility removal and logout. It removes disposable identities and retains durable audit history. Restricted-role verification remains pending because the configured connection is still privileged.
 
-## First local operator
+The management probe also verifies persisted session expiry with a test-only two-second cap on the returned upstream lifetime. It checks that the session works before expiry, then that every protected route rejects absent, malformed and expired cookies through another gateway. Temporary process-only GoTrue/database URLs targeting a closed local port verify safe dependency failure: liveness succeeds, readiness/login return 503, and no dashboard cookie or credential-bearing response is issued. Infrastructure is not stopped and the production one-hour policy is unchanged. The compiled server's registered SIGTERM handler was verified in a temporary foreground process on port 3101 after readiness, exiting successfully and leaving no listener. Successful shutdown lets Node finish native-handle cleanup rather than forcing an immediate exit.
 
-The management probe also verifies persisted session expiry with a test-only two-second cap on the returned upstream lifetime. It checks that the session works before expiry, then that every protected route rejects absent, malformed and expired cookies through another gateway. The production one-hour policy is unchanged. The compiled server's registered SIGTERM handler was verified in a temporary foreground process on port 3101 after readiness, exiting successfully and leaving no listener. Successful shutdown lets Node finish native-handle cleanup rather than forcing an immediate exit.
+## First local operator
 
 The setup command uses built-in Windows PowerShell (`powershell.exe`); PowerShell 7 (`pwsh`) is not required. Its execution-policy override applies only to this command's process and does not change the machine policy.
 
@@ -49,3 +49,5 @@ From the root: `pnpm run build`, `pnpm run typecheck`, `pnpm run test`, `pnpm ru
 ## Recovery from operator lockout
 
 A trusted server administrator recovers/provisions a verified account through supported GoTrue operations, obtains its UUID, updates the allowlist, and restarts the API. There is no public emergency-access endpoint. Replacing the encryption key invalidates existing sessions; there is no automatic key rotation or token refresh.
+
+The recovery gateway probe also accepts `--expiry`: run `pnpm exec tsx scripts/verify-local-gateway-recovery.ts --expiry` to verify persisted recovery-context expiry with a test-only two-second upstream lifetime cap. Both modes check browser/state/redirect restrictions, callback replay, premature reset and CSRF. The expiry mode confirms rejected reset preserves the password and working dashboard session. Natural upstream OTP expiry remains a separate unverified check.

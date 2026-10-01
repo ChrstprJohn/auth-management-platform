@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { parseEnv } from 'node:util';
+import { createServer } from 'node:net';
 import request from 'supertest';
 import { z } from 'zod';
 import {
@@ -78,6 +79,20 @@ class ShortSessionGoTrue extends GoTrueClient {
       expiresAt: Math.min(session.expiresAt, Date.now() + 2000),
     };
   }
+}
+async function unusedLocalPort(): Promise<number> {
+  const server = createServer();
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  const address = server.address();
+  if (!address || typeof address === 'string')
+    throw new Error('Expected local port');
+  await new Promise<void>((resolve, reject) =>
+    server.close((error) => (error ? reject(error) : resolve())),
+  );
+  return address.port;
 }
 function cookie(response: { headers: Record<string, unknown> }): string {
   const value = z
@@ -158,6 +173,48 @@ try {
     'Configured UUID alone is insufficient proof',
   );
   const b = await login(second);
+  const unavailablePort = await unusedLocalPort();
+  const databaseUrl = new URL(config.ADMIN_DATABASE_URL);
+  databaseUrl.hostname = '127.0.0.1';
+  databaseUrl.port = String(unavailablePort);
+  const outageConfigurations = [
+    { ...config, GOTRUE_URL: `http://127.0.0.1:${unavailablePort}` },
+    { ...config, ADMIN_DATABASE_URL: databaseUrl.href },
+  ];
+  for (const outageConfig of outageConfigurations) {
+    const outage = createApp(outageConfig);
+    resources.push(outage);
+    const liveness = await request(outage.app).get('/health/live');
+    const readiness = await request(outage.app).get('/health/ready');
+    const unavailableLogin = await request(outage.app)
+      .post('/v1/operator/auth/login')
+      .set('Origin', origin)
+      .set('X-CSRF-Protection', '1')
+      .send({ email: first.email, password });
+    check(
+      liveness.status === 200 && readiness.status === 503,
+      'Liveness survives dependency connection refusal',
+    );
+    check(
+      unavailableLogin.status === 503 &&
+        unavailableLogin.body.error.code === 'DEPENDENCY_UNAVAILABLE' &&
+        unavailableLogin.headers['set-cookie'] === undefined,
+      'Dependency outage grants no dashboard session',
+    );
+    check(
+      unavailableLogin.body.requestId ===
+        unavailableLogin.headers['x-request-id'],
+      'Outage request correlation',
+    );
+    const responseText = JSON.stringify(unavailableLogin.body);
+    check(
+      !responseText.includes(password) &&
+        !responseText.includes(config.GOTRUE_ADMIN_TOKEN) &&
+        !responseText.includes(config.ADMIN_DATABASE_URL),
+      'Dependency errors contain no credentials',
+    );
+    await closeResource(outage);
+  }
   const expiryResource = createApp(config, {
     upstream: new ShortSessionGoTrue(local.baseUrl, 5000),
   });
@@ -559,6 +616,7 @@ try {
       eligibilityAndLogoutVerified: true,
       persistedShortSessionExpiry: true,
       everyProtectedRouteRejectsInvalidSessions: true,
+      dependencyConnectionRefusalFailsClosed: true,
     }),
   );
 } catch (error: unknown) {
