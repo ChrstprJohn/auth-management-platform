@@ -2,6 +2,8 @@
 
 Agreed product scope; not an implementation report. Build `gotrue-admin-api` and `gotrue-admin-web` first. See [backend architecture](backend-architecture.md), [technology stack](backend-architecture.md#technology-stack), and [shared deployment](../architecture-and-deployment.md).
 
+[Frontend requirements](frontend-requirements.md) maps this scope to screens, interactions and every existing backend endpoint. Frontend architecture and implementation phases will be planned separately.
+
 ## What this dashboard manages
 
 A trusted operator manages global accounts in the shared GoTrue identity pool. The browser calls our backend, which calls private GoTrue. V1 does not manage Docker containers, server environment settings, or developer projects. Accounts share one identity pool: bans and deletion can affect every application using that identity.
