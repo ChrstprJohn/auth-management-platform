@@ -4,6 +4,7 @@ dist/
 .vercel/
 coverage/
 *.log
+.bootstrap.sql
 .env
 .env.*
 !.env.example

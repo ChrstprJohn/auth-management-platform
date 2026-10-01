@@ -12,6 +12,15 @@ services:
       - "127.0.0.1:8081:8081"
     networks:
       - existing_postgres
+    depends_on:
+      - mailpit
+
+  mailpit:
+    image: axllent/mailpit:v1.27.0
+    ports:
+      - "127.0.0.1:8025:8025"
+    networks:
+      - existing_postgres
 
 networks:
   existing_postgres:

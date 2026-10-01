@@ -71,7 +71,7 @@ GoTrue proves identity; backend records supply authority. Operator eligibility i
 
 ## Local development and browser connections
 
-Use the existing local PostgreSQL 17 container, `local-database-server-postgres-1`, on `local-database-server_default`. The [local Compose setup](../infrastructure/local/README.md) runs one development GoTrue container on that network; it does not create another PostgreSQL server. Prepare a dedicated `auth_local_db` and role before starting it. Create separate platform data/credentials when the platform phase begins. Email capture must be configured separately.
+Use the existing local PostgreSQL 17 container, `local-database-server-postgres-1`, on `local-database-server_default`. The [local Compose setup](../infrastructure/local/README.md) runs one development GoTrue container on that network; it does not create another PostgreSQL server. The dedicated `auth_local_db` and `auth_local` role are prepared. Local GoTrue and Mailpit are running; signup requires email verification and messages appear at `http://localhost:8025`. Automatic confirmation is disabled. Use a real provider on the VM later; create platform data/credentials when the platform phase begins.
 
 Use separate host ports for the APIs, e.g. admin 3100 and platform 3200. Containers resolve service names; host processes use local ports. Local data/secrets do not synchronize automatically to production.
 
@@ -106,4 +106,3 @@ Deployment means pull code, build/recreate the relevant API, apply platform migr
 GoTrue's private container port does not make its current Caddy route private. The dashboard alone does not replace public signup/recovery integrations. After migration, supported auth/admin traffic enters one of the two APIs; email/browser callbacks remain public gateway URLs while GoTrue's upstream URL is internal.
 
 References: [existing VM](../vm_infrastructure/vm-infrastructure-reference-updated.md), [existing GoTrue](../vm_infrastructure/5-auth-server.md). Those documents describe deployed infrastructure, not the proposed product contract.
-
