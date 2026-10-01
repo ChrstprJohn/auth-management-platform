@@ -42,6 +42,7 @@ import {
 import { banStatus } from '@/lib/format/display';
 import { useUsersPage, useUserDetails, useCreateUser } from './hooks';
 import { UserActions } from './actions';
+import { PageHeader } from '@/components/page-header';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Plus, RefreshCw, ArrowLeft } from 'lucide-react';
 import { UserRowActions } from './row-actions';
@@ -114,29 +115,26 @@ export function UsersPage() {
   const m = useUsersPage();
   return (
     <section className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-2">
-          <h1>Users</h1>
-          <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">
-            Global accounts shared across applications. Pages can shift as
-            accounts change.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            disabled={m.refreshing || m.state === 'loading'}
-            onClick={m.refresh}
-          >
-            <RefreshCw className={m.refreshing ? 'animate-spin' : ''} />
-            {m.refreshing ? 'Refreshing…' : 'Refresh users'}
-          </Button>
-          <Button nativeButton={false} render={<Link to="/users/new" />}>
-            <Plus />
-            Create user
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Users"
+        description="Global accounts shared across applications. Pages can shift as accounts change."
+        actions={
+          <>
+            <Button
+              variant="outline"
+              disabled={m.refreshing || m.state === 'loading'}
+              onClick={m.refresh}
+            >
+              <RefreshCw className={m.refreshing ? 'animate-spin' : ''} />
+              {m.refreshing ? 'Refreshing…' : 'Refresh users'}
+            </Button>
+            <Button nativeButton={false} render={<Link to="/users/new" />}>
+              <Plus />
+              Create user
+            </Button>
+          </>
+        }
+      />
       {m.pagination.invalid && (
         <Success title="Pagination was normalized">
           Invalid page values use safe defaults.{' '}
@@ -158,70 +156,75 @@ export function UsersPage() {
         />
       ) : (
         m.data && (
-          <div className="overflow-hidden rounded-xl border">
-            <Table className="table-fixed">
-              <TableCaption>
-                Page {m.pagination.page}. Open an account for full details.
-              </TableCaption>
-              <TableHeader className="bg-muted/50">
-                <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead className="hidden sm:table-cell">
-                    Confirmation
-                  </TableHead>
-                  <TableHead className="hidden sm:table-cell">
-                    Ban status
-                  </TableHead>
-                  <TableHead className="hidden sm:table-cell">
-                    Created
-                  </TableHead>
-                  <TableHead className="w-16 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {m.data.users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="whitespace-normal">
-                      <p className="break-all font-medium">
-                        {user.email ?? 'Email not reported'}
-                      </p>
-                    </TableCell>
-
-                    <TableCell className="hidden sm:table-cell">
-                      <Badge
-                        variant={
-                          user.emailConfirmedAt ? 'secondary' : 'outline'
-                        }
-                      >
-                        {user.emailConfirmedAt ? 'Confirmed' : 'Not reported'}
-                      </Badge>
-                    </TableCell>
-
-                    <TableCell className="hidden sm:table-cell">
-                      <Badge
-                        variant={
-                          user.isBanned === true
-                            ? 'destructive'
-                            : user.isBanned === false
-                              ? 'secondary'
-                              : 'outline'
-                        }
-                      >
-                        {banStatus(user.isBanned)}
-                      </Badge>
-                    </TableCell>
-
-                    <TableCell className="hidden whitespace-normal sm:table-cell">
-                      <Timestamp value={user.createdAt} compact />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <UserRowActions user={user} />
-                    </TableCell>
+          <Card className="gap-0 py-0">
+            <CardContent className="p-0">
+              <Table className="table-fixed">
+                <TableCaption>
+                  Page {m.pagination.page}. Open an account for full details.
+                </TableCaption>
+                <TableHeader className="bg-muted/50">
+                  <TableRow>
+                    <TableHead className="lg:w-[32%]">Email</TableHead>
+                    <TableHead className="hidden lg:table-cell">
+                      Confirmation
+                    </TableHead>
+                    <TableHead className="hidden lg:table-cell">
+                      Ban status
+                    </TableHead>
+                    <TableHead className="hidden lg:table-cell">
+                      Created
+                    </TableHead>
+                    <TableHead className="w-16 text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {m.data.users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="whitespace-normal">
+                        <p
+                          className="truncate font-medium"
+                          title={user.email ?? undefined}
+                        >
+                          {user.email ?? 'Email not reported'}
+                        </p>
+                      </TableCell>
+
+                      <TableCell className="hidden lg:table-cell">
+                        <Badge
+                          variant={
+                            user.emailConfirmedAt ? 'secondary' : 'outline'
+                          }
+                        >
+                          {user.emailConfirmedAt ? 'Confirmed' : 'Not reported'}
+                        </Badge>
+                      </TableCell>
+
+                      <TableCell className="hidden lg:table-cell">
+                        <Badge
+                          variant={
+                            user.isBanned === true
+                              ? 'destructive'
+                              : user.isBanned === false
+                                ? 'secondary'
+                                : 'outline'
+                          }
+                        >
+                          {banStatus(user.isBanned)}
+                        </Badge>
+                      </TableCell>
+
+                      <TableCell className="hidden whitespace-normal lg:table-cell">
+                        <Timestamp value={user.createdAt} compact />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <UserRowActions user={user} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         )
       )}
       {m.state !== 'loading' && (
