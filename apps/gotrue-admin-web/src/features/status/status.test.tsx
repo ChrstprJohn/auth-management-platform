@@ -36,5 +36,14 @@ describe('independent health signals', () => {
     expect(live).toHaveBeenCalledTimes(2);
     expect(ready).toHaveBeenCalledTimes(2);
     expect(upstream).toHaveBeenCalledTimes(2);
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Actions for API liveness' }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'Refresh check' }),
+    );
+    expect(live).toHaveBeenCalledTimes(3);
+    expect(ready).toHaveBeenCalledTimes(2);
+    expect(upstream).toHaveBeenCalledTimes(2);
   });
 });

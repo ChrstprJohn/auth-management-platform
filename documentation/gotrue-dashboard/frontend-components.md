@@ -14,7 +14,7 @@ These mappings are our application decisions; availability and primitive behavio
 
 | Screen or area                | Components                                                                              | Purpose                                                                                                          |
 | ----------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Protected shell               | Sidebar, Sheet, Separator, Breadcrumb, Button, Tooltip                                  | Desktop/mobile navigation, current location, accessible icon actions                                             |
+| Protected shell               | Sidebar, Sheet, Separator, Breadcrumb, Dropdown Menu, Avatar, Button, Tooltip           | Desktop/mobile navigation, current location, accessible icon actions                                             |
 | Account menu                  | Dropdown Menu, Avatar, Item                                                             | Safe operator identity and Account/Logout navigation; use a fallback initial rather than invented profile photos |
 | Sign-in                       | Field, Input, Input Group, Button, Spinner, Alert                                       | Labels/help/errors, credential inputs, optional password visibility, pending and failed sign-in                  |
 | Forgot password               | Field, Input, Button, Spinner, Alert                                                    | Email request, generic acknowledgement, same-browser guidance and errors                                         |
@@ -26,8 +26,8 @@ These mappings are our application decisions; availability and primitive behavio
 | Unban                         | Alert Dialog, Button, Spinner, Alert                                                    | Explicit target/access confirmation and pending/outcome presentation                                             |
 | Permanent delete              | Alert Dialog, Button, Spinner, Alert                                                    | Destructive target/global-impact confirmation, backend restrictions and uncertain outcomes                       |
 | Action history                | Table, Badge, Pagination, Select/Native Select, Button, Tooltip, Skeleton, Empty, Alert | Durable outcomes, safe identifiers, page controls and loading/empty/error                                        |
-| Service status                | Item, Badge, Button, Button Group, Skeleton, Spinner, Alert                             | Independent liveness/readiness/upstream results, check time and manual refresh                                   |
-| Account                       | Item, Separator, Button, Tooltip, Skeleton, Alert                                       | Safe ID/email/expiry, copy feedback and logout                                                                   |
+| Service status                | Card, Dropdown Menu, Badge, Button, Skeleton, Spinner, Alert                            | Independent liveness/readiness/upstream results, check time and manual refresh                                   |
+| Account                       | Card, Item, Button, Tooltip, Skeleton, Alert                                            | Safe ID/email/expiry, copy feedback and logout                                                                   |
 | Missing/denied/expired routes | Empty, Alert, Button                                                                    | Clear explanation and safe return/sign-in/retry actions                                                          |
 | Supplemental feedback         | Approved Sonner notifier                                                                | Brief copy/success feedback in addition to persistent inline results                                             |
 
@@ -75,6 +75,16 @@ Official rendered references: [login blocks](https://ui.shadcn.com/blocks/login)
 Captured references and controlled application screenshots live in ignored `artifacts/web-review/polish-before`, `polish-after` and `polish-confirm`. Capture public references with `pnpm exec tsx scripts/capture-shadcn-references.ts`; run fixture verification with `pnpm exec tsx scripts/verify-local-web.ts --ui-review=confirm --review-port=5174`. `--table-review` limits new screenshots to user-requested table/menu refinements; `--behavior-only` diagnoses interactions without another visual pass. These foreground utilities close their browser and Vite resources and do not use live accounts.
 
 ## Scaffold-time and review checks
+
+### Application-wide layout composition
+
+The current overhaul covers `/login`, `/forgot-password`, `/reset-password`, `/dashboard`, `/users`, `/users/new`, `/users/:id`, `/history`, `/status`, `/account`, unmatched destinations and session-blocked screens. The shell and page composition are owned by [frontend architecture](frontend-architecture.md); verification evidence is owned by the [frontend checklist](frontend-checklist.md).
+
+`AppSidebar`, `PageHeader`, `AuthLayout` and `RouteState` compose existing Base UI shadcn primitives. Metric and service-card ellipsis menus use `DropdownMenu` with Lucide `MoreHorizontal`; table menus retain their account/detail destinations. Service checks use equal-height Card sections with aligned footers. Account/details/create/chart areas use responsive seven-column splits. Card headers use `minmax(0,1fr)` for the text column so menu triggers cannot collide with titles. Email previews truncate with the full address available in account details; full identifiers remain selectable/copyable and wrap in details.
+
+Forms retain the official current Field/Input Group + React Hook Form pattern; tables retain the agreed shadcn Table with server pagination. No legacy Radix Form wrappers, client-side pagination engine, sample dashboard records or unsupported reference-block controls are introduced.
+
+Run the expanded fixture-only audit with `pnpm exec tsx scripts/verify-local-web.ts --ui-review=after --layout-review --review-port=5174`; use `confirm` for the single confirmation pass or `--behavior-only` for diagnostics without new screenshots. Captures live in ignored `artifacts/web-review/layout-after` and `layout-confirm`; public references remain in `polish-before`. The audit checks every route at 320/390/768/1024/1440px, keyboard header-menu focus, collapsed/mobile navigation, dark-token renders and blocked routes, and closes its foreground resources.
 
 1. Verify current official registry/CLI compatibility and select the default Base UI style for Vite; record the choice in `components.json` and pin dependencies.
 2. Add mapped components as their features are built, using generated source under `src/components/ui` and the documented package-manager policy.

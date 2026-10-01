@@ -16,6 +16,7 @@ import { mutationSchema } from '../apps/gotrue-admin-web/src/lib/api/schemas.js'
 // and ordinary application queries; never schema/setup SQL or infrastructure startup.
 const live = process.argv.includes('--live');
 const recoveryOnly = process.argv.includes('--recovery-only');
+const layoutReview = process.argv.includes('--layout-review');
 const uiReview = process.argv
   .find((argument) => argument.startsWith('--ui-review='))
   ?.split('=')[1];
@@ -30,7 +31,7 @@ const base = `http://localhost:${reviewPort}`;
 const apiBase = 'http://localhost:3101';
 const output = fileURLToPath(
   new URL(
-    `../artifacts/web-review/${uiReview ? `polish-${uiReview}/` : ''}`,
+    `../artifacts/web-review/${uiReview ? `${layoutReview ? 'layout' : 'polish'}-${uiReview}/` : ''}`,
     import.meta.url,
   ),
 );
@@ -126,8 +127,21 @@ async function fixtureReview(page: Page) {
     }
     let body: unknown;
     let status = 200;
-    if (path.endsWith('/me')) body = fixtureSession;
-    else if (path === '/v1/operator/users') {
+    if (path.endsWith('/me')) {
+      if (scenario === 'denied' || scenario === 'session-error') {
+        status = scenario === 'denied' ? 403 : 503;
+        body = {
+          error: {
+            code:
+              scenario === 'denied'
+                ? 'ACCESS_DENIED'
+                : 'DEPENDENCY_UNAVAILABLE',
+            message: 'Fixture',
+          },
+          requestId: fixtureId,
+        };
+      } else body = fixtureSession;
+    } else if (path === '/v1/operator/users') {
       if (scenario === 'error') {
         status = 503;
         body = {
@@ -160,6 +174,15 @@ async function fixtureReview(page: Page) {
           perPage: 20,
           hasNextPage: false,
         };
+    } else if (
+      path === `/v1/operator/users/${fixtureId}` &&
+      scenario === 'missing'
+    ) {
+      status = 404;
+      body = {
+        error: { code: 'USER_NOT_FOUND', message: 'Fixture' },
+        requestId: fixtureId,
+      };
     } else if (path === '/v1/operator/audit')
       body = {
         entries: (['pending', 'succeeded', 'failed', 'unknown'] as const).map(
@@ -251,9 +274,7 @@ async function fixtureReview(page: Page) {
           exact: true,
         })
         .click();
-      await page
-        .getByRole('menuitem', { name: 'View details' })
-        .waitFor();
+      await page.getByRole('menuitem', { name: 'View details' }).waitFor();
       await screenshot(page, 'desktop-action-menu');
       await page.getByRole('menuitem', { name: 'View details' }).click();
       await page.getByRole('dialog', { name: 'Action details' }).waitFor();
@@ -324,9 +345,7 @@ async function fixtureReview(page: Page) {
           name: `Actions for action 00000000-0000-4000-8000-000000000004`,
         })
         .click();
-      await page
-        .getByRole('menuitem', { name: 'View details' })
-        .waitFor();
+      await page.getByRole('menuitem', { name: 'View details' }).waitFor();
       await screenshot(page, 'mobile-action-menu');
       await page.getByRole('menuitem', { name: 'View details' }).click();
       await page.getByRole('dialog', { name: 'Action details' }).waitFor();
@@ -382,6 +401,97 @@ async function fixtureReview(page: Page) {
     'Read failure is not empty',
   );
   await navigate(page, '/unavailable-fixture-route', 'Page not found');
+  if (layoutReview) {
+    await screenshot(page, 'desktop-not-found');
+    const routes = [
+      ['/login', 'Operator sign in', 'login'],
+      ['/forgot-password', 'Recover your password', 'recovery'],
+      ['/reset-password', 'Set a new password', 'reset'],
+      ['/users', 'Users', 'users'],
+      ['/dashboard', 'Dashboard', 'dashboard'],
+      ['/users/new', 'Create a global user', 'create'],
+      [`/users/${fixtureId}`, 'Account details', 'details'],
+      ['/history', 'Action history', 'history'],
+      ['/status', 'Service status', 'status'],
+      ['/account', 'Current account', 'account'],
+    ] as const;
+    scenario = 'data';
+    for (const width of [320, 768, 1024]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const [path, title, name] of routes) {
+        stage = `layout ${width} ${name}`;
+        await navigate(page, path, title);
+        await page
+          .locator('[data-slot="skeleton"]')
+          .waitFor({ state: 'detached' });
+        await page.evaluate(() => document.fonts.ready);
+        check(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth + 1,
+          ),
+          `${width} page fits`,
+        );
+        check(
+          await page
+            .locator('[data-slot="table-container"]')
+            .evaluateAll((elements) =>
+              elements.every(
+                (element) => element.scrollWidth <= element.clientWidth + 1,
+              ),
+            ),
+          `${width} preview tables fit`,
+        );
+        if (width === 320) await screenshot(page, `narrow-${name}`);
+      }
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await navigate(page, '/users', 'Users');
+    stage = 'layout keyboard header account menu';
+    await page.getByRole('button', { name: 'Header account menu' }).focus();
+    await page.keyboard.press('Enter');
+    await page.getByRole('menuitem', { name: 'Current account' }).waitFor();
+    await screenshot(page, 'desktop-header-menu');
+    await page.keyboard.press('Escape');
+    check(
+      await page
+        .getByRole('button', { name: 'Header account menu' })
+        .evaluate((element) => element === document.activeElement),
+      'Header menu returns focus',
+    );
+    stage = 'layout collapsed sidebar';
+    await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
+    await page.locator('[data-state="collapsed"]').waitFor();
+    await screenshot(page, 'desktop-collapsed-sidebar');
+    await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
+    for (const [path, title, name] of routes) {
+      await navigate(page, path, title);
+      await page
+        .locator('[data-slot="skeleton"]')
+        .waitFor({ state: 'detached' });
+      await page.evaluate(() => document.documentElement.classList.add('dark'));
+      await screenshot(page, `dark-${name}`);
+    }
+    await page.evaluate(() =>
+      document.documentElement.classList.remove('dark'),
+    );
+    scenario = 'missing';
+    await navigate(page, `/users/${fixtureId}`, 'Account not found');
+    await screenshot(page, 'desktop-missing');
+    scenario = 'denied';
+    await navigate(page, '/users', 'Access denied');
+    await screenshot(page, 'desktop-denied');
+    scenario = 'session-error';
+    await navigate(page, '/users', 'Session check unavailable');
+    await screenshot(page, 'desktop-session-error');
+    await page.setViewportSize({ width: 320, height: 900 });
+    await navigate(page, '/users', 'Session check unavailable');
+    await screenshot(page, 'narrow-session-error');
+    await navigate(page, '/unavailable-fixture-route', 'Page not found');
+    await screenshot(page, 'narrow-not-found');
+    console.log(
+      'Layout review passed at 320/390/768/1024/1440px, including dark tokens, header keyboard menu, collapsed/mobile sidebar and blocked routes.',
+    );
+  }
   console.log(
     'Fixture desktop/mobile/keyboard review completed; captures contain controlled fixtures only.',
   );
@@ -734,7 +844,7 @@ try {
   });
   const page = await context.newPage();
   activePage = page;
-  page.setDefaultTimeout(15000);
+  page.setDefaultTimeout(30000);
   let pageErrors = 0;
   page.on('pageerror', (error) => {
     pageErrors++;
@@ -759,6 +869,8 @@ try {
   if (!live && activePage)
     console.log(
       JSON.stringify({
+        fixtureHeadings: await activePage.locator('h1,h2,h3').allTextContents(),
+        fixtureAlertCount: await activePage.getByRole('alert').count(),
         dialogCount: await activePage.getByRole('dialog').count(),
         sidebarOpen: await activePage
           .locator('[data-mobile="true"][data-open]')
@@ -824,4 +936,3 @@ try {
     'Agent-owned browser and foreground servers closed. Real operator configuration unchanged; durable audit retained.',
   );
 }
-

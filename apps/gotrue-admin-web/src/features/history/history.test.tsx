@@ -63,4 +63,3 @@ describe('durable history states', () => {
     ).not.toBeInTheDocument();
   });
 });
-
