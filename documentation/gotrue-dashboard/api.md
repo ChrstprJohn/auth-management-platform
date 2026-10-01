@@ -228,4 +228,10 @@ Environment names, generation instructions and defaults are in [`.env.example`](
 
 ## Documentation required during implementation
 
+## Recovery contracts (planned implementation)
+
+The recovery flow adds `POST /v1/operator/auth/forgot-password` with strict `{email}`, `GET /v1/operator/auth/recovery/callback` with a PKCE `code` and browser-bound `state`, and `POST /v1/operator/auth/reset-password` with strict `{password}`. POSTs require trusted Origin, `X-CSRF-Protection: 1`, and JSON. Forgot-password returns the same 202 message for all valid emails, including upstream send failures; it does not prove delivery. Both POSTs and callback are rate-limited. A separate opaque HttpOnly recovery cookie binds the same browser to a server-generated PKCE verifier; its hash and encrypted recovery material live in prepared admin migration 0003. No supplied redirect or upstream access token is accepted.
+
+The gateway callback is configured server-side, exchanges the one-time GoTrue code, rechecks eligible identity, and redirects without tokens to a configured reset page. Ready recovery contexts expire after ten minutes, capped by upstream expiry; pending contexts expire after one hour, with GoTrue's shorter code/link expiry still enforced. Callback and reset claims are atomic and single-use. Reset invalidates local sessions before the upstream mutation and again after confirmed success, then requires normal login. Ambiguous upstream outcomes consume the context and must not be retried automatically. Full endpoint examples and observed verification evidence will replace this planned section with implementation.
+
 Update this file whenever endpoint behavior changes. Password recovery is not implemented: its exact callback/token exchange contracts require the pinned-local recovery-link, expiry, password-update and Mailpit walkthrough required by backend architecture. User-management/audit contracts above are implemented with isolated tests, but live mutation and PostgreSQL concurrency/persistence verification remain pending. No deployment or end-to-end completion is implied.
