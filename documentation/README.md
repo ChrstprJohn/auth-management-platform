@@ -29,6 +29,8 @@ Each topic has one authoritative home. Edit that file when the topic changes; ot
 
 The current [frontend polish working goal](gotrue-dashboard/frontend-polish-goal.md) records the requested shadcn layouts, dashboard analytics, five-column previews, ellipsis menus and screenshot verification scope.
 
+The [create-user modal and Resend goal](gotrue-dashboard/create-user-modal-resend-goal.md) is a prepared prompt for a future chat, with credentials and provider activation reserved for its final setup phase.
+
 - An endpoint change normally updates code and the API reference. Update the checklist only when verification status changes.
 - An internal backend design change belongs in backend architecture; update the API reference only if clients see changed behavior.
 - Coding rules belong in `AGENTS.md`; do not repeat architecture, package lists, or endpoint contracts there.
