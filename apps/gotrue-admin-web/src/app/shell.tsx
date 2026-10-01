@@ -1,14 +1,16 @@
 import { useEffect } from 'react';
-import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { AppSidebar, shellLinks } from './app-sidebar';
+import { RouteState } from '@/components/route-state';
+import { LogOut, UserRound } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
-  Users,
-  History,
-  HeartPulse,
-  UserRound,
-  ChevronsUpDown,
-  LayoutDashboard,
-  LogOut,
-} from 'lucide-react';
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useSession } from './session';
 import { useAccount } from '@/features/auth/hooks';
 import { ActionOutcome } from '@/features/users/actions';
@@ -16,19 +18,8 @@ import { Failure, Blank, Loading } from '@/components/feedback/states';
 import { Button } from '@/components/ui/button';
 import {
   SidebarProvider,
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
-  SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
@@ -40,23 +31,7 @@ import {
   BreadcrumbLink,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { BrandMark } from '@/components/brand';
 
-const links = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/users', label: 'Users', icon: Users },
-  { to: '/history', label: 'Action history', icon: History },
-  { to: '/status', label: 'Service status', icon: HeartPulse },
-  { to: '/account', label: 'Current account', icon: UserRound },
-];
 function useShell() {
   const location = useLocation();
   const { setOpenMobile, isMobile } = useSidebar();
@@ -74,7 +49,7 @@ function useShell() {
         ? 'Create user'
         : location.pathname.startsWith('/users/')
           ? 'Account details'
-          : (links.find((item) => location.pathname.startsWith(item.to))
+          : (shellLinks.find((item) => location.pathname.startsWith(item.to))
               ?.label ?? 'GoTrue Operator'),
   };
 }
@@ -85,110 +60,15 @@ function ShellContent() {
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <Sidebar variant="inset" collapsible="icon">
-        <SidebarHeader>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                size="lg"
-                render={<Link to="/users" />}
-                tooltip="GoTrue Operator"
-              >
-                <BrandMark />
-                <span className="grid min-w-0 gap-0.5 leading-tight">
-                  <span className="truncate font-semibold">
-                    GoTrue Operator
-                  </span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    Shared identity management
-                  </span>
-                </span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Workspace</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {links.map((item) => (
-                  <SidebarMenuItem key={item.to}>
-                    <SidebarMenuButton
-                      isActive={m.active.startsWith(item.to)}
-                      tooltip={item.label}
-                      aria-current={
-                        m.active.startsWith(item.to) ? 'page' : undefined
-                      }
-                      render={<Link to={item.to} />}
-                    >
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarFooter>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <SidebarMenuButton
-                      size="lg"
-                      className="aria-expanded:bg-sidebar-accent"
-                      aria-label="Operator account menu"
-                      tooltip="Operator account"
-                    />
-                  }
-                >
-                  <Avatar className="rounded-lg">
-                    <AvatarFallback>OP</AvatarFallback>
-                  </Avatar>
-                  <span className="grid min-w-0 flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">Operator</span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {m.account.session?.operator.email}
-                    </span>
-                  </span>
-                  <ChevronsUpDown className="ml-auto size-4" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  side={m.menuSide}
-                  align="end"
-                  className="min-w-56"
-                >
-                  <DropdownMenuItem render={<Link to="/account" />}>
-                    <UserRound />
-                    Current account
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    disabled={m.account.pending}
-                    onClick={m.account.logout}
-                  >
-                    <LogOut />
-                    {m.account.pending ? 'Signing out…' : 'Logout'}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </SidebarMenuItem>
-          </SidebarMenu>
-          {m.account.error && <Failure error={m.account.error} />}
-        </SidebarFooter>
-        <SidebarRail aria-label="Collapse or expand sidebar" />
-      </Sidebar>
+      <AppSidebar model={m} />
       <SidebarInset className="min-w-0">
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 md:px-6">
+        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 border-b border-border bg-background px-4 md:px-8">
           <SidebarTrigger />
           <Separator
             orientation="vertical"
             className="mr-2 data-vertical:h-4 data-vertical:self-auto"
           />
-          <Breadcrumb>
+          <Breadcrumb className="min-w-0 flex-1">
             <BreadcrumbList>
               {m.userParent && (
                 <>
@@ -201,16 +81,52 @@ function ShellContent() {
                 </>
               )}
               <BreadcrumbItem>
-                <BreadcrumbPage>{m.title}</BreadcrumbPage>
+                <BreadcrumbPage className="truncate">{m.title}</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={<Button variant="ghost" size="icon" />}
+              aria-label="Header account menu"
+            >
+              <Avatar className="size-7">
+                <AvatarFallback>
+                  <UserRound className="size-4" />
+                </AvatarFallback>
+              </Avatar>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-64 max-w-[calc(100vw-2rem)]"
+            >
+              <div className="min-w-0 px-2 py-2 text-sm">
+                <p className="font-medium">Operator</p>
+                <p className="break-all text-xs text-muted-foreground">
+                  {m.account.session?.operator.email}
+                </p>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem render={<Link to="/account" />}>
+                <UserRound />
+                Current account
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={m.account.pending}
+                onClick={m.account.logout}
+              >
+                <LogOut />
+                {m.account.pending ? 'Signing out…' : 'Logout'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
         <main
           id="main"
           tabIndex={-1}
-          className="mx-auto w-full max-w-[90rem] min-w-0 flex-1 px-4 py-6 md:px-6 md:py-8 xl:px-8"
+          className="mx-auto w-full max-w-[90rem] min-w-0 flex-1 space-y-4 p-4 pt-6 md:p-8 md:pt-6"
         >
+          {m.account.error && <Failure error={m.account.error} />}
           <ActionOutcome />
           <Outlet />
         </main>
@@ -223,9 +139,9 @@ export function ProtectedShell() {
   const location = useLocation();
   if (session.state === 'loading')
     return (
-      <main className="public-form">
+      <RouteState>
         <Loading label="Checking operator session" />
-      </main>
+      </RouteState>
     );
   if (session.state === 'expired')
     return (
@@ -236,18 +152,18 @@ export function ProtectedShell() {
     );
   if (session.state === 'denied')
     return (
-      <main className="public-form">
+      <RouteState>
         <Blank
           title="Access denied"
           description="Operator access is unavailable. A trusted administrator can check eligibility."
           href="/login"
           action="Return to sign in"
         />
-      </main>
+      </RouteState>
     );
   if (session.state === 'unavailable')
     return (
-      <main className="public-form">
+      <RouteState>
         <h1>Session check unavailable</h1>
         <p>
           Protected data remains blocked until the API can verify your session.
@@ -260,7 +176,7 @@ export function ProtectedShell() {
         >
           Password recovery
         </Button>
-      </main>
+      </RouteState>
     );
   return (
     <SidebarProvider>

@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { RouteState } from '@/components/route-state';
 import { ProtectedShell } from './shell';
 import { LoginPage, AccountPage } from '@/features/auth/views';
 import { Blank } from '@/components/feedback/states';
@@ -49,12 +50,12 @@ export function AppRoutes() {
         <Route
           path="*"
           element={
-            <main className="public-form">
+            <RouteState>
               <Blank
                 title="Page not found"
                 description="This destination is unavailable."
               />
-            </main>
+            </RouteState>
           }
         />
       </Routes>
