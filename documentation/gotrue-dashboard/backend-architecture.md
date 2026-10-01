@@ -1,6 +1,6 @@
 # GoTrue Admin API: Backend Architecture
 
-Design document only. The backend has not been scaffolded or implemented. Read alongside [V1 features](features.md) and [shared architecture](../architecture-and-deployment.md).
+The initial health/operator-session backend is implemented with isolated tests. Live PostgreSQL/GoTrue verification awaits user setup. Later modules remain planned unless their API reference says otherwise. Read alongside [V1 features](features.md) and [shared architecture](../architecture-and-deployment.md).
 
 This file owns backend structure, technology choices, and agreed session/audit/provisioning policies. [API reference](api.md) owns endpoint contracts and usage. [AGENTS.md](../../AGENTS.md) owns coding and delivery rules.
 
@@ -10,27 +10,27 @@ Build `apps/gotrue-admin-api` first: an Express/TypeScript API for trusted opera
 
 ## Technology stack
 
-| Component | Choice | Purpose |
-|---|---|---|
-| Runtime | Node.js supported LTS | Run compiled JavaScript in production; pin exact version during scaffolding |
-| Language | TypeScript, strict mode | Explicit contracts and compile-time checks |
-| HTTP framework | Express | Routes, controllers, and middleware |
-| Upstream HTTP | Axios | Configured GoTrue client with timeouts and safe error mapping |
-| Validation | Zod | Validate environment, parameters, queries, and request bodies |
-| Application/request logging | Pino + pino-http | Structured logs, request correlation, configured secret redaction |
-| Security headers | Helmet | API-appropriate HTTP security headers |
-| Browser origins | cors | Exact trusted frontend origins with explicit credentials policy |
-| Request limits | express-rate-limit | Separate login/recovery and general API limits |
-| Development | tsx watch | Run/restart TypeScript in the foreground; nodemon is unnecessary |
-| Build | TypeScript compiler | Type-check and emit production JavaScript |
-| Tests | Vitest + Supertest | Meaningful service and HTTP integration tests |
-| Formatting/checks | ESLint + Prettier | Consistent code and static checks |
-| Package/workspace management | pnpm workspaces | Independent apps and shared packages in one repository |
-| JWT verification | Deferred: jose if needed | Add only if the session design uses local JWT verification |
-| Persistence | PostgreSQL + pg | Separate restricted admin database for sessions and durable audit; SQL migrations and queries, no ORM |
-| Cookies | cookie-parser | Read the opaque operator session cookie; Express sets/clears it |
-| Session cryptography | Node.js crypto | Random session IDs, SHA-256 hashes, AES-256-GCM token encryption |
-| CSRF | Exact Origin + required custom header | Enforce the agreed browser-mutation policy in middleware; no separate token service |
+| Component                    | Choice                                | Purpose                                                                                               |
+| ---------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Runtime                      | Node.js supported LTS                 | Run compiled JavaScript in production; pin exact version during scaffolding                           |
+| Language                     | TypeScript, strict mode               | Explicit contracts and compile-time checks                                                            |
+| HTTP framework               | Express                               | Routes, controllers, and middleware                                                                   |
+| Upstream HTTP                | Axios                                 | Configured GoTrue client with timeouts and safe error mapping                                         |
+| Validation                   | Zod                                   | Validate environment, parameters, queries, and request bodies                                         |
+| Application/request logging  | Pino + pino-http                      | Structured logs, request correlation, configured secret redaction                                     |
+| Security headers             | Helmet                                | API-appropriate HTTP security headers                                                                 |
+| Browser origins              | cors                                  | Exact trusted frontend origins with explicit credentials policy                                       |
+| Request limits               | express-rate-limit                    | Separate login/recovery and general API limits                                                        |
+| Development                  | tsx watch                             | Run/restart TypeScript in the foreground; nodemon is unnecessary                                      |
+| Build                        | TypeScript compiler                   | Type-check and emit production JavaScript                                                             |
+| Tests                        | Vitest + Supertest                    | Meaningful service and HTTP integration tests                                                         |
+| Formatting/checks            | ESLint + Prettier                     | Consistent code and static checks                                                                     |
+| Package/workspace management | pnpm workspaces                       | Independent apps and shared packages in one repository                                                |
+| JWT verification             | Deferred: jose if needed              | Add only if the session design uses local JWT verification                                            |
+| Persistence                  | PostgreSQL + pg                       | Separate restricted admin database for sessions and durable audit; SQL migrations and queries, no ORM |
+| Cookies                      | cookie-parser                         | Read the opaque operator session cookie; Express sets/clears it                                       |
+| Session cryptography         | Node.js crypto                        | Random session IDs, SHA-256 hashes, AES-256-GCM token encryption                                      |
+| CSRF                         | Exact Origin + required custom header | Enforce the agreed browser-mutation policy in middleware; no separate token service                   |
 
 Pin compatible dependency versions when scaffolding. No Redis, queue, ORM, or additional service is assumed for V1. Use [agreed V1 decisions](#agreed-v1-decisions) for cookie/CSRF behavior, one-hour sessions without refresh, encryption, audit, provisioning, and initial endpoint contracts.
 
@@ -51,7 +51,12 @@ Example wiring:
 ```ts
 const usersService = new UsersService(gotrueClient, auditService);
 const usersController = new UsersController(usersService);
-router.get('/:id', authenticate.handle, requireOperator.handle, usersController.getUser);
+router.get(
+  '/:id',
+  authenticate.handle,
+  requireOperator.handle,
+  usersController.getUser,
+);
 ```
 
 The example assumes bound arrow handlers and separate validation/error handling. Keep `app.ts` independent of listening for HTTP tests; `server.ts` owns startup and graceful shutdown.
@@ -152,7 +157,7 @@ The diagram shows a protected operation. Login, recovery, and minimal health hav
 
 ## Agreed V1 decisions
 
-These decisions are approved for implementation. They describe planned behavior; the backend, admin database, and operator provisioning are not implemented yet. Keep V1 small: existing PostgreSQL, Express/TypeScript, and private GoTrue. No Redis, queue, ORM, automatic session refresh, or operator-role management UI.
+These decisions are approved for implementation. Initial sessions and health are implemented; SQL is prepared but the admin database and operator provisioning await user setup. Keep V1 small: existing PostgreSQL, Express/TypeScript, and private GoTrue. No Redis, queue, ORM, automatic session refresh, or operator-role management UI.
 
 ### Operator sessions
 

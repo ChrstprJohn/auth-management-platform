@@ -13,6 +13,8 @@ Implementation checks are marked only after verification. Decision checks below 
 
 ## Login and session
 
+Initial implementation evidence (2026-10-01): workspace/backend build and 14 isolated configuration/HTTP tests pass for auth boundaries, expiry, encryption, CSRF, rate limits, logout, production-cookie attributes and readiness failure. No SQL was executed. Delivery boxes below stay unchecked until controlled live PostgreSQL/GoTrue walkthroughs establish them. See [backend setup](../../apps/gotrue-admin-api/README.md).
+
 - [ ] Eligible operator can sign in and retrieve current ID/email.
 - [ ] Wrong credentials return a safe error; valid ordinary accounts receive no operator session.
 - [ ] Every protected endpoint rejects absent/invalid/expired sessions and rechecks operator eligibility.

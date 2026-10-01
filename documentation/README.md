@@ -1,23 +1,23 @@
 # Project Documentation
 
-Start here. Build the GoTrue operator dashboard first, then the developer auth platform. Application implementation has not started. Documented design decisions are not delivery completion.
+Start here. Build the GoTrue operator dashboard first, then the developer auth platform. The initial operator backend is implemented with isolated tests; live database/auth verification awaits user setup. Documented design decisions are not delivery completion.
 
 ## Where to make changes
 
 Each topic has one authoritative home. Edit that file when the topic changes; other documents should link to it instead of copying its details.
 
-| Topic | Edit here |
-|---|---|
-| Agent behavior, readable code, DRY, verification, documentation workflow, Windows process rules, frontend constraint, full-schema/migration maintenance and manual execution | [AGENTS.md](../AGENTS.md) |
-| Shared repository layout, database boundaries, VM routing, deployment, GoTrue privacy | [Shared architecture and deployment](architecture-and-deployment.md) |
-| Operator backend stack, layers, sessions, encryption, audit policy, provisioning | [Operator backend architecture](gotrue-dashboard/backend-architecture.md) |
-| Operator endpoint methods, payloads, status codes, cookies/CSRF, usage examples | [Operator API reference](gotrue-dashboard/api.md) |
-| Operator product scope and user-facing behavior | [Operator features](gotrue-dashboard/features.md) |
-| Operator verified delivery status | [Operator checklist](gotrue-dashboard/checklist.md) |
-| Developer platform product scope | [Platform features](platform/features.md) |
-| Developer platform verified delivery status | [Platform checklist](platform/checklist.md) |
-| Local infrastructure commands, pinned images, setup and email verification notes | [Local infrastructure](../infrastructure/local/README.md) |
-| Existing VM operational references | [VM reference](../vm_infrastructure/vm-infrastructure-reference-updated.md) |
+| Topic                                                                                                                                                                        | Edit here                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Agent behavior, readable code, DRY, verification, documentation workflow, Windows process rules, frontend constraint, full-schema/migration maintenance and manual execution | [AGENTS.md](../AGENTS.md)                                                   |
+| Shared repository layout, database boundaries, VM routing, deployment, GoTrue privacy                                                                                        | [Shared architecture and deployment](architecture-and-deployment.md)        |
+| Operator backend stack, layers, sessions, encryption, audit policy, provisioning                                                                                             | [Operator backend architecture](gotrue-dashboard/backend-architecture.md)   |
+| Operator endpoint methods, payloads, status codes, cookies/CSRF, usage examples                                                                                              | [Operator API reference](gotrue-dashboard/api.md)                           |
+| Operator product scope and user-facing behavior                                                                                                                              | [Operator features](gotrue-dashboard/features.md)                           |
+| Operator verified delivery status                                                                                                                                            | [Operator checklist](gotrue-dashboard/checklist.md)                         |
+| Developer platform product scope                                                                                                                                             | [Platform features](platform/features.md)                                   |
+| Developer platform verified delivery status                                                                                                                                  | [Platform checklist](platform/checklist.md)                                 |
+| Local infrastructure commands, pinned images, setup and email verification notes                                                                                             | [Local infrastructure](../infrastructure/local/README.md)                   |
+| Existing VM operational references                                                                                                                                           | [VM reference](../vm_infrastructure/vm-infrastructure-reference-updated.md) |
 
 ## Maintenance rules
 

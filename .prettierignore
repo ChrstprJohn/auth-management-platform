@@ -1,0 +1,12 @@
+pnpm-lock.yaml
+node_modules
+dist
+coverage
+vm_infrastructure
+.pnpm-store
+# Existing documentation/infrastructure formatting is outside backend delivery.
+documentation/architecture-and-deployment.md
+documentation/gotrue-dashboard/features.md
+documentation/gotrue-dashboard/README.md
+documentation/platform
+infrastructure/local
