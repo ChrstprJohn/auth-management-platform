@@ -24,6 +24,8 @@ const messages: Record<string, string> = {
   USER_NOT_FOUND: 'This account is missing or has already been deleted.',
   INVALID_RECOVERY:
     'Recovery is missing, expired, already used or unavailable for this account. Request a fresh email in this browser.',
+  OPERATOR_RECOVERY_UNAVAILABLE:
+    'Password recovery is only available for operator accounts.',
   PASSWORD_RESET_SAME_PASSWORD:
     'Choose a password different from your current password. Request a fresh recovery email before trying again.',
   PASSWORD_RESET_WEAK_PASSWORD:

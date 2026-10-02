@@ -35,6 +35,7 @@ export function ForgotPasswordPage() {
             <TextField
               id="recovery-email"
               label="Email"
+              description="Use the email for your operator account."
               type="email"
               autoComplete="email"
               registration={m.form.register('email')}

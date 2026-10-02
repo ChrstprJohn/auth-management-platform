@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { emailSchema, newPasswordSchema } from '@/features/auth/schemas';
 import { operatorApi } from '@/lib/api/operator';
 import { ApiFailure } from '@/lib/api/client';
+import { failureMessage } from '@/lib/api/feedback';
 import { useSession } from '@/app/session';
 
 export const resetSchema = z
@@ -23,7 +24,24 @@ export function useForgotPassword() {
   const busy = useRef(false);
   const mutation = useMutation({
     mutationFn: () => operatorApi.forgot(form.getValues()),
+    onError: (error) => {
+      if (
+        error instanceof ApiFailure &&
+        error.code === 'OPERATOR_RECOVERY_UNAVAILABLE'
+      )
+        form.setError('email', {
+          type: 'server',
+          message: failureMessage(error),
+        });
+    },
   });
+  const ineligibleEmail =
+    mutation.error instanceof ApiFailure &&
+    mutation.error.code === 'OPERATOR_RECOVERY_UNAVAILABLE';
+  const { setFocus } = form;
+  useEffect(() => {
+    if (ineligibleEmail && !mutation.isPending) setFocus('email');
+  }, [ineligibleEmail, mutation.isPending, setFocus]);
   const submit = form.handleSubmit(async () => {
     if (busy.current) return;
     busy.current = true;
@@ -40,7 +58,7 @@ export function useForgotPassword() {
     submit,
     pending: mutation.isPending,
     success: mutation.isSuccess,
-    error: mutation.error,
+    error: ineligibleEmail ? null : mutation.error,
   };
 }
 export function useResetPassword() {
