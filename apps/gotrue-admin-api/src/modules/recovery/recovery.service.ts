@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import {
   UpstreamError,
+  type AdminUsersClient,
   type OperatorIdentityClient,
   type RecoveryClient,
 } from '@auth/gotrue-client';
@@ -23,8 +24,10 @@ export class RecoveryService {
     private readonly crypto: SessionCrypto,
     private readonly allowlist: ReadonlySet<string>,
     private readonly callbackUrl: string,
+    private readonly admin: Pick<AdminUsersClient, 'getUser'>,
   ) {}
   async request(email: string): Promise<{ cookie: string; expiresAt: Date }> {
+    const recipient = await this.eligibleRecipient(email);
     const cookie = this.crypto.generate();
     const hash = this.crypto.hash(cookie);
     // Two random values make a 86-character RFC 7636 verifier.
@@ -42,11 +45,41 @@ export class RecoveryService {
     callback.searchParams.set('state', cookie);
     const challenge = createHash('sha256').update(verifier).digest('base64url');
     try {
-      await this.upstream.sendRecovery(email, challenge, callback.href);
+      await this.upstream.sendRecovery(recipient, challenge, callback.href);
     } catch {
-      /* Same response for absent accounts, mail/rate failures and outages. */
+      /* Acknowledgement does not confirm delivery, including during send outages. */
     }
     return { cookie, expiresAt };
+  }
+  private async eligibleRecipient(email: string): Promise<string> {
+    // Inspect only configured operators; never search or cache the user directory.
+    const candidates = await Promise.allSettled(
+      [...this.allowlist].map((id) => this.admin.getUser(id)),
+    );
+    let lookupFailed = false;
+    for (const candidate of candidates) {
+      if (candidate.status === 'rejected') {
+        if (
+          !(candidate.reason instanceof UpstreamError) ||
+          candidate.reason.kind !== 'not_found'
+        )
+          lookupFailed = true;
+        continue;
+      }
+      const user = candidate.value;
+      if (user.deleted_at || !user.email) continue;
+      if (
+        isUsableOperator(user, this.allowlist) &&
+        user.email.toLowerCase() === email.toLowerCase()
+      )
+        return user.email;
+    }
+    if (lookupFailed) throw unavailable();
+    throw new ApiError(
+      400,
+      'OPERATOR_RECOVERY_UNAVAILABLE',
+      'Password recovery is only available for operator accounts.',
+    );
   }
   private hash(cookie: unknown): string {
     if (typeof cookie !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(cookie))

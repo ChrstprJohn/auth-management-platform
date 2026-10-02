@@ -112,6 +112,13 @@ export function createApp(
       config.UPSTREAM_TIMEOUT_MS,
       config.GOTRUE_ADMIN_TOKEN,
     );
+  const admin =
+    dependencies.admin ??
+    new GoTrueAdminClient(
+      config.GOTRUE_URL,
+      config.UPSTREAM_TIMEOUT_MS,
+      config.GOTRUE_ADMIN_TOKEN,
+    );
   const recovery = new RecoveryController(
     new RecoveryService(
       dependencies.recovery ??
@@ -121,6 +128,7 @@ export function createApp(
       new SessionCrypto(config.SESSION_ENCRYPTION_KEY),
       config.OPERATOR_UUID_ALLOWLIST,
       config.RECOVERY_CALLBACK_URL,
+      admin,
     ),
     config.NODE_ENV === 'production',
     config.RECOVERY_RESET_URL,
@@ -132,12 +140,7 @@ export function createApp(
   const audit = new AuditController(auditService);
   const users = new UsersController(
     new UsersService(
-      dependencies.admin ??
-        new GoTrueAdminClient(
-          config.GOTRUE_URL,
-          config.UPSTREAM_TIMEOUT_MS,
-          config.GOTRUE_ADMIN_TOKEN,
-        ),
+      admin,
       auditService,
       dependencies.mutationLock ?? new MutationLockRepository(pool),
       authService,
