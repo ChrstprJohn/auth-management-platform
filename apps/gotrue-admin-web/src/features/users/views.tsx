@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { Controller } from 'react-hook-form';
 import type { SafeUser } from '@auth/contracts';
 import { Button } from '@/components/ui/button';
@@ -38,6 +37,8 @@ import {
   Loading,
   Submit,
   Success,
+  MutationFeedback,
+  PendingMutation,
 } from '@/components/feedback/states';
 import { banStatus } from '@/lib/format/display';
 import { useUsersPage, useUserDetails } from './hooks';
@@ -57,6 +58,8 @@ import { PageHeader } from '@/components/page-header';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Plus, RefreshCw } from 'lucide-react';
 import { UserRowActions } from './row-actions';
+import { useInviteUserEntry } from '@/features/email/hooks';
+import { InviteUserDialog } from '@/features/email/views';
 
 export function UserInformation({ user }: { user: SafeUser }) {
   return (
@@ -111,6 +114,14 @@ export function UserInformation({ user }: { user: SafeUser }) {
         </Item>
         <Item className="px-0">
           <ItemContent className="min-w-0">
+            <ItemTitle>Invited</ItemTitle>
+            <ItemDescription>
+              <Timestamp value={user.invitedAt} />
+            </ItemDescription>
+          </ItemContent>
+        </Item>
+        <Item className="px-0">
+          <ItemContent className="min-w-0">
             <ItemTitle>Ban status</ItemTitle>
             <ItemDescription>
               <span className="flex flex-wrap items-center gap-2">
@@ -123,154 +134,181 @@ export function UserInformation({ user }: { user: SafeUser }) {
           </ItemContent>
         </Item>
       </CardContent>
+      <details className="mx-4 min-w-0 border-t pt-4">
+        <summary className="cursor-pointer text-sm font-medium">
+          Technical details
+        </summary>
+        <dl className="mt-3 space-y-2 text-xs [&_dd]:break-all [&_dd]:font-mono [&_dt]:text-muted-foreground">
+          {[
+            ['Created', user.createdAt],
+            ['Email confirmed', user.emailConfirmedAt],
+            ['Invited', user.invitedAt],
+            ['Last sign in', user.lastSignInAt],
+            ['Ban expiry', user.bannedUntil],
+          ].map(([label, value]) => (
+            <div key={label}>
+              <dt>Source {label?.toLowerCase()} timestamp</dt>
+              <dd>{value ?? 'Not reported'}</dd>
+            </div>
+          ))}
+        </dl>
+      </details>
     </Card>
   );
 }
 export function UsersPage() {
   const m = useUsersPage();
   const creation = useCreateUserEntry();
+  const invitation = useInviteUserEntry();
   return (
-    <Dialog open={creation.open} onOpenChange={creation.changeOpen}>
-      <section className="space-y-6">
-        <PageHeader
-          title="Users"
-          description="Global accounts shared across applications. Pages can shift as accounts change."
-          actions={
-            <>
-              <Button
-                variant="outline"
-                disabled={m.refreshing || m.state === 'loading'}
-                onClick={m.refresh}
-              >
-                <RefreshCw className={m.refreshing ? 'animate-spin' : ''} />
-                {m.refreshing ? 'Refreshing…' : 'Refresh users'}
-              </Button>
-              <DialogTrigger
-                ref={creation.triggerRef}
-                onClick={creation.start}
-                render={<Button />}
-              >
-                <Plus />
-                Create user
-              </DialogTrigger>
-              <Button
-                nativeButton={false}
-                variant="outline"
-                render={<Link to="/users/invite" />}
-              >
-                Invite user
-              </Button>
-            </>
-          }
-        />
-        {m.pagination.invalid && (
-          <Success title="Pagination was normalized">
-            Invalid page values use safe defaults.{' '}
-            <Button variant="outline" onClick={m.pagination.normalize}>
-              Update address
-            </Button>
-          </Success>
-        )}
-        {m.refreshing && <p role="status">Refreshing the current page…</p>}
-        {m.error && <Failure error={m.error} retry={m.refresh} />}{' '}
-        {m.state === 'loading' ? (
-          <Loading label="Loading users" />
-        ) : m.state === 'empty' ? (
-          <Blank
-            title="No users on this page"
-            description="Choose an earlier page or create a permitted account."
-            actionElement={
-              <DialogTrigger onClick={creation.start} render={<Button />}>
-                Create user
-              </DialogTrigger>
+    <>
+      <Dialog
+        open={creation.open}
+        onOpenChange={creation.changeOpen}
+        onOpenChangeComplete={creation.afterOpenChange}
+      >
+        <section className="space-y-6">
+          <PageHeader
+            title="Users"
+            description="Global accounts shared across applications."
+            actions={
+              <>
+                <Button
+                  variant="outline"
+                  disabled={m.refreshing || m.state === 'loading'}
+                  onClick={m.refresh}
+                >
+                  <RefreshCw className={m.refreshing ? 'animate-spin' : ''} />
+                  {m.refreshing ? 'Refreshing…' : 'Refresh users'}
+                </Button>
+                <DialogTrigger
+                  ref={creation.triggerRef}
+                  onClick={creation.start}
+                  render={<Button />}
+                >
+                  <Plus />
+                  Create user
+                </DialogTrigger>
+                <Button
+                  ref={invitation.triggerRef}
+                  variant="outline"
+                  onClick={invitation.start}
+                >
+                  Invite user
+                </Button>
+              </>
             }
-            action="Create user"
           />
-        ) : (
-          m.data && (
-            <Card className="gap-0 py-0">
-              <CardContent className="p-0">
-                <Table className="table-fixed">
-                  <TableCaption>
-                    Page {m.pagination.page}. Open an account for full details.
-                  </TableCaption>
-                  <TableHeader className="bg-muted/50">
-                    <TableRow>
-                      <TableHead className="lg:w-[32%]">Email</TableHead>
-                      <TableHead className="hidden lg:table-cell">
-                        Confirmation
-                      </TableHead>
-                      <TableHead className="hidden lg:table-cell">
-                        Ban status
-                      </TableHead>
-                      <TableHead className="hidden lg:table-cell">
-                        Created
-                      </TableHead>
-                      <TableHead className="w-16 text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {m.data.users.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="whitespace-normal">
-                          <p
-                            className="truncate font-medium"
-                            title={user.email ?? undefined}
-                          >
-                            {user.email ?? 'Email not reported'}
-                          </p>
-                        </TableCell>
-
-                        <TableCell className="hidden lg:table-cell">
-                          <Badge
-                            variant={
-                              user.emailConfirmedAt ? 'secondary' : 'outline'
-                            }
-                          >
-                            {user.emailConfirmedAt
-                              ? 'Confirmed'
-                              : 'Not reported'}
-                          </Badge>
-                        </TableCell>
-
-                        <TableCell className="hidden lg:table-cell">
-                          <Badge
-                            variant={
-                              user.isBanned === true
-                                ? 'destructive'
-                                : user.isBanned === false
-                                  ? 'secondary'
-                                  : 'outline'
-                            }
-                          >
-                            {banStatus(user.isBanned)}
-                          </Badge>
-                        </TableCell>
-
-                        <TableCell className="hidden whitespace-normal lg:table-cell">
-                          <Timestamp value={user.createdAt} compact />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <UserRowActions user={user} />
-                        </TableCell>
+          {m.pagination.invalid && (
+            <Success title="Pagination was normalized">
+              Invalid page values use safe defaults.{' '}
+              <Button variant="outline" onClick={m.pagination.normalize}>
+                Update address
+              </Button>
+            </Success>
+          )}
+          {m.refreshing && <p role="status">Refreshing the current page…</p>}
+          {m.error && <Failure error={m.error} retry={m.refresh} />}{' '}
+          {m.state === 'loading' ? (
+            <Loading label="Loading users" />
+          ) : m.state === 'empty' ? (
+            <Blank
+              title="No users on this page"
+              description="Choose an earlier page or create a permitted account."
+              actionElement={
+                <DialogTrigger onClick={creation.start} render={<Button />}>
+                  Create user
+                </DialogTrigger>
+              }
+              action="Create user"
+            />
+          ) : (
+            m.data && (
+              <Card className="gap-0 py-0">
+                <CardContent className="p-0">
+                  <Table className="table-fixed">
+                    <TableCaption>Page {m.pagination.page}</TableCaption>
+                    <TableHeader className="bg-muted/50">
+                      <TableRow>
+                        <TableHead className="lg:w-[32%]">Email</TableHead>
+                        <TableHead className="hidden lg:table-cell">
+                          Confirmation
+                        </TableHead>
+                        <TableHead className="hidden lg:table-cell">
+                          Ban status
+                        </TableHead>
+                        <TableHead className="hidden lg:table-cell">
+                          Created
+                        </TableHead>
+                        <TableHead className="w-16 text-right">
+                          Actions
+                        </TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )
-        )}
-        {m.state !== 'loading' && (
-          <PageControls
-            model={m.pagination}
-            hasNext={m.data?.hasNextPage ?? false}
-            pending={m.refreshing}
-          />
-        )}
-      </section>
-      <CreateUserDialog model={creation} />
-    </Dialog>
+                    </TableHeader>
+                    <TableBody>
+                      {m.data.users.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="whitespace-normal">
+                            <p
+                              className="truncate font-medium"
+                              title={user.email ?? undefined}
+                            >
+                              {user.email ?? 'Email not reported'}
+                            </p>
+                          </TableCell>
+
+                          <TableCell className="hidden lg:table-cell">
+                            <Badge
+                              variant={
+                                user.emailConfirmedAt ? 'secondary' : 'outline'
+                              }
+                            >
+                              {user.emailConfirmedAt
+                                ? 'Confirmed'
+                                : 'Not reported'}
+                            </Badge>
+                          </TableCell>
+
+                          <TableCell className="hidden lg:table-cell">
+                            <Badge
+                              variant={
+                                user.isBanned === true
+                                  ? 'destructive'
+                                  : user.isBanned === false
+                                    ? 'secondary'
+                                    : 'outline'
+                              }
+                            >
+                              {banStatus(user.isBanned)}
+                            </Badge>
+                          </TableCell>
+
+                          <TableCell className="hidden whitespace-normal lg:table-cell">
+                            <Timestamp value={user.createdAt} />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <UserRowActions user={user} />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )
+          )}
+          {m.state !== 'loading' && (
+            <PageControls
+              model={m.pagination}
+              hasNext={m.data?.hasNextPage ?? false}
+              pending={m.refreshing}
+            />
+          )}
+        </section>
+        <CreateUserDialog model={creation} />
+      </Dialog>
+      <InviteUserDialog model={invitation} />
+    </>
   );
 }
 export function UserDetailsPage() {
@@ -331,141 +369,107 @@ function CreateUserDialog({
       showCloseButton={false}
     >
       <DialogHeader>
-        <DialogTitle>Create a global user</DialogTitle>
+        <DialogTitle>Create user</DialogTitle>
         <DialogDescription>
-          Global accounts are shared across applications. Both policies create
-          an account without sending an invitation or confirmation email.
+          Creates a shared account. No email is sent.
         </DialogDescription>
       </DialogHeader>
-      {m.result ? (
-        <div className="min-w-0 space-y-4">
-          <Success title="Account creation confirmed">
-            Audit ID: <CopyId value={m.result.auditId} label="audit ID" />
-          </Success>
-          <UserInformation user={m.result.user} />
-          <div className="flex flex-wrap gap-2">
-            <Button
-              nativeButton={false}
-              render={<Link to={`/users/${m.result.user.id}`} />}
-            >
-              Open account
-            </Button>
-            <Button variant="outline" onClick={m.newAccount}>
-              Create another user
-            </Button>
-          </div>
-          <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>
-              Close
-            </DialogClose>
-          </DialogFooter>
-        </div>
-      ) : (
-        <form noValidate onSubmit={m.submit}>
-          <FieldGroup>
-            <TextField
-              id="create-email"
-              label="Email"
-              type="email"
-              autoComplete="off"
-              registration={m.form.register('email')}
-              error={m.form.formState.errors.email?.message}
-              disabled={m.pending || m.blocked}
-            />
-            <PasswordField
-              id="create-password"
-              label="Password"
-              registration={m.form.register('password')}
-              error={m.form.formState.errors.password?.message}
-              visible={m.visible}
-              toggle={m.toggle}
-              newPassword
-              disabled={m.pending || m.blocked}
-            />
-            <Controller
-              control={m.form.control}
-              name="confirmation"
-              render={({ field, fieldState }) => (
-                <FieldSet>
-                  <FieldLegend>Confirmation policy</FieldLegend>
-                  <FieldDescription id="policy-help">
-                    Operator confirmation bypasses email ownership verification.
+      <form noValidate onSubmit={m.submit}>
+        <FieldGroup>
+          <TextField
+            id="create-email"
+            label="Email"
+            type="email"
+            autoComplete="off"
+            registration={m.form.register('email')}
+            error={m.form.formState.errors.email?.message}
+            disabled={m.pending || m.blocked}
+          />
+          <PasswordField
+            id="create-password"
+            label="Password"
+            registration={m.form.register('password')}
+            error={m.form.formState.errors.password?.message}
+            visible={m.visible}
+            toggle={m.toggle}
+            newPassword
+            disabled={m.pending || m.blocked}
+          />
+          <Controller
+            control={m.form.control}
+            name="confirmation"
+            render={({ field, fieldState }) => (
+              <FieldSet>
+                <FieldLegend>Confirmation policy</FieldLegend>
+                <FieldDescription id="policy-help">
+                  Choose how email ownership is confirmed.
+                </FieldDescription>
+                <RadioGroup
+                  className="gap-4"
+                  name={field.name}
+                  value={field.value ?? ''}
+                  onValueChange={field.onChange}
+                  onBlur={field.onBlur}
+                  disabled={m.pending || m.blocked}
+                  aria-labelledby="policy-label"
+                  aria-describedby="policy-help policy-error"
+                >
+                  <span id="policy-label" className="sr-only">
+                    Confirmation policy
+                  </span>
+                  <Field orientation="horizontal">
+                    <RadioGroupItem
+                      id="require-verification"
+                      value="require_verification"
+                      inputRef={field.ref}
+                    />
+                    <FieldLabel htmlFor="require-verification">
+                      Require verification
+                    </FieldLabel>
+                  </Field>
+                  <FieldDescription>
+                    Email must be verified before normal login. Send a
+                    verification email from account details after creation.
                   </FieldDescription>
-                  <RadioGroup
-                    className="gap-4"
-                    name={field.name}
-                    value={field.value ?? ''}
-                    onValueChange={field.onChange}
-                    onBlur={field.onBlur}
-                    disabled={m.pending || m.blocked}
-                    aria-labelledby="policy-label"
-                    aria-describedby="policy-help policy-error"
-                  >
-                    <span id="policy-label" className="sr-only">
-                      Confirmation policy
-                    </span>
-                    <Field orientation="horizontal">
-                      <RadioGroupItem
-                        id="require-verification"
-                        value="require_verification"
-                        inputRef={field.ref}
-                      />
-                      <FieldLabel htmlFor="require-verification">
-                        Require verification
-                      </FieldLabel>
-                    </Field>
-                    <FieldDescription>
-                      This account remains unconfirmed and cannot complete
-                      normal verified login until email verification succeeds.
-                      Creation sends no email; send verification separately from
-                      account details.
-                    </FieldDescription>
-                    <Field orientation="horizontal">
-                      <RadioGroupItem
-                        id="operator-confirmed"
-                        value="operator_confirmed"
-                      />
-                      <FieldLabel htmlFor="operator-confirmed">
-                        Operator confirmed
-                      </FieldLabel>
-                    </Field>
-                    <FieldDescription>
-                      Explicitly bypass email ownership verification. No email
-                      is sent.
-                    </FieldDescription>
-                  </RadioGroup>
-                  {fieldState.error && (
-                    <FieldError id="policy-error">
-                      {fieldState.error.message}
-                    </FieldError>
-                  )}
-                </FieldSet>
-              )}
-            />
-            {m.error && <Failure error={m.error} />}
-            {m.pending && (
-              <p role="status">
-                Creating the account. Wait for the result before closing.
-                Navigating away does not cancel or undo this request.
-              </p>
+                  <Field orientation="horizontal">
+                    <RadioGroupItem
+                      id="operator-confirmed"
+                      value="operator_confirmed"
+                    />
+                    <FieldLabel htmlFor="operator-confirmed">
+                      Operator confirmed
+                    </FieldLabel>
+                  </Field>
+                  <FieldDescription>
+                    Bypasses email ownership verification.
+                  </FieldDescription>
+                </RadioGroup>
+                {fieldState.error && (
+                  <FieldError id="policy-error">
+                    {fieldState.error.message}
+                  </FieldError>
+                )}
+              </FieldSet>
             )}
-            <DialogFooter>
-              <DialogClose
-                disabled={m.pending}
-                render={<Button variant="outline" />}
-              >
-                {m.blocked ? 'Close' : 'Cancel'}
-              </DialogClose>
-              <Submit
-                pending={m.pending}
-                disabled={m.blocked}
-                label="Create user"
-                progress="Creating user…"
-              />
-            </DialogFooter>
-          </FieldGroup>
-        </form>
-      )}
+          />
+          <MutationFeedback error={m.error} />
+          {m.pending && <PendingMutation />}
+          <DialogFooter>
+            <DialogClose
+              disabled={m.pending}
+              render={<Button variant="outline" />}
+            >
+              {m.blocked ? 'Close' : 'Cancel'}
+            </DialogClose>
+            <Submit
+              pending={m.pending}
+              disabled={m.blocked}
+              label="Create user"
+              progress="Creating user…"
+            />
+          </DialogFooter>
+        </FieldGroup>
+      </form>
     </DialogContent>
   );
 }

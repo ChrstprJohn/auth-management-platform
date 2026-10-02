@@ -9,7 +9,7 @@ import {
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { UserCreationProvider, useCreateUser } from './creation';
 import { InvitationOutcome } from '@/features/email/views';
@@ -30,8 +30,14 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { TextField } from '@/components/form-fields';
-import { Failure, Success } from '@/components/feedback/states';
-import { CopyId } from '@/components/copy-id';
+import {
+  Failure,
+  Success,
+  MutationFeedback,
+  PendingMutation,
+} from '@/components/feedback/states';
+import { toast } from 'sonner';
+import { failureMessage } from '@/lib/api/feedback';
 import { Spinner } from '@/components/ui/spinner';
 import {
   Card,
@@ -58,12 +64,9 @@ export const durationSchema = z.object({
 function useActionController() {
   const { runtime, generation } = useSession();
   const navigate = useNavigate();
+  const location = useLocation();
   const [target, setTarget] = useState<Target | null>(null);
   const [open, setOpen] = useState(false);
-  const [result, setResult] = useState<{
-    auditId: string;
-    target: Target;
-  } | null>(null);
   const busy = useRef(false);
   const opener = useRef<HTMLElement | null>(null);
   const form = useForm({
@@ -88,13 +91,30 @@ function useActionController() {
       return { auditId: response.auditId, target: current };
     },
     onSuccess: (response) => {
-      setResult(response);
+      if (runtime.generation() !== generation) return;
       setOpen(false);
+      form.reset({ durationHours: 24 });
+      toast.success(
+        {
+          ban: 'User banned',
+          unban: 'User unbanned',
+          delete: 'User deleted',
+          send_verification: 'Verification requested',
+          resend_invitation: 'Invitation requested',
+        }[response.target.action],
+      );
       void runtime.client.invalidateQueries({
         queryKey: ['private', generation],
       });
       if (response.target.action === 'delete')
         navigate('/users', { replace: true });
+    },
+    onError: (error) => {
+      if (
+        runtime.generation() === generation &&
+        !(error instanceof ApiFailure && error.uncertain)
+      )
+        toast.error(failureMessage(error));
     },
   });
   const uncertain =
@@ -104,16 +124,17 @@ function useActionController() {
   useEffect(() => {
     setTarget(null);
     setOpen(false);
-    setResult(null);
     busy.current = false;
     resetMutation();
     resetForm({ durationHours: 24 });
   }, [generation, resetMutation, resetForm]);
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
   const start = (user: SafeUser, action: Action, element: HTMLElement) => {
     if (busy.current || uncertain) return;
     mutation.reset();
     opener.current = element;
-    setResult(null);
     form.reset({ durationHours: 24 });
     setTarget({ id: user.id, email: user.email, action });
     setOpen(true);
@@ -124,9 +145,9 @@ function useActionController() {
     try {
       await mutation.mutateAsync();
     } catch {
-      /* Persistent outcome is rendered. */
+      /* Uncertain results remain persistent; definite failures have one toast. */
     } finally {
-      busy.current = false;
+      if (runtime.generation() === generation) busy.current = false;
     }
   };
   const submit =
@@ -137,7 +158,13 @@ function useActionController() {
           void execute();
         };
   const changeOpen = (value: boolean) => {
-    if (!busy.current) setOpen(value);
+    if (!busy.current) {
+      if (!value && !uncertain) {
+        mutation.reset();
+        form.reset({ durationHours: 24 });
+      }
+      setOpen(value);
+    }
   };
   return {
     target,
@@ -145,18 +172,15 @@ function useActionController() {
     open,
     start,
     changeOpen,
+    afterOpenChange: (value: boolean) => {
+      if (!value && !open && opener.current?.isConnected)
+        opener.current.focus();
+    },
     submit,
     form,
     pending: mutation.isPending,
     uncertain,
     error: mutation.error,
-    result,
-    dismiss: () => {
-      if (!uncertain && !busy.current) {
-        mutation.reset();
-        setResult(null);
-      }
-    },
   };
 }
 const ActionsContext = createContext<ReturnType<
@@ -190,40 +214,22 @@ export function ActionOutcome() {
       <InvitationOutcome />
       {!creation.open && creation.pending && (
         <Success title="Account creation pending">
-          Navigating away does not cancel account creation.
+          The request is still in progress.{' '}
+          <Link className="underline" to="/history">
+            View history
+          </Link>
         </Success>
       )}
-      {!creation.open && creation.error && <Failure error={creation.error} />}
-      {!creation.open && creation.result && (
-        <Success title="Account creation confirmed">
-          User: <CopyId value={creation.result.user.id} label="user UUID" /> ·
-          Audit: <CopyId value={creation.result.auditId} label="audit ID" />
-        </Success>
-      )}
-      {m.pending && (
+      {!creation.open && creation.blocked && <Failure error={creation.error} />}
+      {!m.open && m.pending && (
         <Success title="Management action pending">
-          The backend may still be applying {m.target?.action}. Navigating away
-          does not cancel it.
+          The request is still in progress.{' '}
+          <Link className="underline" to="/history">
+            View history
+          </Link>
         </Success>
       )}
-      {m.error && <Failure error={m.error} />}
-      {m.result && (
-        <Success
-          title={
-            m.result.target.action === 'resend_invitation'
-              ? 'Invitation request accepted; confirm inbox delivery'
-              : m.result.target.action === 'send_verification'
-                ? 'Verification request accepted; confirm inbox delivery'
-                : `${m.result.target.action === 'delete' ? 'Permanent deletion' : m.result.target.action === 'ban' ? 'Ban' : 'Unban'} confirmed`
-          }
-        >
-          Target: <CopyId value={m.result.target.id} label="target UUID" /> ·
-          Audit: <CopyId value={m.result.auditId} label="audit ID" />
-          <Button variant="ghost" onClick={m.dismiss}>
-            Dismiss result
-          </Button>
-        </Success>
-      )}
+      {!m.open && m.uncertain && <Failure error={m.error} />}
     </div>
   );
 }
@@ -233,7 +239,7 @@ export function UserActions({ user }: { user: SafeUser }) {
     <Card>
       <CardHeader className="border-b">
         <CardTitle>
-          <h2>Global management actions</h2>
+          <h2>Manage account</h2>
         </CardTitle>
         <CardDescription>
           Bans and deletion affect this identity across applications. They do
@@ -284,7 +290,11 @@ export function UserActions({ user }: { user: SafeUser }) {
           </Button>
         </div>
       </CardContent>
-      <AlertDialog open={m.open} onOpenChange={m.changeOpen}>
+      <AlertDialog
+        open={m.open}
+        onOpenChange={m.changeOpen}
+        onOpenChangeComplete={m.afterOpenChange}
+      >
         <AlertDialogContent
           finalFocus={m.opener}
           className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
@@ -304,9 +314,9 @@ export function UserActions({ user }: { user: SafeUser }) {
               </AlertDialogTitle>
               <AlertDialogDescription>
                 {m.target?.action === 'resend_invitation'
-                  ? 'This sends a new invitation to the current address. The recipient uses the newest code and chooses their own password. Acceptance does not guarantee delivery.'
+                  ? 'The recipient uses the newest code to verify their email and choose a password. A request does not confirm inbox delivery.'
                   : m.target?.action === 'send_verification'
-                    ? 'This sends an email to the account’s current address. Upstream acceptance does not guarantee inbox delivery. Use the newest email code to verify.'
+                    ? 'Sends a verification code to the current email address. A request does not confirm inbox delivery.'
                     : m.target?.action === 'delete'
                       ? 'This permanently removes the shared GoTrue identity across all applications. Application references are not automatically reconciled.'
                       : m.target?.action === 'ban'
@@ -332,12 +342,8 @@ export function UserActions({ user }: { user: SafeUser }) {
                   disabled={m.pending}
                 />
               )}{' '}
-              {m.error && <Failure error={m.error} />}{' '}
-              {m.pending && (
-                <p role="status">
-                  Applying the action. Closing or navigating cannot undo it.
-                </p>
-              )}
+              <MutationFeedback error={m.error} />
+              {m.pending && <PendingMutation />}
             </div>
             <AlertDialogFooter>
               <AlertDialogCancel disabled={m.pending}>Cancel</AlertDialogCancel>

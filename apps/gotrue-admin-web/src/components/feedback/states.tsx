@@ -29,19 +29,29 @@ export function Failure({
         <p>{failureMessage(error)}</p>
         {error instanceof ApiFailure && (
           <>
-            {error.requestId && (
-              <p className="break-all">Request ID: {error.requestId}</p>
-            )}
-            {error.auditId && (
-              <p className="break-all">Audit ID: {error.auditId}</p>
-            )}
             {error.outcome && <p>Known upstream outcome: {error.outcome}</p>}
             {error.uncertain && inspection && (
               <p>
-                <Link className="underline" to="/history">
-                  Inspect action history
+                <Link
+                  className="underline"
+                  to={error.auditId ? `/history/${error.auditId}` : '/history'}
+                >
+                  View history
                 </Link>
               </p>
+            )}
+            {(error.requestId || error.auditId) && (
+              <details className="min-w-0">
+                <summary className="cursor-pointer underline underline-offset-4">
+                  Technical details
+                </summary>
+                {error.requestId && (
+                  <p className="break-all">Request ID: {error.requestId}</p>
+                )}
+                {error.auditId && (
+                  <p className="break-all">Audit ID: {error.auditId}</p>
+                )}
+              </details>
             )}
           </>
         )}
@@ -65,6 +75,39 @@ export function Loading({
       <Skeleton className="h-8 w-48" />
       <Skeleton className="h-32 w-full" />
     </div>
+  );
+}
+export function MutationFeedback({ error }: { error: unknown }) {
+  if (!error) return null;
+  if (error instanceof ApiFailure && error.uncertain)
+    return <Failure error={error} />;
+  return (
+    <details className="min-w-0 text-sm">
+      <summary className="cursor-pointer underline underline-offset-4">
+        Technical details
+      </summary>
+      <p className="mt-2">{failureMessage(error)}</p>
+      {error instanceof ApiFailure && (
+        <>
+          {error.requestId && (
+            <p className="break-all">Request ID: {error.requestId}</p>
+          )}
+          {error.auditId && (
+            <p className="break-all">Audit ID: {error.auditId}</p>
+          )}
+        </>
+      )}
+    </details>
+  );
+}
+export function PendingMutation() {
+  return (
+    <p role="status" className="text-sm">
+      The request is still in progress.{' '}
+      <Link className="underline" to="/history">
+        View history
+      </Link>
+    </p>
   );
 }
 export function Blank({

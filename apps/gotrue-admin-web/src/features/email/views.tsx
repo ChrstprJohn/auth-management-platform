@@ -1,109 +1,111 @@
 import { Link } from 'react-router-dom';
 import { AuthLayout } from '@/components/auth-layout';
-import { PageHeader } from '@/components/page-header';
 import { TextField, PasswordField } from '@/components/form-fields';
 import { FieldGroup } from '@/components/ui/field';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Failure, Submit, Success } from '@/components/feedback/states';
-import { CopyId } from '@/components/copy-id';
+import {
+  Failure,
+  Submit,
+  Success,
+  MutationFeedback,
+  PendingMutation,
+} from '@/components/feedback/states';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
 import { ApiFailure } from '@/lib/api/client';
 import {
   useEmailProof,
   useInviteUser,
+  useInviteUserEntry,
+  useLegacyInviteUserRoute,
   type EmailCallbackStatus,
 } from './hooks';
 
 export function InviteUserPage() {
-  const m = useInviteUser();
+  useLegacyInviteUserRoute();
+  return null;
+}
+export function InviteUserDialog({
+  model: m,
+}: {
+  model: ReturnType<typeof useInviteUserEntry>;
+}) {
   return (
-    <section className="min-w-0 space-y-6">
-      <PageHeader
-        title="Invite a user"
-        description="Send an invitation to the shared identity pool. The recipient verifies their email and chooses their own password. This does not grant operator access."
-        actions={
-          <Button
-            variant="outline"
-            nativeButton={false}
-            render={<Link to="/users" />}
-          >
-            Return to users
-          </Button>
-        }
-      />
-      <Card className="max-w-xl">
-        <CardContent>
-          {m.result ? (
-            <div className="space-y-4">
-              <Success title="Invitation request accepted">
-                Check the recipient inbox to confirm delivery. Account:{' '}
-                <CopyId value={m.result.user.id} label="user UUID" /> · Audit:{' '}
-                <CopyId value={m.result.auditId} label="audit ID" />
-              </Success>
-              <Button onClick={m.another}>Invite another user</Button>
-              <Button
-                nativeButton={false}
-                variant="outline"
-                render={<Link to={`/users/${m.result.user.id}`} />}
+    <Dialog
+      open={m.open}
+      onOpenChange={m.changeOpen}
+      onOpenChangeComplete={m.afterOpenChange}
+    >
+      <DialogContent
+        finalFocus={m.opener}
+        showCloseButton={false}
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl"
+      >
+        <DialogHeader>
+          <DialogTitle>Invite user</DialogTitle>
+          <DialogDescription>
+            The recipient verifies their email and chooses a password. This does
+            not grant operator access.
+          </DialogDescription>
+        </DialogHeader>
+        <form noValidate onSubmit={m.submit}>
+          <FieldGroup>
+            <TextField
+              id="invite-email"
+              label="Recipient email"
+              type="email"
+              autoComplete="email"
+              registration={m.form.register('email')}
+              error={m.form.formState.errors.email?.message}
+              disabled={m.pending || m.blocked}
+            />
+            <p className="text-sm text-muted-foreground">
+              Creates or reinvites an unconfirmed account. Confirmed accounts
+              are rejected. A requested invitation does not confirm inbox
+              delivery.
+            </p>
+            <MutationFeedback error={m.error} />
+            {m.pending && <PendingMutation />}
+            <DialogFooter>
+              <DialogClose
+                disabled={m.pending}
+                render={<Button variant="outline" />}
               >
-                Inspect account
-              </Button>
-            </div>
-          ) : (
-            <form noValidate onSubmit={m.submit}>
-              <FieldGroup>
-                <TextField
-                  id="invite-email"
-                  label="Recipient email"
-                  type="email"
-                  autoComplete="email"
-                  registration={m.form.register('email')}
-                  error={m.form.formState.errors.email?.message}
-                  disabled={m.pending || m.blocked}
-                />
-                <p className="text-sm text-muted-foreground">
-                  This sends email and may create a new account. An existing
-                  unconfirmed account can receive a new invitation; confirmed
-                  accounts are rejected. Delivery is not guaranteed by
-                  acceptance.
-                </p>
-                {m.error && <Failure error={m.error} />}
-                {m.pending && (
-                  <p role="status">
-                    Sending the invitation request. Navigating away does not
-                    cancel it.
-                  </p>
-                )}
-                <Submit
-                  label="Send invitation"
-                  progress="Requesting invitation…"
-                  pending={m.pending}
-                  disabled={m.blocked}
-                />
-              </FieldGroup>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-    </section>
+                {m.blocked ? 'Close' : 'Cancel'}
+              </DialogClose>
+              <Submit
+                label="Send invitation"
+                progress="Requesting invitation…"
+                pending={m.pending}
+                disabled={m.blocked}
+              />
+            </DialogFooter>
+          </FieldGroup>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 export function InvitationOutcome() {
   const m = useInviteUser();
   return (
     <>
-      {m.pending && (
+      {!m.open && m.pending && (
         <Success title="Invitation pending">
-          Navigating away does not cancel the email request.
+          The request is still in progress.{' '}
+          <Link className="underline" to="/history">
+            View history
+          </Link>
         </Success>
       )}
-      {m.error && <Failure error={m.error} />}
-      {m.result && (
-        <Success title="Invitation request accepted">
-          Inbox delivery still needs confirmation. Audit:{' '}
-          <CopyId value={m.result.auditId} label="audit ID" />
-        </Success>
-      )}
+      {!m.open && m.blocked && <Failure error={m.error} />}
     </>
   );
 }
@@ -118,7 +120,7 @@ export function EmailProofPage({
       title={invitation ? 'Accept your invitation' : 'Confirm your email'}
       description={
         invitation
-          ? 'Use the code from your newest invitation and choose a password. Invitation acceptance does not grant operator access.'
+          ? 'Use your newest invitation code and choose a password.'
           : 'Enter your email and the code from your newest confirmation email.'
       }
       navigation={
@@ -158,7 +160,7 @@ export function EmailProofPage({
               registration={m.form.register('code')}
               error={m.form.formState.errors.code?.message}
               disabled={m.pending || m.blocked}
-              description="Use only the newest code. Never share it."
+              description="Never share this code."
             />
             {invitation && (
               <>
@@ -231,7 +233,7 @@ export function EmailCallbackPage({ status }: { status: EmailCallbackStatus }) {
         status === 'invalid'
           ? 'This email link is invalid or expired. Use the newest email.'
           : status === 'processed'
-            ? 'The email link was processed. Sign in normally to check your account. Link credentials have been removed.'
+            ? 'The email link was processed. Sign in to check your account.'
             : 'No email result is available. Use the newest email or complete verification with its code.'
       }
       navigation={

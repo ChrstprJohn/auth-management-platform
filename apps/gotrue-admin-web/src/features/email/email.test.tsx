@@ -1,5 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within, act } from '@testing-library/react';
+import {
+  Routes,
+  Route,
+  useLocation,
+  useNavigate,
+  type NavigateFunction,
+} from 'react-router-dom';
+import { toast } from 'sonner';
 import userEvent from '@testing-library/user-event';
 import { renderApp, fixtureSession } from '@/test/providers';
 import { operatorApi } from '@/lib/api/operator';
@@ -7,6 +15,57 @@ import { ApiFailure } from '@/lib/api/client';
 import { EmailProofPage, InviteUserPage } from './views';
 import { consumeEmailCallback } from './hooks';
 import { useSession } from '@/app/session';
+import { UsersPage } from '@/features/users/views';
+import { ActionOutcome } from '@/features/users/actions';
+
+const invited = {
+  id: fixtureSession.operator.id,
+  email: 'invited@example.test',
+  createdAt: null,
+  emailConfirmedAt: null,
+  invitedAt: '2026-10-02T01:15:00Z',
+  lastSignInAt: null,
+  bannedUntil: null,
+  isBanned: false,
+};
+function mountInvite(legacy = false) {
+  vi.spyOn(operatorApi, 'me').mockResolvedValue(fixtureSession);
+  const users = vi
+    .spyOn(operatorApi, 'users')
+    .mockResolvedValue({
+      users: [invited],
+      page: 3,
+      perPage: 50,
+      hasNextPage: false,
+    });
+  const controls: { navigate?: NavigateFunction; establish?: () => void } = {};
+  function Controls() {
+    const location = useLocation();
+    const session = useSession();
+    controls.navigate = useNavigate();
+    controls.establish = () => session.establish(fixtureSession);
+    return (
+      <output aria-label="Current route">
+        {location.pathname}
+        {location.search}
+      </output>
+    );
+  }
+  const rendered = renderApp(
+    <>
+      <Controls />
+      <ActionOutcome />
+      <Routes>
+        <Route path="/users" element={<UsersPage />} />
+        <Route path="/users/invite" element={<InviteUserPage />} />
+        <Route path="/history/:id" element={<p>Read-only history</p>} />
+        <Route path="/history" element={<p>Read-only history</p>} />
+      </Routes>
+    </>,
+    `/users${legacy ? '/invite' : ''}?page=3&perPage=50`,
+  );
+  return { ...rendered, users, controls };
+}
 
 function EstablishNewSession() {
   const session = useSession();
@@ -140,26 +199,45 @@ describe('email workflows', () => {
     ).not.toBeInTheDocument();
     expect(confirm).toHaveBeenCalledTimes(1);
   });
-  it('validates invitation email and retains acceptance without silently repeating a send', async () => {
-    vi.spyOn(operatorApi, 'me').mockResolvedValue(fixtureSession);
-    const invite = vi.spyOn(operatorApi, 'invite').mockResolvedValue({
-      user: {
-        id: fixtureSession.operator.id,
-        email: 'invited@example.test',
-        createdAt: null,
-        emailConfirmedAt: null,
-        invitedAt: '2026-01-01T00:00:00Z',
-        lastSignInAt: null,
-        bannedUntil: null,
-        isBanned: false,
-      },
-      auditId: fixtureSession.operator.id,
-    });
-    renderApp(<InviteUserPage />);
+  it('opens the legacy entry over Users, preserves pagination and returns focus on idle close', async () => {
+    const invite = vi.spyOn(operatorApi, 'invite');
+    const { users } = mountInvite(true);
+    expect(
+      await screen.findByRole('dialog', { name: 'Invite user' }),
+    ).toBeVisible();
+    expect(screen.getByLabelText('Current route')).toHaveTextContent(
+      '/users?page=3&perPage=50',
+    );
+    expect(users).toHaveBeenCalledWith(3, 50, expect.any(AbortSignal));
+    await userEvent.type(
+      screen.getByLabelText('Recipient email'),
+      invited.email,
+    );
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Invite user' })).toHaveFocus(),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Invite user' }));
+    expect(await screen.findByLabelText('Recipient email')).toHaveValue('');
+    expect(invite).not.toHaveBeenCalled();
+  });
+  it('validates invitation email, suppresses duplicates and closes with exactly one acceptance toast', async () => {
+    const notify = vi.spyOn(toast, 'success');
+    const invite = vi
+      .spyOn(operatorApi, 'invite')
+      .mockResolvedValue({ user: invited, auditId: invited.id });
+    const { users } = mountInvite(true);
+    await screen.findByRole('dialog');
     await userEvent.click(
       screen.getByRole('button', { name: 'Send invitation' }),
     );
     expect(invite).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.getByLabelText('Recipient email')).toHaveFocus(),
+    );
     await userEvent.type(
       screen.getByLabelText('Recipient email'),
       'invited@example.test',
@@ -167,10 +245,106 @@ describe('email workflows', () => {
     await userEvent.dblClick(
       screen.getByRole('button', { name: 'Send invitation' }),
     );
-    expect(
-      await screen.findByText('Invitation request accepted'),
-    ).toBeVisible();
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    );
+    expect(notify).toHaveBeenCalledExactlyOnceWith('Invitation requested');
     await waitFor(() => expect(invite).toHaveBeenCalledTimes(1));
+    expect(users).toHaveBeenCalledTimes(2);
+    await userEvent.click(screen.getByRole('button', { name: 'Invite user' }));
+    expect(await screen.findByLabelText('Recipient email')).toHaveValue('');
+    expect(notify).toHaveBeenCalledTimes(1);
+  });
+  it('retains a pending lock across dismissal attempts and navigation, then rejects a stale response', async () => {
+    const notify = vi.spyOn(toast, 'success');
+    let complete: () => void = () => {};
+    const invite = vi.spyOn(operatorApi, 'invite').mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          complete = () => resolve({ user: invited, auditId: invited.id });
+        }),
+    );
+    const { controls, runtime } = mountInvite(true);
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.type(
+      screen.getByLabelText('Recipient email'),
+      invited.email,
+    );
+    await userEvent.dblClick(
+      screen.getByRole('button', { name: 'Send invitation' }),
+    );
+    expect(
+      within(dialog).getByRole('button', { name: 'Cancel' }),
+    ).toBeDisabled();
+    await userEvent.keyboard('{Escape}');
+    const backdrop = document.querySelector('[data-slot="dialog-overlay"]');
+    if (!backdrop) throw new Error('Missing dialog backdrop');
+    await userEvent.click(backdrop);
+    expect(dialog).toBeVisible();
+    await act(async () => controls.navigate?.('/history'));
+    expect(await screen.findByText('Invitation pending')).toBeVisible();
+    await act(async () => controls.navigate?.('/users'));
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Invite user' }),
+    );
+    expect(
+      await screen.findByRole('button', { name: /Requesting invitation…/ }),
+    ).toBeDisabled();
+    await act(async () => controls.establish?.());
+    const generation = runtime.generation();
+    await act(async () => complete());
+    expect(runtime.generation()).toBe(generation);
+    expect(runtime.client.getQueryData(['session', generation])).toEqual(
+      fixtureSession,
+    );
+    expect(notify).not.toHaveBeenCalled();
+    expect(invite).toHaveBeenCalledTimes(1);
+  });
+  it('keeps an uncertain invitation visible and blocked after history inspection and reopening', async () => {
+    const notify = vi.spyOn(toast, 'success');
+    const invite = vi
+      .spyOn(operatorApi, 'invite')
+      .mockRejectedValue(
+        new ApiFailure(
+          'AUDIT_COMPLETION_FAILED',
+          503,
+          true,
+          invited.id,
+          invited.id,
+          'succeeded',
+        ),
+      );
+    const { controls } = mountInvite(true);
+    await screen.findByRole('dialog');
+    await userEvent.type(
+      screen.getByLabelText('Recipient email'),
+      invited.email,
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Send invitation' }),
+    );
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'could not be fully recorded',
+    );
+    expect(
+      screen.getByRole('button', { name: 'Send invitation' }),
+    ).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    );
+    expect(screen.getByRole('alert')).toBeVisible();
+    await userEvent.click(screen.getByRole('link', { name: 'View history' }));
+    await screen.findByText('Read-only history');
+    await act(async () => controls.navigate?.('/users'));
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Invite user' }),
+    );
+    expect(
+      screen.getByRole('button', { name: 'Send invitation' }),
+    ).toBeDisabled();
+    expect(invite).toHaveBeenCalledTimes(1);
+    expect(notify).not.toHaveBeenCalled();
   });
   it('removes legacy callback credentials before rendering', () => {
     window.history.replaceState(

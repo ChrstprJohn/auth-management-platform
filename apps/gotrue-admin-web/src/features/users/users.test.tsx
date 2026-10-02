@@ -16,6 +16,7 @@ import { parsePagination } from '@/lib/query/pagination';
 import { renderApp, fixtureSession } from '@/test/providers';
 import { UsersPage, UserDetailsPage, LegacyCreateUserRoute } from './views';
 import { createSchema } from './creation';
+import { toast } from 'sonner';
 
 export const fixtureUser = {
   id: '00000000-0000-4000-8000-000000000003',
@@ -76,7 +77,9 @@ describe('global account browsing and creation', () => {
       }),
     );
     expect(
-      await screen.findByRole('menuitem', { name: 'View account' }),
+      await screen.findByRole('menuitem', {
+        name: `View ${fixtureUser.email}`,
+      }),
     ).toHaveAttribute('href', `/users/${fixtureUser.id}`);
   });
   it('renders a missing detail without suggesting an uncertain delete succeeded', async () => {
@@ -112,6 +115,7 @@ describe('global account browsing and creation', () => {
       const create = vi
         .spyOn(operatorApi, 'create')
         .mockResolvedValue({ user: fixtureUser, auditId: fixtureUser.id });
+      const notify = vi.spyOn(toast, 'success');
       renderApp(<UsersPage />, '/users');
       await userEvent.click(
         screen.getByRole('button', { name: 'Create user' }),
@@ -121,9 +125,10 @@ describe('global account browsing and creation', () => {
       await user.type(screen.getByLabelText('Password'), 'valid-password');
       await user.click(screen.getByRole('radio', { name: label }));
       await user.click(screen.getByRole('button', { name: 'Create user' }));
-      expect(
-        await screen.findByText('Account creation confirmed'),
-      ).toBeVisible();
+      await waitFor(() =>
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+      );
+      expect(notify).toHaveBeenCalledExactlyOnceWith('User created');
       expect(create).toHaveBeenCalledWith({
         email: fixtureUser.email,
         password: 'valid-password',
@@ -132,7 +137,6 @@ describe('global account browsing and creation', () => {
             ? 'require_verification'
             : 'operator_confirmed',
       });
-      expect(screen.getByText(/without sending an invitation/)).toBeVisible();
       expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
     },
   );
@@ -244,6 +248,7 @@ describe('create-user dialog lifecycle', () => {
           <Route path="/users" element={<UsersPage />} />
           <Route path="/users/new" element={<LegacyCreateUserRoute />} />
           <Route path="/history" element={<p>Read-only history</p>} />
+          <Route path="/history/:id" element={<p>Read-only history</p>} />
         </Routes>
       </>,
       `/users${legacy ? '/new' : ''}?page=3&perPage=50`,
@@ -254,7 +259,7 @@ describe('create-user dialog lifecycle', () => {
     await userEvent.click(
       await screen.findByRole('button', { name: 'Create user' }),
     );
-    return screen.findByRole('dialog', { name: 'Create a global user' });
+    return screen.findByRole('dialog', { name: 'Create user' });
   }
   async function fill(dialog: HTMLElement) {
     await userEvent.type(
@@ -271,14 +276,12 @@ describe('create-user dialog lifecycle', () => {
   }
   it('redirects legacy URLs to Users while retaining pagination and opening the dialog', async () => {
     const { users } = setup({ legacy: true });
-    await screen.findByRole('dialog', { name: 'Create a global user' });
+    await screen.findByRole('dialog', { name: 'Create user' });
     expect(screen.getByLabelText('Current route')).toHaveTextContent(
       '/users?page=3&perPage=50',
     );
     expect(users).toHaveBeenCalledWith(3, 50, expect.any(AbortSignal));
-    expect(
-      await screen.findByText('Page 3. Open an account for full details.'),
-    ).toBeInTheDocument();
+    expect((await screen.findAllByText('Page 3'))[0]).toBeInTheDocument();
     await userEvent.keyboard('{Escape}');
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
@@ -328,7 +331,8 @@ describe('create-user dialog lifecycle', () => {
     ).toBe(false);
     expect(create).not.toHaveBeenCalled();
   });
-  it('blocks Escape, backdrop, cancel and duplicate submit while pending, then refreshes reads and keeps success on reopen', async () => {
+  it('blocks pending dismissal and duplicates, then closes, notifies once and reopens a fresh form', async () => {
+    const notify = vi.spyOn(toast, 'success');
     let complete:
       | ((result: { user: typeof fixtureUser; auditId: string }) => void)
       | undefined;
@@ -366,7 +370,10 @@ describe('create-user dialog lifecycle', () => {
     await act(async () => {
       complete?.({ user: fixtureUser, auditId: fixtureUser.id });
     });
-    await screen.findByText('Account creation confirmed');
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    );
+    expect(notify).toHaveBeenCalledExactlyOnceWith('User created');
     await waitFor(() => expect(users).toHaveBeenCalledTimes(2));
     expect(
       runtime.client.getQueryState(['private', 0, 'audit', 1, 20])
@@ -376,16 +383,10 @@ describe('create-user dialog lifecycle', () => {
       runtime.client.getQueryState(['private', 0, 'dashboard-users'])
         ?.isInvalidated,
     ).toBe(true);
-    await userEvent.click(screen.getByRole('button', { name: 'Close' }));
     await waitFor(() =>
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+      expect(screen.getByRole('button', { name: 'Create user' })).toHaveFocus(),
     );
     await open();
-    expect(screen.getByText('Account creation confirmed')).toBeVisible();
-    expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Create another user' }),
-    );
     expect(await screen.findByLabelText('Password')).toHaveValue('');
     expect(screen.getByLabelText('Email')).toHaveValue('');
     expect(
@@ -393,6 +394,7 @@ describe('create-user dialog lifecycle', () => {
     ).not.toBeChecked();
     await waitFor(() => expect(screen.getByLabelText('Email')).toHaveFocus());
     expect(create).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledTimes(1);
   });
   it.each(['UPSTREAM_OUTCOME_UNKNOWN', 'AUDIT_COMPLETION_FAILED'])(
     'keeps %s blocked across close/reopen and read-only navigation',
@@ -418,9 +420,7 @@ describe('create-user dialog lifecycle', () => {
       expect(await screen.findByRole('alert')).toHaveTextContent(
         fixtureUser.id,
       );
-      await userEvent.click(
-        screen.getByRole('link', { name: 'Inspect action history' }),
-      );
+      await userEvent.click(screen.getByRole('link', { name: 'View history' }));
       await screen.findByText('Read-only history');
       await act(async () => {
         controls.navigate?.('/users?page=3&perPage=50');
@@ -435,6 +435,7 @@ describe('create-user dialog lifecycle', () => {
     },
   );
   it('retains the pending lock across navigation and ignores a late response after session loss', async () => {
+    const notify = vi.spyOn(toast, 'success');
     let complete:
       | ((result: { user: typeof fixtureUser; auditId: string }) => void)
       | undefined;
@@ -479,10 +480,12 @@ describe('create-user dialog lifecycle', () => {
       screen.queryByText('Account creation confirmed'),
     ).not.toBeInTheDocument();
     expect(create).toHaveBeenCalledTimes(1);
+    expect(notify).not.toHaveBeenCalled();
   });
   it.each(['USER_EXISTS', 'RATE_LIMITED', 'DEPENDENCY_UNAVAILABLE'])(
     'renders safe %s failure and releases the password',
     async (code) => {
+      const notify = vi.spyOn(toast, 'error');
       const create = vi
         .spyOn(operatorApi, 'create')
         .mockRejectedValue(
@@ -499,9 +502,11 @@ describe('create-user dialog lifecycle', () => {
       await userEvent.click(
         within(dialog).getByRole('button', { name: 'Create user' }),
       );
-      expect(await screen.findByRole('alert')).toHaveTextContent(
-        fixtureUser.id,
-      );
+      await waitFor(() => expect(notify).toHaveBeenCalledTimes(1));
+      const details = screen.getByText('Technical details');
+      await userEvent.click(details);
+      expect(screen.getByText(`Request ID: ${fixtureUser.id}`)).toBeVisible();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       expect(screen.getByLabelText('Password')).toHaveValue('');
       expect(screen.getByRole('button', { name: 'Create user' })).toBeEnabled();
       expect(create).toHaveBeenCalledTimes(1);

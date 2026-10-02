@@ -2,8 +2,10 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
+  useCallback,
   type ReactNode,
 } from 'react';
 import { useMutation } from '@tanstack/react-query';
@@ -15,6 +17,8 @@ import { useSession } from '@/app/session';
 import { operatorApi } from '@/lib/api/operator';
 import { emailSchema, newPasswordSchema } from '@/features/auth/schemas';
 import { ApiFailure } from '@/lib/api/client';
+import { toast } from 'sonner';
+import { failureMessage } from '@/lib/api/feedback';
 
 export const createSchema = z.object({
   email: emailSchema,
@@ -37,7 +41,7 @@ function useCreationController() {
     defaultValues: { email: '', password: '' },
   });
   // This controller lives above routes: leaving Users must not release the
-  // mutation lock or discard an uncertain/completed creation result.
+  // mutation lock or discard an uncertain creation result.
   const mutation = useMutation({
     mutationFn: () => {
       const request = runtime.protectedCall(() =>
@@ -49,21 +53,31 @@ function useCreationController() {
     },
     onSuccess: () => {
       if (runtime.generation() !== generation) return;
+      setOpen(false);
+      form.reset({ email: '', password: '' });
+      toast.success('User created');
       void runtime.client.invalidateQueries({
         queryKey: ['private', generation],
       });
     },
+    onError: (error) => {
+      if (
+        runtime.generation() === generation &&
+        !(error instanceof ApiFailure && error.uncertain)
+      )
+        toast.error(failureMessage(error));
+    },
   });
   const { reset: resetMutation } = mutation;
   const { reset: resetForm, resetField, setFocus } = form;
-  useEffect(() => {
+  useLayoutEffect(() => {
     setOpen(false);
     setVisible(false);
     busy.current = false;
     resetMutation();
     resetForm({ email: '', password: '' });
   }, [generation, resetMutation, resetForm]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (location.pathname !== '/users') {
       setOpen(false);
       resetField('password');
@@ -71,18 +85,24 @@ function useCreationController() {
     }
   }, [location.pathname, resetField]);
   useEffect(() => {
-    if (!open || mutation.data) return;
+    if (!open) return;
     const frame = requestAnimationFrame(() => setFocus('email'));
     return () => cancelAnimationFrame(frame);
-  }, [open, mutation.data, setFocus]);
+  }, [open, setFocus]);
   const blocked =
-    mutation.isSuccess ||
-    (mutation.error instanceof ApiFailure && mutation.error.uncertain);
+    mutation.error instanceof ApiFailure && mutation.error.uncertain;
   const changeOpen = (value: boolean) => {
     if (busy.current && !value) return;
     if (!value) {
-      resetField('password');
+      if (!blocked) {
+        resetMutation();
+        resetForm({ email: '', password: '' });
+      } else resetField('password');
       setVisible(false);
+    }
+    if (value && !busy.current && !blocked) {
+      resetMutation();
+      resetForm({ email: '', password: '' });
     }
     setOpen(value);
   };
@@ -104,26 +124,23 @@ function useCreationController() {
   return {
     open,
     changeOpen,
+    afterOpenChange: (value: boolean) => {
+      if (!value && !open && opener.current?.isConnected)
+        opener.current.focus();
+    },
     opener,
     form,
     submit,
     blocked,
     pending: mutation.isPending,
     error: mutation.error,
-    result: mutation.data,
     visible,
     toggle: () => setVisible((value) => !value),
     start: (event: React.MouseEvent<HTMLElement>) => {
       opener.current = event.currentTarget;
       changeOpen(true);
     },
-    openFromRoute: () => setOpen(true),
-    newAccount: () => {
-      if (busy.current || !mutation.isSuccess) return;
-      resetMutation();
-      resetForm({ email: '', password: '' });
-      setVisible(false);
-    },
+    openFromRoute: () => changeOpen(true),
   };
 }
 const CreationContext = createContext<ReturnType<
@@ -148,19 +165,28 @@ export function useCreateUserEntry() {
   const location = useLocation();
   const navigate = useNavigate();
   const { openFromRoute, opener } = model;
+  const consumed = useRef<string | null>(null);
   useEffect(() => {
-    if (!entrySchema.safeParse(location.state).success) return;
+    if (
+      !entrySchema.safeParse(location.state).success ||
+      consumed.current === location.key
+    )
+      return;
+    consumed.current = location.key;
     openFromRoute();
     navigate(
       { pathname: '/users', search: location.search },
       { replace: true, state: null },
     );
-  }, [location.state, location.search, navigate, openFromRoute]);
+  }, [location.state, location.search, location.key, navigate, openFromRoute]);
   // A legacy route has no trigger; use the Users header action for focus return.
-  const triggerRef = (element: HTMLButtonElement | null) => {
-    if (element && (!opener.current || !opener.current.isConnected))
-      opener.current = element;
-  };
+  const triggerRef = useCallback(
+    (element: HTMLButtonElement | null) => {
+      if (element && (!opener.current || !opener.current.isConnected))
+        opener.current = element;
+    },
+    [opener],
+  );
   return { ...model, triggerRef };
 }
 export function useLegacyCreateUserRoute() {

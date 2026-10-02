@@ -2,8 +2,10 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
+  useCallback,
   type ReactNode,
 } from 'react';
 import { useForm } from 'react-hook-form';
@@ -14,6 +16,9 @@ import { emailSchema, newPasswordSchema } from '@/features/auth/schemas';
 import { useSession } from '@/app/session';
 import { operatorApi } from '@/lib/api/operator';
 import { ApiFailure } from '@/lib/api/client';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { failureMessage } from '@/lib/api/feedback';
 
 const inviteSchema = z.object({ email: emailSchema });
 export const emailProofSchema = z.object({
@@ -32,6 +37,9 @@ export const invitationProofSchema = emailProofSchema
 function useInvitationController() {
   const { runtime, generation } = useSession();
   const busy = useRef(false);
+  const opener = useRef<HTMLElement | null>(null);
+  const [open, setOpen] = useState(false);
+  const location = useLocation();
   const form = useForm({
     resolver: zodResolver(inviteSchema),
     defaultValues: { email: '' },
@@ -40,21 +48,49 @@ function useInvitationController() {
     mutationFn: () =>
       runtime.protectedCall(() => operatorApi.invite(form.getValues('email'))),
     onSuccess: () => {
+      if (runtime.generation() !== generation) return;
+      setOpen(false);
+      form.reset({ email: '' });
+      toast.success('Invitation requested');
       void runtime.client.invalidateQueries({
         queryKey: ['private', generation],
       });
     },
+    onError: (error) => {
+      if (
+        runtime.generation() === generation &&
+        !(error instanceof ApiFailure && error.uncertain)
+      )
+        toast.error(failureMessage(error));
+    },
   });
   const { reset } = mutation;
   const { reset: resetForm } = form;
-  useEffect(() => {
+  useLayoutEffect(() => {
     busy.current = false;
+    setOpen(false);
     reset();
     resetForm({ email: '' });
   }, [generation, reset, resetForm]);
+  useLayoutEffect(() => {
+    if (location.pathname !== '/users') setOpen(false);
+  }, [location.pathname]);
+  const { setFocus } = form;
+  useEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => setFocus('email'));
+    return () => cancelAnimationFrame(frame);
+  }, [open, setFocus]);
   const blocked =
-    mutation.isSuccess ||
-    (mutation.error instanceof ApiFailure && mutation.error.uncertain);
+    mutation.error instanceof ApiFailure && mutation.error.uncertain;
+  const changeOpen = (value: boolean) => {
+    if (busy.current && !value) return;
+    if (!busy.current && !blocked) {
+      reset();
+      resetForm({ email: '' });
+    }
+    setOpen(value);
+  };
   const submit = form.handleSubmit(async () => {
     if (busy.current || blocked) return;
     busy.current = true;
@@ -63,23 +99,67 @@ function useInvitationController() {
     } catch {
       /* Persistent safe feedback. */
     } finally {
-      busy.current = false;
+      if (runtime.generation() === generation) busy.current = false;
     }
   });
   return {
     form,
+    open,
+    changeOpen,
+    opener,
+    afterOpenChange: (value: boolean) => {
+      if (!value && !open && opener.current?.isConnected)
+        opener.current.focus();
+    },
+    start: (event: React.MouseEvent<HTMLElement>) => {
+      opener.current = event.currentTarget;
+      changeOpen(true);
+    },
+    openFromRoute: () => changeOpen(true),
     submit,
     pending: mutation.isPending,
     blocked,
     error: mutation.error,
-    result: mutation.data,
-    another: () => {
-      if (!busy.current && !mutation.error) {
-        reset();
-        resetForm({ email: '' });
-      }
-    },
   };
+}
+const invitationEntrySchema = z.object({ inviteUser: z.literal(true) });
+export function useInviteUserEntry() {
+  const model = useInviteUser();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { openFromRoute, opener } = model;
+  const consumed = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      !invitationEntrySchema.safeParse(location.state).success ||
+      consumed.current === location.key
+    )
+      return;
+    consumed.current = location.key;
+    openFromRoute();
+    navigate(
+      { pathname: '/users', search: location.search },
+      { replace: true, state: null },
+    );
+  }, [location.state, location.search, location.key, navigate, openFromRoute]);
+  const triggerRef = useCallback(
+    (element: HTMLButtonElement | null) => {
+      if (element && (!opener.current || !opener.current.isConnected))
+        opener.current = element;
+    },
+    [opener],
+  );
+  return { ...model, triggerRef };
+}
+export function useLegacyInviteUserRoute() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  useEffect(() => {
+    navigate(
+      { pathname: '/users', search: location.search },
+      { replace: true, state: { inviteUser: true } },
+    );
+  }, [navigate, location.search]);
 }
 const InvitationContext = createContext<ReturnType<
   typeof useInvitationController
@@ -133,7 +213,9 @@ export function useEmailProof(invitation: boolean) {
       return submittedGeneration;
     },
     onSuccess: (submittedGeneration) => {
-      if (session.runtime.generation() === submittedGeneration) session.clear();
+      if (session.runtime.generation() !== submittedGeneration) return;
+      session.clear();
+      toast.success(invitation ? 'Invitation accepted' : 'Email confirmed');
     },
   });
   const blocked = mutation.isSuccess || mutation.isError;

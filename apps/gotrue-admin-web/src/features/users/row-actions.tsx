@@ -19,9 +19,12 @@ export function UserRowActions({ user }: { user: SafeUser }) {
         <MoreHorizontal />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem render={<Link to={`/users/${user.id}`} />}>
+        <DropdownMenuItem
+          aria-label={`View ${user.email ?? user.id}`}
+          render={<Link to={`/users/${user.id}`} />}
+        >
           <Eye />
-          View account
+          View
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
