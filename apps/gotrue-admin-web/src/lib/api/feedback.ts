@@ -22,6 +22,7 @@ const messages: Record<string, string> = {
   INVALID_INPUT: 'The request was rejected. Check the fields and their limits.',
   USER_EXISTS: 'An account with that email already exists.',
   USER_NOT_FOUND: 'This account is missing or has already been deleted.',
+  AUDIT_NOT_FOUND: 'This action record could not be found.',
   INVALID_RECOVERY:
     'Recovery is missing, expired, already used or unavailable for this account. Request a fresh email in this browser.',
   OPERATOR_RECOVERY_UNAVAILABLE:

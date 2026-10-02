@@ -46,6 +46,7 @@ export const historySchema = z.object({
   entries: z.array(auditSchema),
   ...pagination,
 });
+export const auditDetailSchema = z.object({ entry: auditSchema });
 export const detailSchema = z.object({ user: userSchema });
 export const mutationSchema = z.object({ user: userSchema, auditId: z.uuid() });
 export const deletionSchema = z.object({

@@ -4,6 +4,7 @@ import { ProtectedShell } from './shell';
 import { LoginPage, AccountPage } from '@/features/auth/views';
 import { Blank } from '@/components/feedback/states';
 import { HistoryPage } from '@/features/history/views';
+import { HistoryDetailsPage } from '@/features/history/details';
 import { StatusPage } from '@/features/status/views';
 import { lazy, Suspense } from 'react';
 import { Loading } from '@/components/feedback/states';
@@ -61,6 +62,7 @@ export function AppRoutes({
             }
           />
           <Route path="/history" element={<HistoryPage />} />
+          <Route path="/history/:id" element={<HistoryDetailsPage />} />
           <Route path="/status" element={<StatusPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/users/new" element={<LegacyCreateUserRoute />} />

@@ -13,7 +13,7 @@ export const newPasswordSchema = z
   );
 export function safeReturn(value: string | null) {
   return value &&
-    /^\/(users(?:\/(?:new|[0-9a-fA-F-]{36}))?|dashboard|history|status|account)(?:\?page=\d+&perPage=\d+)?$/.test(
+    /^\/(users(?:\/(?:new|invite|[0-9a-fA-F-]{36}))?|dashboard|history(?:\/[0-9a-fA-F-]{36})?|status|account)(?:\?page=\d+&perPage=\d+)?$/.test(
       value,
     )
     ? value

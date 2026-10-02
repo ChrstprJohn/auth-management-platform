@@ -16,7 +16,8 @@ import { Button } from '@/components/ui/button';
 
 import { PageControls } from '@/components/page-controls';
 import { Blank, Failure, Loading, Success } from '@/components/feedback/states';
-import { useHistoryPage } from './hooks';
+import { useHistoryPage, historySearch } from './hooks';
+import { actionName } from '@/lib/format/display';
 import { RefreshCw } from 'lucide-react';
 
 export function HistoryPage() {
@@ -59,10 +60,7 @@ export function HistoryPage() {
           <Card className="gap-0 py-0">
             <CardContent className="p-0">
               <Table className="table-fixed">
-                <TableCaption>
-                  Durable records on page {m.pagination.page}. No frontend
-                  reconciliation operation is available.
-                </TableCaption>
+                <TableCaption>Page {m.pagination.page}</TableCaption>
                 <TableHeader className="bg-muted/50">
                   <TableRow>
                     <TableHead>Action</TableHead>
@@ -80,8 +78,8 @@ export function HistoryPage() {
                   {m.data.entries.map((entry) => (
                     <TableRow key={entry.id}>
                       <TableCell>
-                        <p className="whitespace-nowrap capitalize font-medium">
-                          {entry.action}
+                        <p className="whitespace-normal font-medium">
+                          {actionName(entry.action)}
                         </p>
                       </TableCell>
                       <TableCell>
@@ -114,10 +112,13 @@ export function HistoryPage() {
                         </span>
                       </TableCell>
                       <TableCell className="hidden whitespace-normal lg:table-cell">
-                        <Timestamp value={entry.createdAt} compact />
+                        <Timestamp value={entry.createdAt} />
                       </TableCell>
                       <TableCell className="text-right">
-                        <ActionDetails entry={entry} />
+                        <ActionDetails
+                          entry={entry}
+                          search={historySearch(m.pagination)}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}

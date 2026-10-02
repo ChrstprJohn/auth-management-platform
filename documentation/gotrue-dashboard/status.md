@@ -1,6 +1,6 @@
 # GoTrue operator dashboard status
 
-UI clarity implementation is in progress. The protected audit lookup passed 36 isolated backend/storage tests. Shared local-time formatting, safe missing/invalid dates, readable action names and local-date dashboard charts are implemented; all 105 frontend tests and aggregate typecheck passed on 2026-10-02. Full lint/build/asset and bounded browser verification remain in progress; no live/SQL checks were performed.
+UI clarity implementation is in progress. Authoritative protected history details now load `/history/:id` directly, preserve list pagination and show support IDs only in technical inspection; missing/deleted targets remain explicit. The audit backend/storage tests passed (36), all frontend tests passed (105), and typecheck passed on 2026-10-02. Remaining modal/session commits and aggregate/browser checks are in progress; no live/SQL walkthrough was performed.
 
 Latest prepared task: [Operator UI clarity goal](operator-ui-clarity-goal.md), prepared on 2026-10-02. It covers shadcn-only invite/confirmation modals, concise View actions, notifications and automatic confirmed-modal closure, removal of routine inline alerts/IDs, full-page history inspection, copy cleanup and consistent dates across all existing screens. Implementation has started; required frontend and aggregate verification is in progress.
 

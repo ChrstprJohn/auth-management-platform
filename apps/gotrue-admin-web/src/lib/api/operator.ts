@@ -7,6 +7,7 @@ import {
   mutationSchema,
   deletionSchema,
   historySchema,
+  auditDetailSchema,
   liveSchema,
   readySchema,
   upstreamSchema,
@@ -78,6 +79,10 @@ export const operatorApi = {
       historySchema,
       { signal },
     ),
+  historyEntry: (id: string, signal?: AbortSignal) =>
+    api.request('GET', `/v1/operator/audit/${id}`, auditDetailSchema, {
+      signal,
+    }),
   live: (signal?: AbortSignal) =>
     api.request('GET', '/health/live', liveSchema, { signal }),
   ready: (signal?: AbortSignal) =>
