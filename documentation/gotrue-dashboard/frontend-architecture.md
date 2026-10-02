@@ -1,26 +1,26 @@
 # Operator frontend architecture
 
-Status: implemented in `apps/gotrue-admin-web`; local verification and remaining launch prerequisites are recorded in the [frontend checklist](frontend-checklist.md). This file owns the stack and implementation boundaries. [Frontend requirements](frontend-requirements.md) owns screens and all 21 endpoint mappings; [implementation plan](frontend-implementation-plan.md) owns phases and acceptance gates; [API reference](api.md) owns HTTP contracts; [AGENTS.md](../../AGENTS.md) owns coding and delivery rules.
+Status: implemented in `apps/gotrue-admin-web`; local verification and remaining launch prerequisites are recorded in the [frontend checklist](frontend-checklist.md). This file owns the stack and implementation boundaries. [Frontend requirements](frontend-requirements.md) owns screens and all 22 endpoint mappings; [implementation plan](frontend-implementation-plan.md) owns phases and acceptance gates; [API reference](api.md) owns HTTP contracts; [AGENTS.md](../../AGENTS.md) owns coding and delivery rules.
 
 ## Stack
 
-| Area           | Choice                            | Responsibility                                                                              |
-| -------------- | --------------------------------- | ------------------------------------------------------------------------------------------- |
-| Application    | React + strict TypeScript         | Browser UI with explicit safe contracts                                                     |
-| Tooling        | Vite                              | Local development and static production build                                               |
-| Components     | shadcn/ui                         | Owned accessible component source, dialogs, buttons, tables and controls                    |
-| Styling        | Tailwind CSS                      | Shared tokens, responsive layout and interaction states                                     |
-| Requests       | Axios                             | Cookie/CSRF configuration, bounded HTTP requests and safe errors                            |
-| Server state   | TanStack Query                    | Reads, mutation state, cancellation and cache invalidation                                  |
-| Navigation     | React Router, browser SPA         | Public recovery/login routes and protected dashboard destinations                           |
-| Forms          | React Hook Form + Zod             | Field state, validation and feature-hook submit orchestration                               |
-| Icons/feedback | Lucide + Sonner                   | Consistent icons and supplemental success notifications; errors remain inline               |
-| Tests          | Vitest + React Testing Library    | User interactions and boundary/state regression checks                                      |
-| Tables         | shadcn Table + backend pagination | Safe account/history rows; TanStack Table deferred until richer column behavior is required |
+| Area           | Choice                            | Responsibility                                                                                |
+| -------------- | --------------------------------- | --------------------------------------------------------------------------------------------- |
+| Application    | React + strict TypeScript         | Browser UI with explicit safe contracts                                                       |
+| Tooling        | Vite                              | Local development and static production build                                                 |
+| Components     | shadcn/ui                         | Owned accessible component source, dialogs, buttons, tables and controls                      |
+| Styling        | Tailwind CSS                      | Shared tokens, responsive layout and interaction states                                       |
+| Requests       | Axios                             | Cookie/CSRF configuration, bounded HTTP requests and safe errors                              |
+| Server state   | TanStack Query                    | Reads, mutation state, cancellation and cache invalidation                                    |
+| Navigation     | React Router, browser SPA         | Public recovery/login routes and protected dashboard destinations                             |
+| Forms          | React Hook Form + Zod             | Field state, validation and feature-hook submit orchestration                                 |
+| Icons/feedback | Lucide + Sonner                   | Consistent icons and concise mutation notifications; validation/uncertainty remain persistent |
+| Tests          | Vitest + React Testing Library    | User interactions and boundary/state regression checks                                        |
+| Tables         | shadcn Table + backend pagination | Safe account/history rows; TanStack Table deferred until richer column behavior is required   |
 
 Use the existing pnpm workspace and ESLint/Prettier. Pin dependencies in the app manifest. No extra global state library, frontend auth SDK or server runtime is needed.
 
-Use the official shadcn/ui registry and generated component source, with its default theme tokens. The user asked to use shadcn components and current catalog guidance; do not create a separate bespoke design system or independently restyle each component. Follow the [component map](frontend-components.md) for each screen/state, including current Field, Empty, Spinner, Input Group and other appropriate primitives. Use the current default Base UI generation for this new app and its matching composition APIs. Sonner remains the approved supplemental notifier. Do not mix primitive families or introduce a second toast system without a documented reason.
+Use the official shadcn/ui registry and generated component source, with its default theme tokens. The user asked to use shadcn components and current catalog guidance; do not create a separate bespoke design system or independently restyle each component. Follow the [component map](frontend-components.md) for each screen/state, including current Field, Empty, Spinner, Input Group and other appropriate primitives. Use the current default Base UI generation for this new app and its matching composition APIs. Sonner remains the approved notification system. Do not mix primitive families or introduce a second toast system without a documented reason.
 
 Exact package versions are selected and pinned at scaffold time after checking compatibility with the repository's Node/pnpm versions and release-age policy. A recommendation is not evidence that dependencies have been installed.
 
@@ -68,19 +68,29 @@ Use feature-scoped query keys for the current session, paginated users, individu
 
 Axios uses the public API origin, `withCredentials: true`, bounded timeout and custom CSRF headers on POST/DELETE. 204 is empty success. Readiness and protected upstream-health 503 status objects remain distinct from common error envelopes. Never expose raw Axios errors or retry mutations automatically. Reads use explicit user retry so health/session failures remain visible.
 
-Mutation success invalidates affected reads. Failure preserves request/audit IDs and safe outcome metadata. Ambiguous or completion-failure results block repeat submission and offer read-only inspection; they do not show a rollback claim. The create-user controller/provider lives above routes in `features/users/creation.tsx`, retaining pending/error/success safety across close/navigation. Users owns the thin dialog presentation; a compatibility hook redirects `/users/new` to Users with consumed in-memory open intent and unchanged pagination. Passwords clear when the request starts, on idle close/navigation and on session change; no password-bearing mutation variables or persistent store is introduced. URLs contain pagination and user IDs, never passwords or recovery values.
+Mutation success invalidates affected reads. Failure preserves request/audit IDs and safe outcome metadata. Ambiguous or completion-failure results block repeat submission and offer read-only inspection; they do not show a rollback claim. The create-user controller/provider lives above routes in `features/users/creation.tsx`, retaining pending/uncertain safety across close/navigation. Users owns the thin dialog presentation; a compatibility hook redirects `/users/new` to Users with consumed in-memory open intent and unchanged pagination. Passwords clear when the request starts, on idle close/navigation and on session change; no password-bearing mutation variables or persistent store is introduced. URLs contain pagination and user IDs, never passwords or recovery values.
 
 Use one bounded HTTP timeout defined in the client, no retry interceptor, and explicit read retry controls. Normalize unknown network failures into safe frontend errors, without retaining raw Axios objects in UI/query errors. Keep mutation variables containing passwords short-lived; reset form and mutation state after completion or unmount. Authorization failures are contextual: login's 401 is bad credentials, protected 401 is session loss, and mutation 403 may be disabled deletion or browser-policy rejection. Session/bootstrap 503 blocks access without claiming logout.
 
 The public configuration is `VITE_API_BASE_URL`, locally `http://localhost:3100`. Vite serves the browser app on `http://localhost:5173` with a strict port so a fallback port cannot silently break trusted origins. Validate the configured HTTP(S) origin without embedded credentials/query/fragment. Production requires the existing same-site HTTPS policy and static-host history fallback for direct routes, including `/reset-password`; deployment remains separately authorized work. No frontend variable contains a database URL or GoTrue credential.
 
+## Operator UI clarity
+
+Create/invite providers retain pending and uncertain locks above routes. Users renders existing shadcn Dialogs; legacy /users/new and /users/invite entries consume an in-memory intent and preserve validated pagination. Confirmed acceptance closes the overlay, clears transient form state, returns focus and invalidates current-session reads. Management uses the existing AlertDialog. One Sonner notification reports confirmed acceptance; definite mutation failures notify once and retain support data in a Technical details disclosure. Field validation and unresolved outcomes remain persistent and accessible. Closing or navigating never implies rollback; repeat mutation controls remain locked for uncertainty.
+
+The shared account provider serializes every sign-out control. Login, logout, reset and email-proof completions guard the submitted session generation before clearing or establishing account state. Earlier responses cannot replace newer sessions, emit stale completion notices or repopulate private caches.
+
+History details are a protected read-only /history/:id page backed by GET /v1/operator/audit/:id, including direct navigation/refresh. Hook-owned lookup validates the UUID, distinguishes missing/error/loading states and fetches a target only when meaningful. Back navigation uses validated page/perPage parameters. Actor context identifies the current operator only when IDs match; no profile data is invented. UUIDs and exact timestamps remain in Technical details. Inspection never mutates or reconciles an audit record.
+
+The shared formatter presents full browser-local timestamps such as **02 Oct 2026, 9:15 AM**; missing/invalid values read Not reported and do not render invalid time elements. Chart buckets use browser-local calendar dates with the shared date-only formatter; tooltips retain full timestamps. Normal timestamps wrap at mobile widths. Dashboard labels its first-20-user/first-20-action boundary once.
+
 ## Visual and state model
 
-Use shadcn's default styling and components, readable neutral surfaces and semantic status labels. Navigation includes Dashboard, Users, history, service status and account; Users remains the default post-login destination. Use the shadcn Sidebar/Sheet pattern on narrow screens; wide tables scroll in their own region and retain all fields. Forms use labeled fields, inline errors and persistent result messages. Destructive dialogs identify the target and action before submission. A dark-mode selector is not required for V1; keep theme choice separate from functional completeness.
+Use shadcn's default styling and components, readable neutral surfaces and semantic status labels. Navigation includes Dashboard, Users, history, service status and account; Users remains the default post-login destination. Use the shadcn Sidebar/Sheet pattern on narrow screens; wide tables scroll in their own region and retain all fields. Forms use labeled fields and inline validation; confirmed actions notify once, while instructions and uncertainty persist. Destructive dialogs identify the target and action before submission. A dark-mode selector is not required for V1; keep theme choice separate from functional completeness.
 
 Protected routes compose `SidebarProvider`, extracted `AppSidebar`, `SidebarInset`, sticky breadcrumb/account header and one padded main region. `PageHeader` standardizes titles/descriptions/actions; actions stack below the title at tablet widths. Dashboard metrics use two/four-column grids; details, account and charts use seven-column desktop splits with single-column mobile order. Creation uses a viewport-bounded shadcn Dialog over Users and preserves its pagination/breadcrumb. Card headers reserve a nonshrinking menu column and let text shrink. Keep these compositions in views.
 
-Sign-in and both recovery routes use `AuthLayout` with Card/Field forms and a separate CardFooter navigation region. Session loading/denied/unavailable and unmatched routes use `RouteState`; protected account data and navigation are withheld until session verification succeeds. The shell is never an authentication bypass. Five-column table previews appear at large widths; compact previews retain links to full account details or read-only audit dialogs, as specified in [requirements](frontend-requirements.md).
+Sign-in and both recovery routes use `AuthLayout` with Card/Field forms and a separate CardFooter navigation region. Session loading/denied/unavailable and unmatched routes use `RouteState`; protected account data and navigation are withheld until session verification succeeds. The shell is never an authentication bypass. Five-column table previews appear at large widths; compact previews retain links to full account details or read-only audit pages, as specified in [requirements](frontend-requirements.md).
 
 Every screen supplies loading and error UI, then its real/empty/missing state. Background refresh keeps real data visible with an explicit refresh indicator. Session failure blocks protected content; 503 does not imply successful logout. Status checks show individual timestamps and unavailable states rather than fabricated metrics. Recovery uses same-browser email navigation through the backend callback; no frontend callback exchange or recovery-status endpoint is introduced.
 
@@ -97,7 +107,7 @@ Hooks return explicit named states rather than a collection of booleans that per
 | Loaded                      | Real safe fields, readable timestamps, copyable identifiers and available actions          |
 | Invalid form                | Associated field errors, preserved non-secret input and focus on the first error           |
 | Mutation pending            | Disabled repeat submission, named progress text; prevent accidental dialog resubmission    |
-| Confirmed success           | Persistent result or destination feedback; refresh affected queries; toast is supplemental |
+| Confirmed success           | Close confirmed modal, clear transient form, notify once and refresh affected queries      |
 | Missing/deleted             | Clear not-found result and return to Users                                                 |
 | Session expired             | Clear private state and provide sign-in; safe internal return route only                   |
 | Access denied               | Block protected content and explain access was denied; do not impersonate another identity |

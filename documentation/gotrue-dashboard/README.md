@@ -19,5 +19,3 @@ The operator backend and React/Vite frontend implement health, secure sessions, 
 Edit the document that owns the changed topic. See the [documentation index](../README.md) for repository-wide ownership.
 
 ## Latest prepared operator task
-
-[Operator UI clarity goal](operator-ui-clarity-goal.md) covers shadcn modals, concise action labels and notifications, full-page history details, copy cleanup and consistent dates. Prepared on 2026-10-02; implementation and UI verification have not started.
