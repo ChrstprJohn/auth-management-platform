@@ -82,7 +82,7 @@ Operator eligibility comes from a server-controlled allowlist of GoTrue UUIDs. V
 
 ## 10. Recent management action history
 
-- Show recent user creation, ban, unban, and deletion attempts with pagination or a bounded recent view.
+- Show recent user creation, invitation, verification-email, ban, unban, and deletion attempts with pagination or a bounded recent view.
 - Record actor UUID, target UUID where known, action, outcome, timestamp, and request ID.
 - Keep records durable across API restarts and restrict viewing to eligible operators.
 - Distinguish success, failure, and unknown/partial outcomes. Follow the [durable audit policy](backend-architecture.md#durable-audit-history) for intent/completion records and reconciliation.
@@ -96,9 +96,13 @@ Secure operator sessions, constructor-injected class-based layers, server-side i
 
 Planned route groups remain `/v1/operator/auth/*`, `/v1/operator/users`, operator audit history, and minimal health. Final methods/payloads, storage, session lifecycle, and recovery callbacks are documented before their implementation.
 
+## Authorized email extension
+
+Operators can invite users, send verification for unconfirmed password-created accounts, and resend invitations for unconfirmed invited accounts. Recipients verify the newest OTP; invited recipients choose their own password. None of these grants operator eligibility. GoTrue owns sending through hosted Resend SMTP, proof expiry and one-use validation; our API preserves strict contracts and durable email-action audit. The [API reference](api.md#email-extension-contract-implemented-live-delivery-pending) owns details and [status](status.md) distinguishes isolated verification from pending manual inbox tests.
+
 ## Deferred
 
-Global email search until upstream support is assessed; editing user email/password/metadata; invitation and resend-verification workflows; bulk operations; full session/device administration; operator-role management UI; analytics; provider/environment settings; Docker restart/log controls; developer/project management.
+Global email search until upstream support is assessed; editing user email/password/metadata; bulk operations; full session/device administration; operator-role management UI; analytics; provider/environment settings; Docker restart/log controls; developer/project management.
 
 ## Complete V1
 

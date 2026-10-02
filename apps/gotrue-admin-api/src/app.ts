@@ -12,6 +12,8 @@ import {
   GoTrueClient,
   GoTrueAdminClient,
   GoTrueRecoveryClient,
+  GoTrueEmailClient,
+  type EmailClient,
   type RecoveryClient,
   type AdminUsersClient,
   type OperatorIdentityClient,
@@ -55,6 +57,9 @@ import { createRecoveryRoutes } from './modules/recovery/recovery.routes.js';
 import { createUsersRoutes } from './modules/users/users.routes.js';
 import { createAuditRoutes } from './modules/audit/audit.routes.js';
 import { createHealthRoutes } from './modules/health/health.routes.js';
+import { EmailService } from './modules/email/email.service.js';
+import { EmailController } from './modules/email/email.controller.js';
+import { createEmailRoutes } from './modules/email/email.routes.js';
 export interface AppDependencies {
   upstream?: OperatorIdentityClient;
   sessions?: SessionStore;
@@ -64,6 +69,7 @@ export interface AppDependencies {
   mutationLock?: MutationLock;
   recovery?: RecoveryClient;
   recoveryStore?: RecoveryStore;
+  email?: EmailClient;
 }
 export function createApp(
   config: Config,
@@ -99,6 +105,13 @@ export function createApp(
     config.NODE_ENV === 'production',
   );
   const authenticate = new AuthenticateMiddleware(authService, auth.cookieName);
+  const emailClient =
+    dependencies.email ??
+    new GoTrueEmailClient(
+      config.GOTRUE_URL,
+      config.UPSTREAM_TIMEOUT_MS,
+      config.GOTRUE_ADMIN_TOKEN,
+    );
   const recovery = new RecoveryController(
     new RecoveryService(
       dependencies.recovery ??
@@ -130,6 +143,7 @@ export function createApp(
       authService,
       config.OPERATOR_UUID_ALLOWLIST,
       config.ALLOW_GLOBAL_USER_DELETION,
+      emailClient,
     ),
   );
   const health = new HealthController(
@@ -203,6 +217,22 @@ export function createApp(
   app.use(createHealthRoutes(health, authenticate));
   app.use('/v1/operator/auth', createOperatorAuthRoutes(auth, csrf));
   app.use('/v1/operator/auth', createRecoveryRoutes(recovery, csrf));
+  app.use(
+    '/v1/email',
+    createEmailRoutes(
+      new EmailController(
+        new EmailService(
+          emailClient,
+          dependencies.recovery ??
+            new GoTrueRecoveryClient(
+              config.GOTRUE_URL,
+              config.UPSTREAM_TIMEOUT_MS,
+            ),
+        ),
+      ),
+      csrf,
+    ),
+  );
   app.use('/v1/operator/users', createUsersRoutes(users, authenticate, csrf));
   app.use('/v1/operator/audit', createAuditRoutes(audit, authenticate));
   app.use((_req, _res, next) =>

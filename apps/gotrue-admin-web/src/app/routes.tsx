@@ -13,6 +13,12 @@ const DashboardPage = lazy(() =>
   })),
 );
 import { UserActionsProvider } from '@/features/users/actions';
+import { type EmailCallbackStatus } from '@/features/email/hooks';
+import {
+  InviteUserPage,
+  EmailProofPage,
+  EmailCallbackPage,
+} from '@/features/email/views';
 import {
   UsersPage,
   UserDetailsPage,
@@ -23,13 +29,26 @@ import {
   ResetPasswordPage,
 } from '@/features/recovery/views';
 
-export function AppRoutes() {
+export function AppRoutes({
+  emailCallbackStatus = 'missing',
+}: {
+  emailCallbackStatus?: EmailCallbackStatus;
+}) {
   return (
     <UserActionsProvider>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/confirm-email" element={<EmailProofPage />} />
+        <Route
+          path="/accept-invitation"
+          element={<EmailProofPage invitation />}
+        />
+        <Route
+          path="/auth/callback"
+          element={<EmailCallbackPage status={emailCallbackStatus} />}
+        />
         <Route element={<ProtectedShell />}>
           <Route index element={<Navigate to="/users" replace />} />
           <Route path="/account" element={<AccountPage />} />
@@ -45,6 +64,7 @@ export function AppRoutes() {
           <Route path="/status" element={<StatusPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/users/new" element={<LegacyCreateUserRoute />} />
+          <Route path="/users/invite" element={<InviteUserPage />} />
           <Route path="/users/:id" element={<UserDetailsPage />} />
         </Route>
         <Route

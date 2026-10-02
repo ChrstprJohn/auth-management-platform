@@ -153,6 +153,13 @@ export function UsersPage() {
                 <Plus />
                 Create user
               </DialogTrigger>
+              <Button
+                nativeButton={false}
+                variant="outline"
+                render={<Link to="/users/invite" />}
+              >
+                Invite user
+              </Button>
             </>
           }
         />
@@ -409,8 +416,9 @@ function CreateUserDialog({
                     </Field>
                     <FieldDescription>
                       This account remains unconfirmed and cannot complete
-                      normal verified login until a supported verification flow
-                      is available. No email is sent.
+                      normal verified login until email verification succeeds.
+                      Creation sends no email; send verification separately from
+                      account details.
                     </FieldDescription>
                     <Field orientation="horizontal">
                       <RadioGroupItem

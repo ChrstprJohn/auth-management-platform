@@ -301,8 +301,19 @@ describe('owned storage boundaries (mocked pg, no executed SQL)', () => {
       new URL('migrations/0003_operator_recovery.sql', base),
       'utf8',
     );
+    const emailMigration = await readFile(
+      new URL('migrations/0004_email_audit_actions.sql', base),
+      'utf8',
+    );
+    const upgradedAudit = audit.replace(
+      "('create','ban','unban','delete')",
+      "('create','ban','unban','delete','invite','send_verification')",
+    );
+    expect(emailMigration).toContain(
+      "CHECK (action IN ('create','ban','unban','delete','invite','send_verification'))",
+    );
     expect(normalize(full)).toBe(
-      normalize(initial + '\n' + audit + '\n' + recovery),
+      normalize(initial + '\n' + upgradedAudit + '\n' + recovery),
     );
   });
 });

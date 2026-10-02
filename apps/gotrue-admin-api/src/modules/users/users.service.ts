@@ -3,6 +3,7 @@ import {
   UpstreamError,
   type AdminUser,
   type AdminUsersClient,
+  type EmailClient,
 } from '@auth/gotrue-client';
 import { ApiError, unavailable } from '../../shared/errors/api-error.js';
 import type { AuditService } from '../audit/audit.service.js';
@@ -19,6 +20,7 @@ function safeUser(user: AdminUser): SafeUser {
     email: user.email || null,
     createdAt: user.created_at ?? null,
     emailConfirmedAt: user.email_confirmed_at ?? null,
+    invitedAt: user.invited_at ?? null,
     lastSignInAt: user.last_sign_in_at ?? null,
     bannedUntil: user.banned_until ?? null,
     isBanned: user.banned_until
@@ -34,10 +36,17 @@ export class UsersService {
     private readonly auth: Pick<OperatorAuthService, 'hasUsableSession'>,
     private readonly operators: ReadonlySet<string>,
     private readonly deletionAllowed: boolean,
+    private readonly email?: EmailClient,
   ) {}
   private mapError(error: unknown): ApiError {
     if (error instanceof ApiError) return error;
     if (error instanceof UpstreamError) {
+      if (error.kind === 'rate_limited')
+        return new ApiError(
+          429,
+          'EMAIL_RATE_LIMITED',
+          'Email requests are limited. Wait before making a new request.',
+        );
       if (error.ambiguous)
         return new ApiError(
           503,
@@ -122,6 +131,54 @@ export class UsersService {
         input.confirmation === 'operator_confirmed',
       );
       return { value: { user: safeUser(user) }, targetId: user.id };
+    });
+  }
+  async invite(context: ManagementContext, email: string) {
+    return this.attempt(context, 'invite', null, async () => {
+      if (!this.email) throw unavailable();
+      const user = await this.email.invite(email);
+      return { value: { user: safeUser(user) }, targetId: user.id };
+    });
+  }
+  async sendVerification(context: ManagementContext, targetId: string) {
+    return this.attempt(context, 'send_verification', targetId, async () => {
+      if (!this.email) throw unavailable();
+      const user = await this.upstream.getUser(targetId);
+      if (
+        !user.email ||
+        user.invited_at ||
+        user.email_confirmed_at ||
+        user.deleted_at ||
+        (user.banned_until && Date.parse(user.banned_until) > Date.now())
+      )
+        throw new ApiError(
+          409,
+          'EMAIL_ACTION_UNAVAILABLE',
+          'Verification requires an unconfirmed, usable email account.',
+        );
+      await this.email.sendVerification(user.email);
+      return { value: { user: safeUser(user) }, targetId };
+    });
+  }
+  async resendInvitation(context: ManagementContext, targetId: string) {
+    return this.attempt(context, 'invite', targetId, async () => {
+      if (!this.email) throw unavailable();
+      const user = await this.upstream.getUser(targetId);
+      if (
+        !user.email ||
+        !user.invited_at ||
+        user.email_confirmed_at ||
+        user.deleted_at ||
+        (user.banned_until && Date.parse(user.banned_until) > Date.now())
+      )
+        throw new ApiError(
+          409,
+          'EMAIL_ACTION_UNAVAILABLE',
+          'Resending requires an unconfirmed, usable invited account.',
+        );
+      const invited = await this.email.invite(user.email);
+      if (invited.id !== targetId) throw new UpstreamError('unavailable', true);
+      return { value: { user: safeUser(invited) }, targetId };
     });
   }
   private async protectOperator(targetId: string): Promise<void> {

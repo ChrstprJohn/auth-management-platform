@@ -6,6 +6,7 @@ import {
   UpstreamError,
   type AdminUser,
   type AdminUsersClient,
+  type EmailClient,
   type OperatorIdentityClient,
 } from '@auth/gotrue-client';
 import { createApp } from '../../src/app.js';
@@ -115,7 +116,9 @@ class Lock implements MutationLock {
     }
   }
 }
-class Upstream implements OperatorIdentityClient, AdminUsersClient {
+class Upstream
+  implements OperatorIdentityClient, AdminUsersClient, EmailClient
+{
   readonly users = new Map<string, AdminUser>(
     [first, second, ordinary].map((id) => [id, user(id)]),
   );
@@ -166,6 +169,22 @@ class Upstream implements OperatorIdentityClient, AdminUsersClient {
     this.users.set(result.id, result);
     return result;
   }
+  async invite(email: string) {
+    await this.beforeMutation();
+    const result = [...this.users.values()].find(
+      (entry) => entry.email === email,
+    ) ?? { ...user(randomUUID()), email, email_confirmed_at: null };
+    result.invited_at = '2026-01-01T00:00:00Z';
+    this.users.set(result.id, result);
+    return result;
+  }
+  async sendVerification(_email: string) {
+    await this.beforeMutation();
+  }
+  async verify(): Promise<never> {
+    throw new UpstreamError('identity');
+  }
+  async discardSession() {}
   async setBan(id: string, duration: string) {
     await this.beforeMutation();
     const result = await this.getUser(id);
@@ -206,6 +225,7 @@ async function setup(deletionAllowed = true) {
     upstream,
     sessions,
     admin: upstream,
+    email: upstream,
     audit,
     mutationLock: new Lock(),
     checkDatabase: async () => {},
@@ -239,6 +259,108 @@ async function setup(deletionAllowed = true) {
   return { ...resource, upstream, audit, sessions, cookie, login, mutation };
 }
 describe('user management and audit HTTP boundaries', () => {
+  it('audits invitation acceptance and rejects email sends before upstream on invalid targets', async () => {
+    const { mutation, audit, upstream } = await setup();
+    const invited = await mutation('/v1/operator/users/invitations', {
+      email: 'invited@example.test',
+      confirmation: 'SEND_INVITATION',
+    });
+    expect(invited.status).toBe(202);
+    expect(audit.rows[0]).toMatchObject({
+      action: 'invite',
+      outcome: 'succeeded',
+      targetId: invited.body.user.id,
+    });
+    expect(JSON.stringify(invited.body)).not.toContain('access_token');
+    expect(
+      (
+        await mutation(`/v1/operator/users/${ordinary}/send-verification`, {
+          targetId: ordinary,
+          confirmation: 'SEND_VERIFICATION_EMAIL',
+        })
+      ).status,
+    ).toBe(409);
+    expect(upstream.mutations).toBe(1);
+    expect(audit.rows[0]).toMatchObject({
+      action: 'send_verification',
+      outcome: 'failed',
+    });
+    expect(
+      (
+        await mutation(`/v1/operator/users/${ordinary}/send-verification`, {
+          targetId: second,
+          confirmation: 'SEND_VERIFICATION_EMAIL',
+        })
+      ).status,
+    ).toBe(400);
+    expect(upstream.mutations).toBe(1);
+  });
+  it('sends verification only for eligible unconfirmed accounts and reinvites the bound account', async () => {
+    const { mutation, upstream, audit } = await setup();
+    const target = upstream.users.get(ordinary);
+    if (!target) throw new Error('Fixture missing');
+    target.email_confirmed_at = null;
+    expect(
+      (
+        await mutation(`/v1/operator/users/${ordinary}/send-verification`, {
+          targetId: ordinary,
+          confirmation: 'SEND_VERIFICATION_EMAIL',
+        })
+      ).status,
+    ).toBe(202);
+    target.invited_at = '2026-01-01T00:00:00Z';
+    expect(
+      (
+        await mutation(`/v1/operator/users/${ordinary}/send-verification`, {
+          targetId: ordinary,
+          confirmation: 'SEND_VERIFICATION_EMAIL',
+        })
+      ).status,
+    ).toBe(409);
+    expect(
+      (
+        await mutation(`/v1/operator/users/${ordinary}/resend-invitation`, {
+          targetId: ordinary,
+          confirmation: 'RESEND_INVITATION',
+        })
+      ).status,
+    ).toBe(202);
+    expect(upstream.mutations).toBe(2);
+    expect(audit.rows[0]).toMatchObject({
+      action: 'invite',
+      targetId: ordinary,
+      outcome: 'succeeded',
+    });
+  });
+  it('fails closed before sending without durable audit and retains uncertain email outcomes without retry', async () => {
+    const { mutation, audit, upstream } = await setup();
+    audit.failIntent = true;
+    expect(
+      (
+        await mutation('/v1/operator/users/invitations', {
+          email: 'invited@example.test',
+          confirmation: 'SEND_INVITATION',
+        })
+      ).status,
+    ).toBe(503);
+    expect(upstream.mutations).toBe(0);
+    audit.failIntent = false;
+    upstream.error = new UpstreamError('unavailable', true);
+    const response = await mutation('/v1/operator/users/invitations', {
+      email: 'invited@example.test',
+      confirmation: 'SEND_INVITATION',
+    });
+    expect(response.status).toBe(503);
+    expect(response.body).toMatchObject({
+      outcome: 'unknown',
+      auditId: audit.rows[0]?.id,
+    });
+    expect(upstream.mutations).toBe(1);
+    expect(audit.rows[0]).toMatchObject({
+      action: 'invite',
+      outcome: 'unknown',
+    });
+  });
   it('requires operator sessions for list, details, mutation and audit', async () => {
     const { app } = await setup();
     for (const path of [
@@ -272,6 +394,7 @@ describe('user management and audit HTTP boundaries', () => {
         'email',
         'emailConfirmedAt',
         'id',
+        'invitedAt',
         'isBanned',
         'lastSignInAt',
       ].sort(),

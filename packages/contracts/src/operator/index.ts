@@ -16,11 +16,18 @@ export interface SafeUser {
   email: string | null;
   createdAt: string | null;
   emailConfirmedAt: string | null;
+  invitedAt?: string | null;
   lastSignInAt: string | null;
   bannedUntil: string | null;
   isBanned: boolean | null;
 }
-export type AuditAction = 'create' | 'ban' | 'unban' | 'delete';
+export type AuditAction =
+  | 'create'
+  | 'ban'
+  | 'unban'
+  | 'delete'
+  | 'invite'
+  | 'send_verification';
 export type AuditOutcome = 'pending' | 'succeeded' | 'failed' | 'unknown';
 export interface AuditEntry {
   id: string;

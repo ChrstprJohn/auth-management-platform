@@ -2,7 +2,7 @@
 
 GoTrue `supabase/gotrue:v2.196.0` runs at `http://localhost:8081` on the existing `local-database-server_default` network, using PostgreSQL 17 and `auth_local_db` / `auth_local` / `auth`. Compose defines no PostgreSQL server. The user owns database preparation and every infrastructure restart: GoTrue startup can run its own migrations.
 
-The example prepares hosted Resend through GoTrue SMTP. No Resend instance, SDK, proxy mail API or extra token flow is deployed. Current ignored `.env` values are preserved until final setup; templates do not activate a provider. Historical Mailpit evidence and current live gaps belong in [GoTrue status](../../documentation/gotrue-dashboard/status.md).
+The example prepares hosted Resend through GoTrue SMTP. No Resend instance, SDK, proxy mail API or extra token flow is deployed. The ignored local `.env` is configured for Resend with the user-entered key; the running GoTrue container still needs user-operated recreation to load it. Historical Mailpit evidence and current live gaps belong in [GoTrue status](../../documentation/gotrue-dashboard/status.md).
 
 ## SMTP configuration and pinned TLS evidence
 
@@ -16,10 +16,10 @@ Pinned GoTrue [mailmeclient](https://github.com/supabase/auth/blob/v2.196.0/inte
 | `GOTRUE_SMTP_PORT` | `465` |
 | `GOTRUE_SMTP_USER` | `resend` |
 | `GOTRUE_SMTP_PASS` | User-entered Resend sending key, only on the server |
-| `GOTRUE_SMTP_ADMIN_EMAIL` | `auth@mail.chrbuilds.dev` (proposed sender; confirm before activation) |
+| `GOTRUE_SMTP_ADMIN_EMAIL` | `auth@mail.chrbuilds.dev` |
 | `GOTRUE_SMTP_SENDER_NAME` | Chosen sender display name |
 
-Keep `GOTRUE_MAILER_AUTOCONFIRM=false` and all `GOTRUE_MAILER_URLPATHS_*=/verify`. Signup confirmation and recovery use this SMTP path. Admin creation from Users sends **no invitation or confirmation email under either policy**, including after Resend activation. An unconfirmed admin-created account still needs a supported verification flow before normal verified login. No invitation/resend controls are introduced.
+Keep `GOTRUE_MAILER_AUTOCONFIRM=false` and all `GOTRUE_MAILER_URLPATHS_*=/verify`. Signup confirmation and recovery use this SMTP path. Admin creation from Users sends **no invitation or confirmation email under either policy**, including after Resend activation. An unconfirmed admin-created account needs a verification code before normal verified login. The operator can send verification from account details, invite from Users, or resend an invitation for an unconfirmed invited account.
 
 ## Final setup checklist (user-operated, after independent checks)
 
@@ -50,9 +50,17 @@ After authorization and user-operated restart:
 3. Submit a new password once. Confirmed 204 clears dashboard sessions. Verify normal new-password login and rejection of the old password/session, then logout. Record safe evidence/date. Timeout or `PASSWORD_RESET_OUTCOME_UNKNOWN` may mean the password changed; try normal sign-in or trusted assistance instead of repeating reset. `PASSWORD_RESET_COMPLETION_FAILED` means password update succeeded but cleanup was not confirmed.
 4. Review provider rejection/rate-limit handling with controlled fixtures first. For an observed real rejection, preserve the generic acknowledgement and inspect safe provider activity; fix sender/key/domain locally. For a visible 429, wait before an intentional fresh request; never loop/retry automatically or invent a countdown. Never fall back to Mailpit or claim acknowledgement guarantees delivery. Do not send to unauthorized recipients to provoke failures.
 
-If signup confirmation is authorized, use a disposable recipient the user controls and verify inbox arrival and `/verify` separately. `pnpm operator:setup` submits signup and changes the allowlist, so is excluded without separate authorization. Preserve operator eligibility, PKCE, callback allowlists and generic acknowledgements.
+For confirmation or invitations, use a disposable recipient the user controls. Send verification from account details, or select Invite user from Users. Open `/confirm-email` or `/accept-invitation` and enter the newest numeric code; invitation acceptance also sets a password. Check Resend acceptance separately from inbox arrival. `pnpm operator:setup` submits signup and changes the allowlist, so is excluded without separate authorization. Preserve operator eligibility, PKCE, callback allowlists and generic acknowledgements.
 
 Status remains **implementation ready; setup/live delivery pending** until domain/key/sender setup, effective SMTP activation, inbox arrival and the complete recovery/new-password-login walkthrough have evidence.
+
+## Invitation and confirmation templates
+
+Compose supplies GOTRUE_MAILER_TEMPLATES_INVITE=http://host.docker.internal:5173/email-templates/invitation.html and GOTRUE_MAILER_TEMPLATES_CONFIRMATION=http://host.docker.internal:5173/email-templates/confirmation.html. Start pnpm web:dev and pnpm dev in separate foreground terminals before sending. Vite binds 0.0.0.0 and permits host.docker.internal so the GoTrue container can fetch the public templates. This is local tooling; production serves static public templates over HTTPS and overrides these URLs. A read-only fetch from the existing container passed for both files on 2026-10-02.
+
+The templates display GoTrue's one-use .Token and link to recipient pages without tokens in URLs. GoTrue handles OTP expiry and replay; the API verifies the proof and discards generated session credentials. The templates leave recovery's existing same-browser PKCE link unchanged. Keep Vite reachable: pinned GoTrue falls back to default email content if template fetching fails. The default confirmation link is supported by the credential-clearing /auth/callback page; default invitations do not provide the new password form/code instructions. If a default invitation arrives, restore template reachability and intentionally resend from account details before accepting.
+
+The audit migration 0004 was reported applied by the user. No further admin SQL is prepared. The agent does not recreate GoTrue because its startup can run upstream migrations.
 
 ## Explicit Mailpit capture option
 

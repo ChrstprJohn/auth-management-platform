@@ -29,6 +29,22 @@ export const operatorApi = {
     ),
   reset: (body: { password: string }) =>
     api.request('POST', `${auth}/reset-password`, z.undefined(), { body }),
+  invite: (email: string) =>
+    api.request('POST', `${users}/invitations`, mutationSchema, {
+      body: { email, confirmation: 'SEND_INVITATION' },
+    }),
+  sendVerification: (id: string) =>
+    api.request('POST', `${users}/${id}/send-verification`, mutationSchema, {
+      body: { targetId: id, confirmation: 'SEND_VERIFICATION_EMAIL' },
+    }),
+  confirmEmail: (body: { email: string; code: string }) =>
+    api.request('POST', '/v1/email/confirm', z.undefined(), { body }),
+  resendInvitation: (id: string) =>
+    api.request('POST', `${users}/${id}/resend-invitation`, mutationSchema, {
+      body: { targetId: id, confirmation: 'RESEND_INVITATION' },
+    }),
+  acceptInvitation: (body: { email: string; code: string; password: string }) =>
+    api.request('POST', '/v1/email/accept-invitation', z.undefined(), { body }),
   users: (page: number, perPage: number, signal?: AbortSignal) =>
     api.request(
       'GET',

@@ -8,6 +8,8 @@ services:
     environment:
       GOTRUE_API_HOST: 0.0.0.0
       PORT: "8081"
+      GOTRUE_MAILER_TEMPLATES_INVITE: ${GOTRUE_MAILER_TEMPLATES_INVITE:-http://host.docker.internal:5173/email-templates/invitation.html}
+      GOTRUE_MAILER_TEMPLATES_CONFIRMATION: ${GOTRUE_MAILER_TEMPLATES_CONFIRMATION:-http://host.docker.internal:5173/email-templates/confirmation.html}
     ports:
       - "127.0.0.1:8081:8081"
     networks:

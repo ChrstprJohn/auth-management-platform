@@ -91,3 +91,7 @@ Run the expanded fixture-only audit with `pnpm exec tsx scripts/verify-local-web
 3. Preserve default tokens and use the same primitive family across features; composition, accessibility and styling checks apply to generated source too.
 4. Check every mapped state/control through behavior tests and desktop/mobile/keyboard review. A component being installed is not evidence that a feature/state works.
 5. Update frontend checklist items only with actual implementation/verification evidence. Recheck source guidance when a registry API changes; never mechanically copy stale examples.
+
+## Email extension controls
+
+Invite user uses the existing PageHeader/Card/Field/Button conventions. Recipient proof pages use AuthLayout, TextField, new-password PasswordField, FieldGroup and safe status/alert feedback. Account email actions use the existing AlertDialog with bounded viewport height and scrolling, explicit target context and confirmation. No provider settings or privileged credentials enter the UI. Fixture review: pnpm exec tsx scripts/verify-local-web.ts --email-review --ui-review=after --review-port=5174; captures use dummy HTTP responses and send no email.

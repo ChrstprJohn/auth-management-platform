@@ -11,6 +11,18 @@ export const banSchema = z.strictObject({
   targetId: userIdSchema,
   confirmation: z.literal('BAN_GLOBAL_USER'),
 });
+export const inviteSchema = z.strictObject({
+  email: z.email().max(254),
+  confirmation: z.literal('SEND_INVITATION'),
+});
+export const sendVerificationSchema = z.strictObject({
+  targetId: userIdSchema,
+  confirmation: z.literal('SEND_VERIFICATION_EMAIL'),
+});
+export const resendInvitationSchema = z.strictObject({
+  targetId: userIdSchema,
+  confirmation: z.literal('RESEND_INVITATION'),
+});
 export const unbanSchema = z.strictObject({
   targetId: userIdSchema,
   confirmation: z.literal('UNBAN_GLOBAL_USER'),

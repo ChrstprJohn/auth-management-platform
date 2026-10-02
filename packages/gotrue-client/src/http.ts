@@ -32,6 +32,7 @@ export class GoTrueHttp {
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;
+        if (status === 429) throw new UpstreamError('rate_limited');
         if (status === 404) throw new UpstreamError('not_found');
         if (status === 401 || status === 403)
           throw new UpstreamError(identity ? 'identity' : 'unavailable');

@@ -12,6 +12,8 @@ export { UpstreamError } from './errors.js';
 export { GoTrueAdminClient } from './admin-users.js';
 export { GoTrueHttp } from './http.js';
 export { GoTrueRecoveryClient } from './recovery.js';
+export { GoTrueEmailClient } from './email.js';
+export type { EmailClient } from './email.js';
 export type { RecoveryClient } from './recovery.js';
 export type { AdminUser, AdminUsersClient } from './admin-users.js';
 export type {

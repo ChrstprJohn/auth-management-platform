@@ -19,6 +19,7 @@ const live = process.argv.includes('--live');
 const recoveryOnly = process.argv.includes('--recovery-only');
 const layoutReview = process.argv.includes('--layout-review');
 const createReview = process.argv.includes('--create-review');
+const emailReview = process.argv.includes('--email-review');
 const uiReview = process.argv
   .find((argument) => argument.startsWith('--ui-review='))
   ?.split('=')[1];
@@ -33,7 +34,7 @@ const base = `http://localhost:${reviewPort}`;
 const apiBase = 'http://localhost:3101';
 const output = fileURLToPath(
   new URL(
-    `../artifacts/web-review/${uiReview ? `${createReview ? 'create' : layoutReview ? 'layout' : 'polish'}-${uiReview}/` : ''}`,
+    `../artifacts/web-review/${uiReview ? `${emailReview ? 'email' : createReview ? 'create' : layoutReview ? 'layout' : 'polish'}-${uiReview}/` : ''}`,
     import.meta.url,
   ),
 );
@@ -145,6 +146,34 @@ async function fixtureReview(page: Page) {
           requestId: fixtureId,
         };
       } else body = fixtureSession;
+    } else if (emailReview && path.startsWith('/v1/email/')) {
+      check(
+        request.headers()['x-csrf-protection'] === '1',
+        'Email proof includes CSRF',
+      );
+      await route.fulfill({ status: 204, headers });
+      return;
+    } else if (
+      emailReview &&
+      (path.endsWith('/invitations') ||
+        path.endsWith('/send-verification') ||
+        path.endsWith('/resend-invitation'))
+    ) {
+      createCalls++;
+      check(
+        request.headers()['x-csrf-protection'] === '1',
+        'Email send includes CSRF',
+      );
+      status = scenario === 'email-unknown' ? 503 : 202;
+      body =
+        scenario === 'email-unknown'
+          ? {
+              error: { code: 'UPSTREAM_OUTCOME_UNKNOWN', message: 'Fixture' },
+              requestId: fixtureId,
+              auditId: fixtureId,
+              outcome: 'unknown',
+            }
+          : { user: { ...fixtureUser, isBanned: false }, auditId: fixtureId };
     } else if (path === '/v1/operator/users' && request.method() === 'POST') {
       createCalls++;
       check(
@@ -247,7 +276,13 @@ async function fixtureReview(page: Page) {
         auditId: fixtureId,
         outcome: 'unknown',
       };
-    } else body = { user: fixtureUser };
+    } else
+      body = {
+        user: {
+          ...fixtureUser,
+          isBanned: emailReview ? false : fixtureUser.isBanned,
+        },
+      };
     await route.fulfill({
       status,
       headers,
@@ -256,6 +291,92 @@ async function fixtureReview(page: Page) {
     });
   });
   await mkdir(output, { recursive: true });
+  if (emailReview) {
+    for (const width of [1440, 320]) {
+      await page.setViewportSize({ width, height: 1000 });
+      for (const [path, title] of [
+        ['/users/invite', 'Invite a user'],
+        ['/confirm-email', 'Confirm your email'],
+        ['/accept-invitation', 'Accept your invitation'],
+      ] as const) {
+        await navigate(page, path, title);
+        await screenshot(
+          page,
+          `${width}-${path.slice(1).replaceAll('/', '-')}`,
+        );
+        check(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= window.innerWidth,
+          ),
+          'Email form fits viewport',
+        );
+      }
+      await page
+        .getByLabel('Email', { exact: true })
+        .fill('invited@example.test');
+      stage = 'email fixture proof submission';
+      await page.getByLabel('Email code').fill('123456');
+      await page
+        .getByLabel('New password', { exact: true })
+        .fill('fixture-password');
+      await page
+        .getByLabel('Confirm new password', { exact: true })
+        .fill('fixture-password');
+      await page
+        .getByRole('button', { name: 'Verify email and set password' })
+        .click();
+      await page.getByText('Email verified and password set').waitFor();
+      stage = 'email fixture account actions';
+      await navigate(page, `/users/${fixtureId}`, 'Account details');
+      await page
+        .getByRole('button', { name: 'Send verification email', exact: true })
+        .click();
+      const dialog = page.getByRole('alertdialog');
+      await dialog.waitFor();
+      await screenshot(page, `${width}-verification-dialog`);
+      check(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+        'Verification dialog fits viewport',
+      );
+      await dialog.getByRole('button', { name: 'Cancel' }).click();
+      await navigate(page, '/users/invite', 'Invite a user');
+      const another = page.getByRole('button', { name: 'Invite another user' });
+      if (await another.count()) await another.click();
+      await page.getByLabel('Recipient email').fill('invited@example.test');
+      await page
+        .getByRole('button', { name: 'Send invitation', exact: true })
+        .click();
+      await page.getByRole('button', { name: 'Invite another user' }).waitFor();
+    }
+    check(
+      createCalls === 2,
+      'One invitation request per intentional submission',
+    );
+    await navigate(page, `/users/${fixtureId}`, 'Account details');
+    scenario = 'email-unknown';
+    await page
+      .getByRole('button', { name: 'Send verification email', exact: true })
+      .click();
+    const dialog = page.getByRole('alertdialog');
+    await dialog
+      .getByRole('button', { name: 'Send verification email', exact: true })
+      .click();
+    await dialog.getByRole('alert').waitFor();
+    await screenshot(page, '320-verification-unknown');
+    check(
+      await dialog.evaluate(
+        (element) =>
+          element.getBoundingClientRect().height <= window.innerHeight - 20,
+      ),
+      'Unknown email dialog remains inside mobile viewport',
+    );
+    console.log(
+      'Email fixture review passed at desktop and 320px: recipient forms, invitation acceptance, confirmation dialog and invitation sends. No real email sent.',
+    );
+    return;
+  }
   if (createReview) {
     const dialog = page.getByRole('dialog', { name: 'Create a global user' });
     const trigger = page.getByRole('button', {

@@ -16,9 +16,11 @@ import { failureMessage } from '@/lib/api/feedback';
 export function Failure({
   error,
   retry,
+  inspection = true,
 }: {
   error: unknown;
   retry?: () => void;
+  inspection?: boolean;
 }) {
   return (
     <Alert variant="destructive" role="alert">
@@ -34,7 +36,7 @@ export function Failure({
               <p className="break-all">Audit ID: {error.auditId}</p>
             )}
             {error.outcome && <p>Known upstream outcome: {error.outcome}</p>}
-            {error.uncertain && (
+            {error.uncertain && inspection && (
               <p>
                 <Link className="underline" to="/history">
                   Inspect action history

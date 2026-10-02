@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <body>
+    <h1>You have been invited</h1>
+    <p>
+      An operator invited this email address to the shared identity pool. This
+      does not grant dashboard access.
+    </p>
+    <p>Your invitation code: <strong>{{ .Token }}</strong></p>
+    <p>
+      <a href="{{ .SiteURL }}/accept-invitation"
+        >Accept your invitation and choose a password</a
+      >. Enter this email address and the code above. Use only the newest email.
+    </p>
+    <p>
+      If you did not expect this invitation, ignore it. Do not share your code.
+    </p>
+  </body>
+</html>

@@ -7,6 +7,7 @@ import {
 import { afterEach, describe, expect, it } from 'vitest';
 import { GoTrueClient, GoTrueAdminClient, UpstreamError } from './client.js';
 import { GoTrueRecoveryClient } from './recovery.js';
+import { GoTrueEmailClient } from './email.js';
 
 const id = '00000000-0000-4000-8000-000000000001';
 const user = {
@@ -42,6 +43,93 @@ function json(res: ServerResponse, body: unknown, status = 200) {
   res.end(JSON.stringify(body));
 }
 describe('bounded GoTrue adapter', () => {
+  it('uses server-only invitation/resend authentication and discards proof sessions', async () => {
+    const calls: Array<{
+      path: string | undefined;
+      body: unknown;
+      authorization: string | undefined;
+    }> = [];
+    const invited = {
+      ...user,
+      invited_at: '2026-01-01T00:00:00Z',
+      email_confirmed_at: '2026-01-01T00:00:00Z',
+    };
+    const url = await fixture((req, res) => {
+      let body = '';
+      req.setEncoding('utf8');
+      req.on('data', (chunk: string) => {
+        body += chunk;
+      });
+      req.on('end', () => {
+        calls.push({
+          path: req.url,
+          body: body ? JSON.parse(body) : undefined,
+          authorization: req.headers.authorization,
+        });
+        if (req.url === '/invite') json(res, invited);
+        else if (req.url === '/verify')
+          json(res, {
+            user: invited,
+            access_token: 'proof-secret',
+            refresh_token: 'discard-me',
+            expires_in: 300,
+          });
+        else json(res, {});
+      });
+    });
+    const client = new GoTrueEmailClient(url, 1000, 'server-admin');
+    await client.invite(user.email);
+    await client.sendVerification(user.email);
+    const session = await client.verify(user.email, '123456', 'invite');
+    await client.discardSession(session.accessToken);
+    expect(calls).toEqual([
+      {
+        path: '/invite',
+        body: { email: user.email },
+        authorization: 'Bearer server-admin',
+      },
+      {
+        path: '/resend',
+        body: { email: user.email, type: 'signup' },
+        authorization: 'Bearer server-admin',
+      },
+      {
+        path: '/verify',
+        body: { email: user.email, token: '123456', type: 'invite' },
+        authorization: undefined,
+      },
+      {
+        path: '/logout?scope=local',
+        body: undefined,
+        authorization: 'Bearer proof-secret',
+      },
+    ]);
+    expect(JSON.stringify(session)).not.toContain('discard-me');
+  });
+  it('rejects mismatched proof identity and non-invited password setup, and maps sending limits', async () => {
+    const url = await fixture((_req, res) =>
+      json(res, {
+        user: { ...user, email_confirmed_at: '2026-01-01T00:00:00Z' },
+        access_token: 'proof-secret',
+        expires_in: 300,
+      }),
+    );
+    const client = new GoTrueEmailClient(url, 1000, 'server-admin');
+    await expect(
+      client.verify('other@example.test', '123456', 'signup'),
+    ).rejects.toMatchObject({ ambiguous: true });
+    await expect(
+      client.verify(user.email, '123456', 'invite'),
+    ).rejects.toMatchObject({ ambiguous: true });
+    const limited = await fixture((_req, res) =>
+      json(res, { message: 'private' }, 429),
+    );
+    await expect(
+      new GoTrueEmailClient(limited, 1000, 'server-admin').sendVerification(
+        user.email,
+      ),
+    ).rejects.toMatchObject({ kind: 'rate_limited', ambiguous: false });
+  });
   it('uses purpose-bound recovery PKCE payloads and sends only password on update', async () => {
     const calls: Array<{
       path: string | undefined;

@@ -16,7 +16,7 @@ For browser auth and management mutations, including login and logout, require a
 
 ## Initial endpoint contracts
 
-All responses use JSON except successful logout. Reject unknown login fields and validate email/password without logging them. Successful auth responses use `Cache-Control: no-store`. Common errors use `{ "error": { "code": "...", "message": "..." }, "requestId": "..." }` with safe messages.
+Responses use JSON except successful 204 logout, reset and recipient-proof responses, and the recovery callback redirect. Reject unknown login fields and validate email/password without logging them. Successful auth responses use `Cache-Control: no-store`. Common errors use `{ "error": { "code": "...", "message": "..." }, "requestId": "..." }` with safe messages.
 
 | Method | Endpoint                   | Request                                                                     | Success                                                                                                                                     |
 | ------ | -------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -44,7 +44,7 @@ All routes below require an unexpired operator cookie, current allowlist eligibi
 | DELETE | `/v1/operator/users/:id`       | `{confirmation:"DELETE_GLOBAL_USER_PERMANENTLY",targetId}`                                                                | 200 `{deleted:true,targetId,auditId}`                                                               |
 | GET    | `/v1/operator/audit`           | Pagination query                                                                                                          | 200 `{entries,page,perPage,hasNextPage}`                                                            |
 
-Create requires a valid email (max 254 characters), password 8–72 UTF-8 bytes, and an explicit confirmation choice. `operator_confirmed` bypasses email ownership verification. GoTrue admin creation sends no confirmation/invitation email; `require_verification` creates an unconfirmed account and does not promise a sent message. Resend/invitation is deferred. Ban duration is sent as bounded Go duration hours; unban uses `none`; deletion explicitly sends `should_soft_delete:false`. These shapes were checked against [pinned admin handlers](https://github.com/supabase/auth/blob/v2.196.0/internal/api/admin.go); the controlled local walkthrough verified both creation modes without invitation email, the supplied ban duration, unban and permanent deletion.
+Create requires a valid email (max 254 characters), password 8–72 UTF-8 bytes, and an explicit confirmation choice. `operator_confirmed` bypasses email ownership verification. GoTrue admin creation sends no confirmation/invitation email; `require_verification` creates an unconfirmed account and does not promise a sent message. Use the separate email extension below for invitation or verification sends. Ban duration is sent as bounded Go duration hours; unban uses `none`; deletion explicitly sends `should_soft_delete:false`. These shapes were checked against [pinned admin handlers](https://github.com/supabase/auth/blob/v2.196.0/internal/api/admin.go); the controlled local walkthrough verified both creation modes without invitation email, the supplied ban duration, unban and permanent deletion.
 
 Safe user fields: `id`, `email` (nullable), `createdAt`, `emailConfirmedAt`, `lastSignInAt`, `bannedUntil` (nullable), and `isBanned` (nullable if data cannot establish status). Never return metadata, hashes, identities, factors or upstream tokens. Missing optional dates stay null rather than invented dates. A missing `banned_until` means no ban reported by the pinned upstream JSON model; malformed supplied dates fail response validation. Pagination is bounded offset pagination and may shift during concurrent changes.
 
@@ -54,23 +54,23 @@ Ban/delete are serialized with an admin-database advisory lock held on a dedicat
 
 The local ban walkthrough rejected password login and an existing access token at the upstream user endpoint during the ban; unban restored login. Natural ban expiry remains unverified. Bans/deletion affect the shared global identity. They do not promise immediate revocation of every existing token across applications. No platform data is cascaded or reconciled; production deletion is disabled unless `ALLOW_GLOBAL_USER_DELETION=true` is explicitly configured after platform-reference reconciliation has been reviewed. Repeating a confirmed delete yields 404 with a failed audit attempt. Repeating ban/unban is a new recorded upstream request (ban duration restarts). Creation has no idempotency key; inspect unknown outcomes before retrying.
 
-Audit entries contain UUID `id`, `actorId`, nullable `targetId`, action (`create`, `ban`, `unban`, `delete`), outcome, `createdAt`, nullable `completedAt`, and `requestId`. No email/password/token/raw payload is stored. History is retained indefinitely in V1 and read only by operators. Reconciliation is a trusted user-managed SQL update after supported GoTrue checks; no public reconciliation endpoint or automatic retry exists.
+Audit entries contain UUID `id`, `actorId`, nullable `targetId`, action (`create`, `ban`, `unban`, `delete`, `invite`, `send_verification`), outcome, `createdAt`, nullable `completedAt`, and `requestId`. No email/password/token/raw payload is stored. History is retained indefinitely in V1 and read only by operators. Reconciliation is a trusted user-managed SQL update after supported GoTrue checks; no public reconciliation endpoint or automatic retry exists.
 
 ### Management usage after login
 
 Use the preceding login/me/logout flow to preserve the HttpOnly cookie. The browser supplies Origin. The following helper applies the same credential/CSRF policy; every error response must be handled before using returned data:
 
 ```ts
-async function operatorRequest(path: string, method = 'GET', body?: object) {
+async function operatorRequest(path: string, method = "GET", body?: object) {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method,
-    credentials: 'include',
+    credentials: "include",
     headers:
-      method === 'GET'
+      method === "GET"
         ? {}
         : {
-            'Content-Type': 'application/json',
-            'X-CSRF-Protection': '1',
+            "Content-Type": "application/json",
+            "X-CSRF-Protection": "1",
           },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
@@ -78,42 +78,42 @@ async function operatorRequest(path: string, method = 'GET', body?: object) {
   if (!response.ok) throw result; // Include requestId/auditId in safe support reporting.
   return result;
 }
-const page = await operatorRequest('/v1/operator/users?page=1&perPage=20');
-const created = await operatorRequest('/v1/operator/users', 'POST', {
-  email: 'controlled-test@example.test',
+const page = await operatorRequest("/v1/operator/users?page=1&perPage=20");
+const created = await operatorRequest("/v1/operator/users", "POST", {
+  email: "controlled-test@example.test",
   password: controlledTestPassword,
-  confirmation: 'operator_confirmed', // Explicitly bypasses email ownership verification.
+  confirmation: "operator_confirmed", // Explicitly bypasses email ownership verification.
 });
 const targetId = created.user.id;
 const details = await operatorRequest(`/v1/operator/users/${targetId}`);
 // Obtain explicit human confirmation of global shared-account impact first.
 const banned = await operatorRequest(
   `/v1/operator/users/${targetId}/ban`,
-  'POST',
+  "POST",
   {
     targetId,
-    confirmation: 'BAN_GLOBAL_USER',
+    confirmation: "BAN_GLOBAL_USER",
     durationHours: 24,
   },
 );
 const unbanned = await operatorRequest(
   `/v1/operator/users/${targetId}/unban`,
-  'POST',
+  "POST",
   {
     targetId,
-    confirmation: 'UNBAN_GLOBAL_USER',
+    confirmation: "UNBAN_GLOBAL_USER",
   },
 );
 // Requires ALLOW_GLOBAL_USER_DELETION=true; permanent global identity removal.
 const deleted = await operatorRequest(
   `/v1/operator/users/${targetId}`,
-  'DELETE',
+  "DELETE",
   {
     targetId,
-    confirmation: 'DELETE_GLOBAL_USER_PERMANENTLY',
+    confirmation: "DELETE_GLOBAL_USER_PERMANENTLY",
   },
 );
-const history = await operatorRequest('/v1/operator/audit?page=1&perPage=20');
+const history = await operatorRequest("/v1/operator/audit?page=1&perPage=20");
 ```
 
 Representative safe details/create/ban/unban contract:
@@ -156,33 +156,33 @@ Other management errors include `400 UPSTREAM_REJECTED`, `404 USER_NOT_FOUND`, `
 The following illustrates the implemented browser integration. Configure the API and its database first following [backend setup](../../apps/gotrue-admin-api/README.md). Use a controlled operator account and never hard-code real passwords in application source.
 
 ```ts
-const apiBaseUrl = 'http://localhost:3100';
+const apiBaseUrl = "http://localhost:3100";
 
 // email and password come from the sign-in form.
 const login = await fetch(`${apiBaseUrl}/v1/operator/auth/login`, {
-  method: 'POST',
-  credentials: 'include',
+  method: "POST",
+  credentials: "include",
   headers: {
-    'Content-Type': 'application/json',
-    'X-CSRF-Protection': '1',
+    "Content-Type": "application/json",
+    "X-CSRF-Protection": "1",
   },
   body: JSON.stringify({ email, password }),
 });
-if (!login.ok) throw new Error('Sign-in failed');
+if (!login.ok) throw new Error("Sign-in failed");
 const operatorSession = await login.json();
 
 const current = await fetch(`${apiBaseUrl}/v1/operator/auth/me`, {
-  credentials: 'include',
+  credentials: "include",
 });
-if (!current.ok) throw new Error('Could not retrieve current operator');
+if (!current.ok) throw new Error("Could not retrieve current operator");
 const currentOperator = await current.json();
 
 const logout = await fetch(`${apiBaseUrl}/v1/operator/auth/logout`, {
-  method: 'POST',
-  credentials: 'include',
-  headers: { 'X-CSRF-Protection': '1' },
+  method: "POST",
+  credentials: "include",
+  headers: { "X-CSRF-Protection": "1" },
 });
-if (!logout.ok) throw new Error('Sign-out could not be confirmed');
+if (!logout.ok) throw new Error("Sign-out could not be confirmed");
 // Successful logout is 204; there is no JSON body to parse.
 ```
 
@@ -255,27 +255,27 @@ Timeout/ambiguous update returns 503 `PASSWORD_RESET_OUTCOME_UNKNOWN`: password 
 From the configured frontend origin, preserve cookies throughout:
 
 ```ts
-const apiBaseUrl = 'http://localhost:3100';
+const apiBaseUrl = "http://localhost:3100";
 const headers = {
-  'Content-Type': 'application/json',
-  'X-CSRF-Protection': '1',
+  "Content-Type": "application/json",
+  "X-CSRF-Protection": "1",
 };
 const requested = await fetch(
   `${apiBaseUrl}/v1/operator/auth/forgot-password`,
   {
-    method: 'POST',
-    credentials: 'include',
+    method: "POST",
+    credentials: "include",
     headers,
-    body: JSON.stringify({ email: 'controlled-operator@example.test' }),
+    body: JSON.stringify({ email: "controlled-operator@example.test" }),
   },
 );
 if (requested.status !== 202) throw await requested.json();
-// Open Mailpit's newest recovery email in this SAME browser.
+// Open your mailbox's newest recovery email in this SAME browser.
 // Follow its GoTrue link; the gateway exchanges the code and redirects
 // to the configured /reset-password page without credentials in the URL.
 const reset = await fetch(`${apiBaseUrl}/v1/operator/auth/reset-password`, {
-  method: 'POST',
-  credentials: 'include',
+  method: "POST",
+  credentials: "include",
   headers,
   body: JSON.stringify({ password: newControlledPassword }),
 });
@@ -290,3 +290,57 @@ Observed pinned upstream evidence: Mailpit recovery email, PKCE exchange/state p
 ## Documentation required during implementation
 
 Update this reference whenever endpoint behavior changes. The local upstream and recovery gateway probes establish only their recorded controlled flows. They do not establish complete V1 management/security verification, production delivery, or deployment.
+
+## Email extension contract (implemented; live delivery pending)
+
+The user authorized invitation and resend-verification workflows on 2026-10-02. Admin creation remains a separate password-based action and sends no mail. All browser POSTs below require an exact trusted Origin, `X-CSRF-Protection: 1` and JSON; operator actions additionally require an eligible operator cookie. Strict schemas reject additional fields. No endpoint grants operator eligibility or automatically retries a mutation.
+
+| Method/path                                     | Input                                                                                                  | Success contract and effects                                                                                                                                                                  |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /v1/operator/users/invitations`           | `{email, confirmation:"SEND_INVITATION"}`; valid email, max 254                                        | 202 safe user and audit ID; GoTrue `/invite` creates an account without a password or invites an existing unconfirmed account. Recipient chooses a password. Confirmed duplicates return 409. |
+| `POST /v1/operator/users/:id/send-verification` | `{targetId, confirmation:"SEND_VERIFICATION_EMAIL"}`; matching UUID                                    | 202 safe user and audit ID; resolves the current email server-side, rejects invited/confirmed/banned/email-less accounts and calls GoTrue `/resend` with signup type.                         |
+| `POST /v1/operator/users/:id/resend-invitation` | `{targetId, confirmation:"RESEND_INVITATION"}`; matching UUID                                          | 202 safe user and audit ID; only an unconfirmed, usable invited account; uses its server-resolved email and rejects a changed target. Audit action is `invite`.                               |
+| `POST /v1/email/confirm`                        | `{email, code}`; valid email, numeric code 6–10 characters                                             | 204 after GoTrue verifies signup OTP. Discards upstream session credentials; ordinary login still required.                                                                                   |
+| `POST /v1/email/accept-invitation`              | `{email, code, password}`; same email/code rules, password 8 characters minimum/72 UTF-8 bytes maximum | 204 after verifying invitation OTP and setting password. No dashboard session/eligibility is created.                                                                                         |
+
+Invitation/verification sends are limited to 5 requests/IP per 15 minutes, shared across invitation, verification and reinvitation routes; public proof endpoints to 10/IP/15 minutes. Global limits also apply. 429 is an intentional-later-request outcome, not a retry loop. Management actions write durable intent before contacting GoTrue, then completion; migration 0004 extends allowed audit actions. Without it, intent fails before sending. 202 proves upstream acceptance only, never inbox delivery. Mail/dependency timeout or unparseable mutation result is an uncertain outcome with audit/request IDs and read-only history inspection. Completion-storage failure reports the known upstream result separately.
+
+OTP codes and passwords stay in request memory, never URLs, logs or persisted browser state. Invitation verification consumes its code before password update; rejected/ambiguous update must not be repeated with the same code. A partial failure reports `INVITATION_PASSWORD_FAILED` or `INVITATION_OUTCOME_UNKNOWN` and requires normal sign-in or trusted assistance. No recovery token or login credential can replace the invitation/signup code. Existing operator recovery remains the same-browser PKCE flow.
+
+Use the sign-in/cookie-preserving flow above, then send one intentional operator request. Local base URL is `http://localhost:3100`; production uses the configured API origin. UUIDs and addresses below are controlled examples. New safe-user responses include nullable `invitedAt` alongside existing fields.
+
+```javascript
+// In the trusted frontend origin, after operator sign-in:
+await fetch("http://localhost:3100/v1/operator/users/invitations", {
+  method: "POST",
+  credentials: "include",
+  headers: { "Content-Type": "application/json", "X-CSRF-Protection": "1" },
+  body: JSON.stringify({
+    email: "controlled-recipient@example.test",
+    confirmation: "SEND_INVITATION",
+  }),
+});
+// Verification: POST /v1/operator/users/<UUID>/send-verification
+// body: {targetId: '<UUID>', confirmation: 'SEND_VERIFICATION_EMAIL'}
+// Reinvitation: POST /v1/operator/users/<UUID>/resend-invitation
+// body: {targetId: '<UUID>', confirmation: 'RESEND_INVITATION'}
+
+// Recipient submits the newest code, without an operator session:
+await fetch("http://localhost:3100/v1/email/confirm", {
+  method: "POST",
+  credentials: "include",
+  headers: { "Content-Type": "application/json", "X-CSRF-Protection": "1" },
+  body: JSON.stringify({
+    email: "controlled-recipient@example.test",
+    code: "<NEWEST_NUMERIC_CODE>",
+  }),
+});
+// Invitation: POST /v1/email/accept-invitation
+// body: {email: 'controlled-recipient@example.test', code: '<NEWEST_NUMERIC_CODE>', password: '<NEW_PASSWORD>'}
+```
+
+Send success is `202 {"user": <safe user>, "auditId": "<UUID>"}`; proof success is empty 204 with no operator cookie or token. These describe the contract, not observed inbox responses. Invalid bodies/mismatched targets return 400 `INVALID_INPUT`, confirmed duplicates 409 `USER_EXISTS`, ineligible email targets 409 `EMAIL_ACTION_UNAVAILABLE`, and invalid/expired proof 400 `INVALID_EMAIL_CODE`. Auth/CSRF failures follow the shared 401/403 policy. Limits return 429 `EMAIL_RATE_LIMITED` (upstream) or the common limiter envelope, with no automatic retry. Dependency/ambiguous failures return 503; management failures retain the safe audit ID/outcome. Example invalid proof: `{"error":{"code":"INVALID_EMAIL_CODE","message":"The email code is invalid or expired. Use the newest email."},"requestId":"<UUID>"}`.
+
+GoTrue custom confirmation/invitation templates display the OTP and link to `/confirm-email` or `/accept-invitation`. The user reported applying migration 0004. GoTrue recreation is user-operated. Start Vite before sending: Compose points template URLs to `http://host.docker.internal:5173/email-templates/`. A read-only Docker fetch verified both files are reachable. Pinned GoTrue falls back to its default template if fetching fails; keep Vite reachable during local email testing. Live OTP/inbox proof remains pending. Default `/verify` confirmation links are handled by `/auth/callback`, which removes fragment credentials immediately and asks the user to confirm with ordinary sign-in.
+
+Update this reference whenever endpoint behavior changes and update [GoTrue status](status.md) with the actual implementation/verification scope and remaining work. Local probe evidence does not establish production delivery or deployment.

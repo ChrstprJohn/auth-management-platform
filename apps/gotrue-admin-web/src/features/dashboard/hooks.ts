@@ -56,7 +56,16 @@ export function summarizeAudit(entries: AuditEntry[]) {
         count: entries.filter((entry) => entry.outcome === outcome).length,
       }),
     ),
-    actions: (['create', 'ban', 'unban', 'delete'] as const).map((action) => ({
+    actions: (
+      [
+        'create',
+        'ban',
+        'unban',
+        'delete',
+        'invite',
+        'send_verification',
+      ] as const
+    ).map((action) => ({
       label: action,
       count: entries.filter((entry) => entry.action === action).length,
     })),

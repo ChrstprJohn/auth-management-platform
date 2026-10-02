@@ -44,10 +44,13 @@ function useShell() {
     active: location.pathname,
     menuSide: isMobile ? ('bottom' as const) : ('right' as const),
     userParent: location.pathname.startsWith('/users/'),
-    title: location.pathname.startsWith('/users/')
-      ? 'Account details'
-      : (shellLinks.find((item) => location.pathname.startsWith(item.to))
-          ?.label ?? 'GoTrue Operator'),
+    title:
+      location.pathname === '/users/invite'
+        ? 'Invite user'
+        : location.pathname.startsWith('/users/')
+          ? 'Account details'
+          : (shellLinks.find((item) => location.pathname.startsWith(item.to))
+              ?.label ?? 'GoTrue Operator'),
   };
 }
 function ShellContent() {

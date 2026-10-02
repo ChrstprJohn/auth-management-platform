@@ -8,6 +8,7 @@ export const adminUserSchema = z.object({
   email: z.string().nullable().optional(),
   created_at: date.nullable().optional(),
   email_confirmed_at: date.nullable().optional(),
+  invited_at: date.nullable().optional(),
   last_sign_in_at: date.nullable().optional(),
   banned_until: date.nullable().optional(),
   deleted_at: date.nullable().optional(),

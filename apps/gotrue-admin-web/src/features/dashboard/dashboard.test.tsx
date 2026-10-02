@@ -82,7 +82,7 @@ describe('bounded dashboard snapshots', () => {
     ]);
     expect(summary.unresolved).toBe(2);
     expect(summary.outcomes.map((row) => row.count)).toEqual([1, 0, 1, 1]);
-    expect(summary.actions.map((row) => row.count)).toEqual([1, 2, 0, 0]);
+    expect(summary.actions.map((row) => row.count)).toEqual([1, 2, 0, 0, 0, 0]);
     expect(summary.daily).toEqual([
       { date: '2026-10-01', attempts: 3, unresolved: 2 },
     ]);

@@ -7,6 +7,9 @@ import {
   banSchema,
   unbanSchema,
   deleteSchema,
+  inviteSchema,
+  sendVerificationSchema,
+  resendInvitationSchema,
 } from './users.schemas.js';
 import { parseInput, paginationSchema } from '../../shared/http/validation.js';
 import { ApiError } from '../../shared/errors/api-error.js';
@@ -56,6 +59,34 @@ export class UsersController {
         await this.service.create(
           this.context(res),
           this.input(req, createUserSchema),
+        ),
+      );
+  };
+  invite = async (req: Request, res: Response): Promise<void> => {
+    const input = this.input(req, inviteSchema);
+    res
+      .status(202)
+      .json(await this.service.invite(this.context(res), input.email));
+  };
+  sendVerification = async (req: Request, res: Response): Promise<void> => {
+    const input = this.input(req, sendVerificationSchema);
+    res
+      .status(202)
+      .json(
+        await this.service.sendVerification(
+          this.context(res),
+          this.target(req, input.targetId),
+        ),
+      );
+  };
+  resendInvitation = async (req: Request, res: Response): Promise<void> => {
+    const input = this.input(req, resendInvitationSchema);
+    res
+      .status(202)
+      .json(
+        await this.service.resendInvitation(
+          this.context(res),
+          this.target(req, input.targetId),
         ),
       );
   };

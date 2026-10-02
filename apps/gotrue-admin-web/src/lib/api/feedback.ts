@@ -1,6 +1,16 @@
 import { ApiFailure } from './client';
 
 const messages: Record<string, string> = {
+  INVALID_EMAIL_CODE:
+    'The email code is invalid or expired. Use the newest email.',
+  EMAIL_RATE_LIMITED:
+    'Email requests are limited. Wait before making a new request.',
+  EMAIL_ACTION_UNAVAILABLE:
+    'This action requires an unconfirmed account with a usable email address.',
+  INVITATION_PASSWORD_FAILED:
+    'Email was verified, but password setup failed and the code was consumed. Contact the inviting operator.',
+  INVITATION_OUTCOME_UNKNOWN:
+    'Email was verified, but the password result is unknown. Try ordinary sign-in or contact the inviting operator; do not repeat this submission.',
   AUTHENTICATION_REQUIRED: 'Sign in with valid operator credentials.',
   ACCESS_DENIED:
     'Access was denied. Check operator eligibility and use the trusted dashboard origin.',

@@ -1,6 +1,6 @@
 # Operator frontend architecture
 
-Status: implemented in `apps/gotrue-admin-web`; local verification and remaining launch prerequisites are recorded in the [frontend checklist](frontend-checklist.md). This file owns the stack and implementation boundaries. [Frontend requirements](frontend-requirements.md) owns screens and all 16 endpoint mappings; [implementation plan](frontend-implementation-plan.md) owns phases and acceptance gates; [API reference](api.md) owns HTTP contracts; [AGENTS.md](../../AGENTS.md) owns coding and delivery rules.
+Status: implemented in `apps/gotrue-admin-web`; local verification and remaining launch prerequisites are recorded in the [frontend checklist](frontend-checklist.md). This file owns the stack and implementation boundaries. [Frontend requirements](frontend-requirements.md) owns screens and all 21 endpoint mappings; [implementation plan](frontend-implementation-plan.md) owns phases and acceptance gates; [API reference](api.md) owns HTTP contracts; [AGENTS.md](../../AGENTS.md) owns coding and delivery rules.
 
 ## Stack
 
@@ -110,3 +110,7 @@ Hooks return explicit named states rather than a collection of booleans that per
 Dialog focus, Escape/cancel, route changes and reduced-motion behavior need explicit handling. During a pending or uncertain mutation, closing an overlay must not discard outcome feedback or imply cancellation of the backend action. Ordinary read failures can retain current data with an error banner; session loss removes it.
 
 Implementation status and verification belong in the [frontend checklist](frontend-checklist.md), with overall product status in the existing delivery checklist. Follow [implementation phases and gates](frontend-implementation-plan.md). Production hosting/origin checks, natural upstream OTP expiry, platform-reference reconciliation and branded backend callback-error redirects remain separately scoped work. A reusable [AI handoff goal](frontend-ai-goal.md) points to the complete documentation and autonomous-work boundaries.
+
+## Email extension
+
+Email feature hooks own invitation form/mutation state in an app-level provider and public proof orchestration. Views render accessible fields, safe outcomes and callbacks. Invited state comes from safe invitedAt; it selects reinvitation instead of signup resend in details. Codes/passwords are cleared before the request settles and never retained in mutation variables or persistent storage. Definite invalid-code/limit rejection permits deliberate re-entry; consumed or uncertain results remain blocked. Completion clears private account state only if the submission's session generation is still current. Legacy callback credentials are removed before React renders. Operator recovery remains PKCE and uses its separate server-held context.

@@ -4,6 +4,7 @@ export const identitySchema = z.object({
   id: z.uuid(),
   email: z.email(),
   email_confirmed_at: z.string().nullable().optional(),
+  invited_at: z.string().nullable().optional(),
   banned_until: z.string().nullable().optional(),
 });
 export type Identity = z.infer<typeof identitySchema>;

@@ -15,7 +15,7 @@ CREATE TABLE management_audit (
   id uuid PRIMARY KEY,
   actor_id uuid NOT NULL,
   target_id uuid,
-  action text NOT NULL CHECK (action IN ('create','ban','unban','delete')),
+  action text NOT NULL CHECK (action IN ('create','ban','unban','delete','invite','send_verification')),
   outcome text NOT NULL DEFAULT 'pending' CHECK (outcome IN ('pending','succeeded','failed','unknown')),
   request_id uuid NOT NULL,
   created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,

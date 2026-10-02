@@ -12,6 +12,8 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { UserCreationProvider, useCreateUser } from './creation';
+import { InvitationOutcome } from '@/features/email/views';
+import { InvitationProvider } from '@/features/email/hooks';
 import type { SafeUser } from '@auth/contracts';
 import { useSession } from '@/app/session';
 import { operatorApi } from '@/lib/api/operator';
@@ -39,7 +41,12 @@ import {
   CardContent,
 } from '@/components/ui/card';
 
-type Action = 'ban' | 'unban' | 'delete';
+type Action =
+  | 'ban'
+  | 'unban'
+  | 'delete'
+  | 'send_verification'
+  | 'resend_invitation';
 type Target = { id: string; email: string | null; action: Action };
 export const durationSchema = z.object({
   durationHours: z
@@ -68,11 +75,15 @@ function useActionController() {
       if (!target) throw new ApiFailure('INVALID_INPUT', 400, false);
       const current = target;
       const response = await runtime.protectedCall<{ auditId: string }>(() =>
-        current.action === 'ban'
-          ? operatorApi.ban(current.id, form.getValues('durationHours'))
-          : current.action === 'unban'
-            ? operatorApi.unban(current.id)
-            : operatorApi.delete(current.id),
+        current.action === 'resend_invitation'
+          ? operatorApi.resendInvitation(current.id)
+          : current.action === 'send_verification'
+            ? operatorApi.sendVerification(current.id)
+            : current.action === 'ban'
+              ? operatorApi.ban(current.id, form.getValues('durationHours'))
+              : current.action === 'unban'
+                ? operatorApi.unban(current.id)
+                : operatorApi.delete(current.id),
       );
       return { auditId: response.auditId, target: current };
     },
@@ -159,9 +170,11 @@ function StatefulActions({ children }: { children: ReactNode }) {
 }
 export function UserActionsProvider({ children }: { children: ReactNode }) {
   return (
-    <UserCreationProvider>
-      <StatefulActions>{children}</StatefulActions>
-    </UserCreationProvider>
+    <InvitationProvider>
+      <UserCreationProvider>
+        <StatefulActions>{children}</StatefulActions>
+      </UserCreationProvider>
+    </InvitationProvider>
   );
 }
 function useActions() {
@@ -174,6 +187,7 @@ export function ActionOutcome() {
   const creation = useCreateUser();
   return (
     <div className="space-y-3 empty:hidden">
+      <InvitationOutcome />
       {!creation.open && creation.pending && (
         <Success title="Account creation pending">
           Navigating away does not cancel account creation.
@@ -195,7 +209,13 @@ export function ActionOutcome() {
       {m.error && <Failure error={m.error} />}
       {m.result && (
         <Success
-          title={`${m.result.target.action === 'delete' ? 'Permanent deletion' : m.result.target.action === 'ban' ? 'Ban' : 'Unban'} confirmed`}
+          title={
+            m.result.target.action === 'resend_invitation'
+              ? 'Invitation request accepted; confirm inbox delivery'
+              : m.result.target.action === 'send_verification'
+                ? 'Verification request accepted; confirm inbox delivery'
+                : `${m.result.target.action === 'delete' ? 'Permanent deletion' : m.result.target.action === 'ban' ? 'Ban' : 'Unban'} confirmed`
+          }
         >
           Target: <CopyId value={m.result.target.id} label="target UUID" /> ·
           Audit: <CopyId value={m.result.auditId} label="audit ID" />
@@ -224,6 +244,25 @@ export function UserActions({ user }: { user: SafeUser }) {
         <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap lg:flex-col">
           <Button
             variant="outline"
+            disabled={
+              m.pending ||
+              m.uncertain ||
+              !user.email ||
+              !!user.emailConfirmedAt ||
+              user.isBanned !== false
+            }
+            onClick={(event) =>
+              m.start(
+                user,
+                user.invitedAt ? 'resend_invitation' : 'send_verification',
+                event.currentTarget,
+              )
+            }
+          >
+            {user.invitedAt ? 'Resend invitation' : 'Send verification email'}
+          </Button>
+          <Button
+            variant="outline"
             disabled={m.pending || m.uncertain}
             onClick={(event) => m.start(user, 'ban', event.currentTarget)}
           >
@@ -246,22 +285,33 @@ export function UserActions({ user }: { user: SafeUser }) {
         </div>
       </CardContent>
       <AlertDialog open={m.open} onOpenChange={m.changeOpen}>
-        <AlertDialogContent finalFocus={m.opener}>
+        <AlertDialogContent
+          finalFocus={m.opener}
+          className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+        >
           <form noValidate onSubmit={m.submit}>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {m.target?.action === 'delete'
-                  ? 'Permanently delete global identity?'
-                  : m.target?.action === 'ban'
-                    ? 'Ban global identity?'
-                    : 'Unban global identity?'}
+                {m.target?.action === 'resend_invitation'
+                  ? 'Resend invitation?'
+                  : m.target?.action === 'send_verification'
+                    ? 'Send verification email?'
+                    : m.target?.action === 'delete'
+                      ? 'Permanently delete global identity?'
+                      : m.target?.action === 'ban'
+                        ? 'Ban global identity?'
+                        : 'Unban global identity?'}
               </AlertDialogTitle>
               <AlertDialogDescription>
-                {m.target?.action === 'delete'
-                  ? 'This permanently removes the shared GoTrue identity across all applications. Application references are not automatically reconciled.'
-                  : m.target?.action === 'ban'
-                    ? 'This blocks access through the shared identity for the chosen duration.'
-                    : 'This explicitly restores access by clearing the shared identity ban.'}
+                {m.target?.action === 'resend_invitation'
+                  ? 'This sends a new invitation to the current address. The recipient uses the newest code and chooses their own password. Acceptance does not guarantee delivery.'
+                  : m.target?.action === 'send_verification'
+                    ? 'This sends an email to the account’s current address. Upstream acceptance does not guarantee inbox delivery. Use the newest email code to verify.'
+                    : m.target?.action === 'delete'
+                      ? 'This permanently removes the shared GoTrue identity across all applications. Application references are not automatically reconciled.'
+                      : m.target?.action === 'ban'
+                        ? 'This blocks access through the shared identity for the chosen duration.'
+                        : 'This explicitly restores access by clearing the shared identity ban.'}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="my-5 space-y-4">
@@ -301,11 +351,15 @@ export function UserActions({ user }: { user: SafeUser }) {
                 {m.pending && <Spinner />}
                 {m.pending
                   ? 'Applying…'
-                  : m.target?.action === 'delete'
-                    ? 'Confirm permanent deletion'
-                    : m.target?.action === 'ban'
-                      ? 'Confirm ban'
-                      : 'Confirm unban'}
+                  : m.target?.action === 'resend_invitation'
+                    ? 'Resend invitation'
+                    : m.target?.action === 'send_verification'
+                      ? 'Send verification email'
+                      : m.target?.action === 'delete'
+                        ? 'Confirm permanent deletion'
+                        : m.target?.action === 'ban'
+                          ? 'Confirm ban'
+                          : 'Confirm unban'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </form>
