@@ -37,6 +37,64 @@ describe('same-browser recovery UI', () => {
     );
     expect(forgot).toHaveBeenCalledWith({ email: 'controlled@example.test' });
   });
+  it('marks a non-operator email invalid and allows correction without automatic retry', async () => {
+    vi.spyOn(operatorApi, 'me').mockResolvedValue(fixtureSession);
+    const forgot = vi
+      .spyOn(operatorApi, 'forgot')
+      .mockRejectedValueOnce(
+        new ApiFailure('OPERATOR_RECOVERY_UNAVAILABLE', 400, false),
+      )
+      .mockResolvedValueOnce({ message: 'fixture' });
+    renderApp(<ForgotPasswordPage />);
+    const email = screen.getByLabelText('Email');
+    await userEvent.type(email, 'ordinary@example.test');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Request recovery email' }),
+    );
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(
+      'Password recovery is only available for operator accounts.',
+    );
+    expect(alert).toHaveAttribute('id', 'recovery-email-error');
+    expect(email).toHaveAttribute('aria-invalid', 'true');
+    await waitFor(() => expect(email).toHaveFocus());
+    expect(email).toHaveValue('ordinary@example.test');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(forgot).toHaveBeenCalledTimes(1);
+    await userEvent.clear(email);
+    await userEvent.type(email, 'operator@example.test');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Request recovery email' }),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'does not confirm delivery',
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(forgot).toHaveBeenCalledTimes(2);
+    expect(forgot).toHaveBeenLastCalledWith({ email: 'operator@example.test' });
+  });
+  it('shows dependency failure separately from email eligibility', async () => {
+    vi.spyOn(operatorApi, 'me').mockResolvedValue(fixtureSession);
+    const forgot = vi
+      .spyOn(operatorApi, 'forgot')
+      .mockRejectedValue(new ApiFailure('DEPENDENCY_UNAVAILABLE', 503, false));
+    renderApp(<ForgotPasswordPage />);
+    await userEvent.type(
+      screen.getByLabelText('Email'),
+      'operator@example.test',
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Request recovery email' }),
+    );
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'A required service is unavailable.',
+    );
+    expect(screen.getByLabelText('Email')).toHaveAttribute(
+      'aria-invalid',
+      'false',
+    );
+    expect(forgot).toHaveBeenCalledTimes(1);
+  });
   it('clears private caches after 204 and sends only password', async () => {
     vi.spyOn(operatorApi, 'me').mockResolvedValue(fixtureSession);
     const reset = vi.spyOn(operatorApi, 'reset').mockResolvedValue(undefined);
@@ -54,7 +112,7 @@ describe('same-browser recovery UI', () => {
       screen.getByRole('button', { name: 'Reset password' }),
     );
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'Password reset confirmed',
+      'Your dashboard sessions were cleared.',
     );
     expect(reset).toHaveBeenCalledWith({ password: 'valid-password' });
     expect(runtime.client.getQueryData(['private', 'fixture'])).toBeUndefined();
