@@ -380,6 +380,28 @@ describe('operator recovery boundaries', () => {
     expect(resource.store.invalidations).toBe(1);
     expect((await reset(resource.app, context.pair)).status).toBe(400);
   });
+  it.each([
+    ['same_password', 'PASSWORD_RESET_SAME_PASSWORD', 400],
+    ['weak_password', 'PASSWORD_RESET_WEAK_PASSWORD', 400],
+    ['rejected', 'PASSWORD_RESET_REJECTED', 400],
+    ['rate_limited', 'PASSWORD_RESET_RATE_LIMITED', 429],
+  ] as const)(
+    'distinguishes %s after valid recovery from an expired link and consumes the attempt',
+    async (kind, errorCode, status) => {
+      const resource = setup();
+      const context = await ready(resource);
+      resource.upstream.updateError = new UpstreamError(kind);
+      const response = await reset(resource.app, context.pair);
+      expect(response.status).toBe(status);
+      expect(response.body.error.code).toBe(errorCode);
+      expect(response.body.error.message).toContain('fresh recovery email');
+      expect(JSON.stringify(response.body)).not.toContain('access_token');
+      expect((await reset(resource.app, context.pair)).body.error.code).toBe(
+        'INVALID_RECOVERY',
+      );
+      expect(resource.upstream.updates).toBe(1);
+    },
+  );
   it('rejects extra reset fields and oversized UTF-8 passwords before consuming context', async () => {
     const resource = setup();
     const context = await ready(resource);

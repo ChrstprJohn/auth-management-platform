@@ -24,6 +24,14 @@ const messages: Record<string, string> = {
   USER_NOT_FOUND: 'This account is missing or has already been deleted.',
   INVALID_RECOVERY:
     'Recovery is missing, expired, already used or unavailable for this account. Request a fresh email in this browser.',
+  PASSWORD_RESET_SAME_PASSWORD:
+    'Choose a password different from your current password. Request a fresh recovery email before trying again.',
+  PASSWORD_RESET_WEAK_PASSWORD:
+    'The password does not meet the account password policy. Request a fresh recovery email and choose a stronger password.',
+  PASSWORD_RESET_REJECTED:
+    'The password change was rejected. Request a fresh recovery email or contact the server administrator.',
+  PASSWORD_RESET_RATE_LIMITED:
+    'Password reset was rate limited. Wait before requesting a fresh recovery email.',
   DELETION_DISABLED:
     'Permanent deletion is disabled by the backend. The account remains available for inspection.',
   LAST_USABLE_OPERATOR:

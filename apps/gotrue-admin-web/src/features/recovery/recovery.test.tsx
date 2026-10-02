@@ -61,6 +61,10 @@ describe('same-browser recovery UI', () => {
   });
   it.each([
     'INVALID_RECOVERY',
+    'PASSWORD_RESET_SAME_PASSWORD',
+    'PASSWORD_RESET_WEAK_PASSWORD',
+    'PASSWORD_RESET_REJECTED',
+    'PASSWORD_RESET_RATE_LIMITED',
     'PASSWORD_RESET_OUTCOME_UNKNOWN',
     'PASSWORD_RESET_COMPLETION_FAILED',
   ])('blocks repeat reset after %s and releases secrets', async (code) => {
@@ -70,8 +74,12 @@ describe('same-browser recovery UI', () => {
       .mockRejectedValue(
         new ApiFailure(
           code,
-          code === 'INVALID_RECOVERY' ? 400 : 503,
-          code !== 'INVALID_RECOVERY',
+          code === 'PASSWORD_RESET_RATE_LIMITED'
+            ? 429
+            : code.endsWith('UNKNOWN') || code.endsWith('COMPLETION_FAILED')
+              ? 503
+              : 400,
+          code.endsWith('UNKNOWN') || code.endsWith('COMPLETION_FAILED'),
         ),
       );
     renderApp(<ResetPasswordPage />);
@@ -87,6 +95,14 @@ describe('same-browser recovery UI', () => {
       screen.getByRole('button', { name: 'Reset password' }),
     );
     expect(await screen.findByRole('alert')).toBeVisible();
+    if (code === 'PASSWORD_RESET_SAME_PASSWORD') {
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'different from your current password',
+      );
+      expect(screen.getByRole('alert')).not.toHaveTextContent(
+        'missing, expired',
+      );
+    }
     await waitFor(() =>
       expect(screen.getByLabelText('New password')).toHaveValue(''),
     );

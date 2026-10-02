@@ -3,6 +3,8 @@ export class UpstreamError extends Error {
     public readonly kind:
       | 'identity'
       | 'rate_limited'
+      | 'same_password'
+      | 'weak_password'
       | 'unavailable'
       | 'not_found'
       | 'rejected'

@@ -129,6 +129,32 @@ export class RecoveryService {
         throw invalidRecovery();
       await this.upstream.updatePassword(token, password, user.id);
     } catch (error) {
+      if (error instanceof UpstreamError) {
+        if (error.kind === 'same_password')
+          throw new ApiError(
+            400,
+            'PASSWORD_RESET_SAME_PASSWORD',
+            'Choose a password different from your current password. Request a fresh recovery email before trying again.',
+          );
+        if (error.kind === 'weak_password')
+          throw new ApiError(
+            400,
+            'PASSWORD_RESET_WEAK_PASSWORD',
+            'The password does not meet the account password policy. Request a fresh recovery email and choose a stronger password.',
+          );
+        if (error.kind === 'rejected')
+          throw new ApiError(
+            400,
+            'PASSWORD_RESET_REJECTED',
+            'The password change was rejected. Request a fresh recovery email or contact the server administrator.',
+          );
+        if (error.kind === 'rate_limited')
+          throw new ApiError(
+            429,
+            'PASSWORD_RESET_RATE_LIMITED',
+            'Password reset was rate limited. Wait before requesting a fresh recovery email.',
+          );
+      }
       if (
         error instanceof UpstreamError &&
         (error.ambiguous || error.kind === 'unavailable')

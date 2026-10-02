@@ -221,10 +221,39 @@ describe('bounded GoTrue adapter', () => {
         id,
       ),
     ).rejects.toMatchObject({
-      kind: 'identity',
+      kind: 'rejected',
       message: 'GoTrue request failed',
     });
   });
+  it.each(['same_password', 'weak_password'] as const)(
+    'preserves safe password rejection %s without leaking the upstream response',
+    async (errorCode) => {
+      const url = await fixture((_req, res) =>
+        json(
+          res,
+          { error_code: errorCode, msg: 'private-provider-detail' },
+          422,
+        ),
+      );
+      await expect(
+        new GoTrueRecoveryClient(url, 1000).updatePassword(
+          'private-token',
+          'private-password',
+          id,
+        ),
+      ).rejects.toMatchObject({
+        kind: errorCode,
+        ambiguous: false,
+        message: 'GoTrue request failed',
+      });
+      await expect(
+        new GoTrueRecoveryClient(url, 1000).exchangeRecovery(
+          'private-code',
+          'private-verifier',
+        ),
+      ).rejects.toMatchObject({ kind: 'identity' });
+    },
+  );
   it('rejects mismatched user identities and marks mutation responses uncertain', async () => {
     const url = await fixture((_req, res) =>
       json(res, { ...user, id: '00000000-0000-4000-8000-000000000002' }),
