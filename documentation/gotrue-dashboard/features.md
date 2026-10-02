@@ -21,7 +21,7 @@ Operator eligibility comes from a server-controlled allowlist of GoTrue UUIDs. V
 
 ## 2. Operator password recovery
 
-- Provide a forgot-password flow with a generic response that does not reveal whether an email belongs to an operator.
+- Validate the current operator email before requesting recovery. Show an email-field error for ordinary/absent/ineligible accounts and send no recovery mail for them; eligible requests receive an acknowledgement that does not confirm delivery. See the [recovery API contract](api.md#password-recovery-implemented-isolated-verification).
 - Deliver recovery email to Mailpit locally and the configured email provider in production.
 - Allow only trusted recovery destinations and use expiring, purpose-bound recovery context.
 - Let the account owner set a new password through GoTrue's supported recovery flow; invalid/expired links show a safe error.

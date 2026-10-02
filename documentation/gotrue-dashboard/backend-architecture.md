@@ -216,7 +216,7 @@ See [API reference](api.md) for methods, payloads, status codes, health checks, 
 
 ### Password recovery
 
-Use GoTrue's built-in recovery after the initial login flow works. Send a generic response without disclosing account/operator existence, apply rate limits, and use a fixed trusted gateway callback; never accept arbitrary redirect destinations. Recovery context must expire and be bound to password recovery. Password reset does not grant operator eligibility or establish a dashboard management session; require normal login afterward.
+Use GoTrue's built-in recovery after the initial login flow works. At the user's request, validate operator-email eligibility before creating context or sending: RecoveryService reads only configured UUIDs through the existing constructor-injected admin client and applies the shared usable-operator rule plus non-deletion and current-email matching. There is no cached email roster, user-directory search or direct GoTrue SQL. Explicit rejection deliberately replaces identity-independent acknowledgement; unavailable lookups remain dependency failures. The [API reference](api.md#password-recovery-implemented-isolated-verification) owns the response details. Apply rate limits and use a fixed trusted gateway callback; never accept arbitrary redirect destinations. Recovery context must expire and be bound to password recovery. Password reset does not grant operator eligibility or establish a dashboard management session; require normal login afterward.
 
 When the gateway successfully completes password reset, invalidate all local operator sessions for that UUID. Do not promise equivalent behavior for out-of-band resets or other applications until tested against GoTrue.
 
