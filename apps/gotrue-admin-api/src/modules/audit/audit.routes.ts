@@ -8,5 +8,6 @@ export function createAuditRoutes(
 ): Router {
   const router = Router();
   router.get('/', authenticate.handle, controller.list);
+  router.get('/:id', authenticate.handle, controller.find);
   return router;
 }

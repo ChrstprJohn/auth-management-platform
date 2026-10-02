@@ -45,6 +45,12 @@ export class AuditService {
       hasNextPage: entries.length > perPage,
     };
   }
+  async find(id: string) {
+    const entry = await this.store.find(id);
+    if (!entry)
+      throw new ApiError(404, 'AUDIT_NOT_FOUND', 'Action record not found.');
+    return { entry };
+  }
   hasUnresolvedOperatorRemoval(ids: readonly string[]) {
     return this.store.hasUnresolvedOperatorRemoval(ids);
   }

@@ -18,6 +18,56 @@ function pool() {
 }
 const result = { command: 'SELECT', rowCount: 1, oid: 0, fields: [], rows: [] };
 describe('owned storage boundaries (mocked pg, no executed SQL)', () => {
+  it('binds audit lookup IDs, validates safe rows and keeps absent/corrupt/unavailable distinct', async () => {
+    const database = pool();
+    const id = '11111111-1111-4111-8111-111111111111';
+    const query = vi
+      .spyOn(database, 'query')
+      .mockImplementation(async () => ({ ...result, rows: [] }));
+    const repository = new AuditRepository(database);
+    expect(await repository.find(id)).toBeNull();
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('WHERE id=$1'), [
+      id,
+    ]);
+    const created = new Date('2026-10-02T01:15:00Z');
+    query.mockImplementation(async () => ({
+      ...result,
+      rows: [
+        {
+          id,
+          actor_id: id,
+          target_id: null,
+          action: 'invite',
+          outcome: 'pending',
+          created_at: created,
+          completed_at: null,
+          request_id: id,
+          password: 'must-never-return',
+        },
+      ],
+    }));
+    expect(await repository.find(id)).toEqual({
+      id,
+      actorId: id,
+      targetId: null,
+      action: 'invite',
+      outcome: 'pending',
+      createdAt: created.toISOString(),
+      completedAt: null,
+      requestId: id,
+    });
+    query.mockImplementation(async () => ({
+      ...result,
+      rows: [{ id: 'invalid' }],
+    }));
+    await expect(repository.find(id)).rejects.toMatchObject({
+      code: 'DEPENDENCY_UNAVAILABLE',
+    });
+    query.mockRejectedValue(new Error('private details'));
+    await expect(repository.find(id)).rejects.toMatchObject({
+      message: 'A required service is unavailable.',
+    });
+  });
   const recoveryRow = {
     recovery_hash: 'a'.repeat(64),
     email_hash: 'b'.repeat(64),

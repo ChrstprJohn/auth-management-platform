@@ -1,6 +1,8 @@
 # GoTrue operator dashboard status
 
-Latest prepared task: [Operator UI clarity goal](operator-ui-clarity-goal.md), prepared on 2026-10-02. It covers shadcn-only invite/confirmation modals, concise View actions, notifications and automatic confirmed-modal closure, removal of routine inline alerts/IDs, full-page history inspection, copy cleanup and consistent dates across all existing screens. The goal document is complete; UI implementation and its verification have not started.
+UI clarity implementation is in progress. On 2026-10-02, the authoritative `GET /v1/operator/audit/:id` lookup was implemented through the existing audit repository/service/controller with UUID validation, eligible-cookie checks, safe missing/dependency responses and no schema changes. The isolated users/audit and mocked-storage suites passed (36 tests); no SQL or live audit walkthrough was performed. Frontend implementation and required aggregate/browser checks remain in progress.
+
+Latest prepared task: [Operator UI clarity goal](operator-ui-clarity-goal.md), prepared on 2026-10-02. It covers shadcn-only invite/confirmation modals, concise View actions, notifications and automatic confirmed-modal closure, removal of routine inline alerts/IDs, full-page history inspection, copy cleanup and consistent dates across all existing screens. Implementation has started; required frontend and aggregate verification is in progress.
 
 Last verified for this goal: 2026-10-02.
 

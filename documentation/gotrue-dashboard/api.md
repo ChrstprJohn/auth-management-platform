@@ -30,6 +30,20 @@ Use `400` for invalid input, `401` for invalid credentials or absent/invalid/exp
 
 ## User management and audit contracts (implemented; local walkthrough verified)
 
+### Audit record lookup (implemented; isolated verification)
+
+`GET /v1/operator/audit/:id` reads one durable record for an eligible operator using the same cookie and per-request eligibility checks as the audit list. `id` must be a UUID; invalid input returns `400 INVALID_INPUT`, an absent record returns `404 AUDIT_NOT_FOUND`, and authentication/access/dependency errors use the common `401`/`403`/`503` envelope. No body, query parameters or CSRF header is required for this read. Local base URL is `http://localhost:3100`; production uses the configured API origin and HTTPS cookie policy.
+
+After the documented cookie-preserving sign-in flow, request the record using the same cookie jar:
+
+```sh
+curl --cookie operator-cookies.txt http://localhost:3100/v1/operator/audit/REPLACE_WITH_AUDIT_UUID
+```
+
+Representative success: `200 {"entry":{"id":"AUDIT_UUID","actorId":"OPERATOR_UUID","targetId":null,"action":"invite","outcome":"pending","createdAt":"ISO_TIMESTAMP","completedAt":null,"requestId":"REQUEST_UUID"}}`. Missing example: `404 {"error":{"code":"AUDIT_NOT_FOUND","message":"Action record not found."},"requestId":"REQUEST_UUID"}`. Examples describe the contract, not live captures.
+
+The lookup uses the existing admin audit table and requires no migration. It performs no mutation, upstream call, audit completion or reconciliation, and is safe to deliberately retry. Pending/unknown records remain unresolved; a target ID does not establish that the account still exists. The browser detail page loads this endpoint on direct navigation/refresh and keeps list pagination in validated URL parameters.
+
 `GET /v1/operator/health` requires the same operator cookie/eligibility checks. It makes a bounded GoTrue health request and returns `200 {"status":"reachable","version":"v2.196.0"}` or `503 {"status":"unavailable","version":null}`. This safe version view has no mutations or audit effects, is safe to retry, and does not establish email/auth/database readiness. Authentication failures retain the common error envelope.
 
 All routes below require an unexpired operator cookie, current allowlist eligibility and upstream identity validation. Mutations additionally require the same exact Origin/custom-header/JSON policy as login. Pagination accepts only `page` (integer 1–10000, default 1) and `perPage` (integer 1–100, default 20); unknown query/body fields are rejected. Account path IDs must be UUIDs. Search and arbitrary upstream payload forwarding are not supported.

@@ -17,6 +17,7 @@ export interface AuditStore {
     targetId: string | null,
   ): Promise<void>;
   list(page: number, perPage: number): Promise<AuditEntry[]>;
+  find(id: string): Promise<AuditEntry | null>;
   hasUnresolvedOperatorRemoval(
     operatorIds: readonly string[],
   ): Promise<boolean>;
@@ -38,6 +39,19 @@ const rowSchema = z.object({
   completed_at: z.date().nullable(),
   request_id: z.uuid(),
 });
+function entryFromRow(value: unknown): AuditEntry {
+  const row = rowSchema.parse(value);
+  return {
+    id: row.id,
+    actorId: row.actor_id,
+    targetId: row.target_id,
+    action: row.action,
+    outcome: row.outcome,
+    createdAt: row.created_at.toISOString(),
+    completedAt: row.completed_at?.toISOString() ?? null,
+    requestId: row.request_id,
+  };
+}
 export class AuditRepository implements AuditStore {
   constructor(private readonly pool: Pool) {}
   async intent(
@@ -78,19 +92,18 @@ export class AuditRepository implements AuditStore {
         'SELECT id, actor_id, target_id, action, outcome, created_at, completed_at, request_id FROM management_audit ORDER BY created_at DESC, id DESC LIMIT $1 OFFSET $2',
         [perPage + 1, (page - 1) * perPage],
       );
-      return result.rows.map((value) => {
-        const row = rowSchema.parse(value);
-        return {
-          id: row.id,
-          actorId: row.actor_id,
-          targetId: row.target_id,
-          action: row.action,
-          outcome: row.outcome,
-          createdAt: row.created_at.toISOString(),
-          completedAt: row.completed_at?.toISOString() ?? null,
-          requestId: row.request_id,
-        };
-      });
+      return result.rows.map(entryFromRow);
+    } catch {
+      throw unavailable();
+    }
+  }
+  async find(id: string): Promise<AuditEntry | null> {
+    try {
+      const result = await this.pool.query<Record<string, unknown>>(
+        'SELECT id, actor_id, target_id, action, outcome, created_at, completed_at, request_id FROM management_audit WHERE id=$1',
+        [id],
+      );
+      return result.rows.length ? entryFromRow(result.rows[0]) : null;
     } catch {
       throw unavailable();
     }

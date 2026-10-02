@@ -56,6 +56,11 @@ class Audit implements AuditStore {
   readonly rows: AuditEntry[] = [];
   failIntent = false;
   failCompletion = false;
+  failLookup = false;
+  async find(id: string) {
+    if (this.failLookup) throw unavailable();
+    return this.rows.find((entry) => entry.id === id) ?? null;
+  }
   async intent(
     actorId: string,
     targetId: string | null,
@@ -259,6 +264,45 @@ async function setup(deletionAllowed = true) {
   return { ...resource, upstream, audit, sessions, cookie, login, mutation };
 }
 describe('user management and audit HTTP boundaries', () => {
+  it('loads one authoritative audit record with UUID validation, missing and dependency errors', async () => {
+    const { app, audit, cookie, upstream } = await setup();
+    const id = await audit.intent(first, null, 'invite', randomUUID());
+    const read = (path: string) => request(app).get(path).set('Cookie', cookie);
+    const response = await read(`/v1/operator/audit/${id.toUpperCase()}`);
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ entry: audit.rows[0] });
+    expect(response.headers['cache-control']).toBe('no-store');
+    expect(upstream.mutations).toBe(0);
+    expect((await read('/v1/operator/audit/not-a-uuid')).status).toBe(400);
+    expect((await read(`/v1/operator/audit/${id}?extra=1`)).status).toBe(400);
+    const missing = await read(`/v1/operator/audit/${randomUUID()}`);
+    expect(missing.status).toBe(404);
+    expect(missing.body.error.code).toBe('AUDIT_NOT_FOUND');
+    audit.failLookup = true;
+    const unavailable = await read(`/v1/operator/audit/${id}`);
+    expect(unavailable.status).toBe(503);
+    expect(unavailable.body.error.code).toBe('DEPENDENCY_UNAVAILABLE');
+    expect(audit.rows).toHaveLength(1);
+  });
+  it('requires the eligible cookie identity for audit lookup on every request', async () => {
+    const { app, cookie, audit, upstream } = await setup();
+    const id = await audit.intent(first, ordinary, 'ban', randomUUID());
+    expect((await request(app).get(`/v1/operator/audit/${id}`)).status).toBe(
+      401,
+    );
+    expect(
+      (
+        await request(app)
+          .get(`/v1/operator/audit/${id}`)
+          .set('Authorization', 'Bearer project-credential')
+      ).status,
+    ).toBe(401);
+    upstream.users.set(first, { ...user(first), email_confirmed_at: null });
+    expect(
+      (await request(app).get(`/v1/operator/audit/${id}`).set('Cookie', cookie))
+        .status,
+    ).toBe(403);
+  });
   it('audits invitation acceptance and rejects email sends before upstream on invalid targets', async () => {
     const { mutation, audit, upstream } = await setup();
     const invited = await mutation('/v1/operator/users/invitations', {
