@@ -1,8 +1,10 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import { z } from 'zod';
 import {
   UpstreamError,
+  type AdminUser,
+  type AdminUsersClient,
   type Identity,
   type OperatorIdentityClient,
   type RecoveryClient,
@@ -80,8 +82,10 @@ class FakeRecovery implements RecoveryClient, OperatorIdentityClient {
   challenge = '';
   exchangeCalls = 0;
   updates = 0;
+  sentEmails: string[] = [];
   expiresAt = Date.now() + 3600000;
-  async sendRecovery(_email: string, challenge: string, callback: string) {
+  async sendRecovery(email: string, challenge: string, callback: string) {
+    this.sentEmails.push(email);
     this.callback = callback;
     this.challenge = challenge;
     if (this.sendError) throw this.sendError;
@@ -117,15 +121,29 @@ const resources: Array<ReturnType<typeof createApp>> = [];
 afterEach(async () => {
   await Promise.all(resources.splice(0).map((resource) => resource.close()));
 });
-function setup(production = false) {
+function setup(production = false, operatorIds = operatorId) {
   const upstream = new FakeRecovery();
   const store = new MemoryRecovery();
+  const operatorUsers = new Map<string, AdminUser>([
+    [operatorId, upstream.user],
+  ]);
+  const admin: AdminUsersClient = {
+    getUser: vi.fn(async (id: string) => {
+      const user = operatorUsers.get(id);
+      if (!user) throw new UpstreamError('not_found');
+      return user;
+    }),
+    listUsers: vi.fn<AdminUsersClient['listUsers']>(),
+    createUser: vi.fn<AdminUsersClient['createUser']>(),
+    setBan: vi.fn<AdminUsersClient['setBan']>(),
+    deleteUser: vi.fn<AdminUsersClient['deleteUser']>(),
+  };
   const config = loadConfig({
     NODE_ENV: production ? 'production' : 'test',
     GOTRUE_ADMIN_TOKEN: 'test-admin',
     GOTRUE_URL: 'http://localhost:8081',
     ADMIN_DATABASE_URL: 'postgresql://unused:unused@localhost/test',
-    OPERATOR_UUID_ALLOWLIST: operatorId,
+    OPERATOR_UUID_ALLOWLIST: operatorIds,
     SESSION_ENCRYPTION_KEY: Buffer.alloc(32, 8).toString('base64'),
     FRONTEND_ORIGINS: production ? 'https://admin.chrbuilds.dev' : origin,
     RECOVERY_CALLBACK_URL: production
@@ -140,17 +158,24 @@ function setup(production = false) {
     upstream,
     recovery: upstream,
     recoveryStore: store,
+    admin,
     checkDatabase: async () => {},
   });
   resources.push(resource);
-  return { ...resource, upstream, store, config };
+  return { ...resource, upstream, store, config, admin, operatorUsers };
 }
-async function start(app: ReturnType<typeof createApp>['app']) {
-  const response = await request(app)
+function requestRecovery(
+  app: ReturnType<typeof createApp>['app'],
+  email = 'operator@example.test',
+) {
+  return request(app)
     .post('/v1/operator/auth/forgot-password')
     .set('Origin', origin)
     .set('X-CSRF-Protection', '1')
-    .send({ email: 'operator@example.test' });
+    .send({ email });
+}
+async function start(app: ReturnType<typeof createApp>['app']) {
+  const response = await requestRecovery(app);
   expect(response.status).toBe(202);
   const cookie = responseCookies(response)[0];
   if (typeof cookie !== 'string') throw new Error('Expected recovery cookie');
@@ -182,7 +207,7 @@ function reset(app: ReturnType<typeof createApp>['app'], cookie: string) {
     .send({ password: 'new-controlled-password' });
 }
 describe('operator recovery boundaries', () => {
-  it('returns the same generic response for absent accounts and upstream send errors', async () => {
+  it('acknowledges eligible requests without promising delivery during send errors', async () => {
     const resource = setup();
     const first = await start(resource.app);
     resource.upstream.sendError = new UpstreamError('unavailable', true);
@@ -195,6 +220,87 @@ describe('operator recovery boundaries', () => {
     expect(new URL(resource.upstream.callback).pathname).toBe(
       '/v1/operator/auth/recovery/callback',
     );
+    expect(resource.upstream.sentEmails).toEqual([
+      'operator@example.test',
+      'operator@example.test',
+    ]);
+  });
+  it.each(['ordinary@example.test', 'absent@example.test'])(
+    'rejects %s before creating context or requesting mail',
+    async (email) => {
+      const resource = setup();
+      if (email === 'ordinary@example.test') {
+        const ordinaryId = '33333333-3333-4333-8333-333333333333';
+        resource.operatorUsers.set(ordinaryId, {
+          ...resource.upstream.user,
+          id: ordinaryId,
+          email,
+        });
+      }
+      const response = await requestRecovery(resource.app, email);
+      expect(response.status).toBe(400);
+      expect(response.body.error).toEqual({
+        code: 'OPERATOR_RECOVERY_UNAVAILABLE',
+        message: 'Password recovery is only available for operator accounts.',
+      });
+      expect(responseCookies(response)).toEqual([]);
+      expect(resource.store.rows.size).toBe(0);
+      expect(resource.upstream.sentEmails).toEqual([]);
+      expect(resource.admin.getUser).toHaveBeenCalledWith(operatorId);
+      expect(resource.admin.listUsers).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    { email_confirmed_at: null },
+    { banned_until: '2099-01-01T00:00:00Z' },
+    { deleted_at: '2026-01-01T00:00:00Z' },
+    { email: null },
+  ])('rejects an ineligible operator %j without mail', async (override) => {
+    const resource = setup();
+    resource.operatorUsers.set(operatorId, {
+      ...resource.upstream.user,
+      ...override,
+    });
+    expect((await requestRecovery(resource.app)).status).toBe(400);
+    expect(resource.store.rows.size).toBe(0);
+    expect(resource.upstream.sentEmails).toEqual([]);
+  });
+  it('distinguishes lookup outage from invalid email and never sends without proof', async () => {
+    const resource = setup();
+    vi.mocked(resource.admin.getUser).mockRejectedValue(
+      new UpstreamError('unavailable'),
+    );
+    const response = await requestRecovery(resource.app);
+    expect(response.status).toBe(503);
+    expect(response.body.error.code).toBe('DEPENDENCY_UNAVAILABLE');
+    expect(responseCookies(response)).toEqual([]);
+    expect(resource.store.rows.size).toBe(0);
+    expect(resource.upstream.sentEmails).toEqual([]);
+  });
+  it('does not send when recovery-context storage fails after validating the operator', async () => {
+    const resource = setup();
+    resource.store.fail = true;
+    expect((await requestRecovery(resource.app)).status).toBe(503);
+    expect(resource.upstream.sentEmails).toEqual([]);
+    expect(resource.store.rows.size).toBe(0);
+  });
+  it('skips missing configured operators and matches the current email case-insensitively', async () => {
+    const missingId = '44444444-4444-4444-8444-444444444444';
+    const resource = setup(false, `${missingId},${operatorId}`);
+    resource.operatorUsers.set(operatorId, {
+      ...resource.upstream.user,
+      email: 'Updated.Operator@example.test',
+      banned_until: '2025-01-01T00:00:00Z',
+    });
+    expect((await requestRecovery(resource.app)).status).toBe(400);
+    expect(
+      (await requestRecovery(resource.app, 'updated.operator@EXAMPLE.test'))
+        .status,
+    ).toBe(202);
+    expect(resource.upstream.sentEmails).toEqual([
+      'Updated.Operator@example.test',
+    ]);
+    expect(resource.admin.getUser).toHaveBeenCalledWith(missingId);
   });
   it('uses encrypted, hashed storage and separate HttpOnly cookies without operator sessions', async () => {
     const resource = setup();
@@ -246,9 +352,13 @@ describe('operator recovery boundaries', () => {
       ).status,
     ).toBe(400);
   });
-  it('rate-limits recovery requests without identity-dependent responses', async () => {
+  it('rate-limits both eligible and rejected recovery requests', async () => {
     const { app } = setup();
-    for (let attempt = 0; attempt < 5; attempt++) await start(app);
+    for (let attempt = 0; attempt < 2; attempt++) await start(app);
+    for (let attempt = 0; attempt < 3; attempt++)
+      expect((await requestRecovery(app, 'ordinary@example.test')).status).toBe(
+        400,
+      );
     const sixth = await request(app)
       .post('/v1/operator/auth/forgot-password')
       .set('Origin', origin)
