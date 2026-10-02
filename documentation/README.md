@@ -39,3 +39,7 @@ The [create-user modal and Resend goal](gotrue-dashboard/create-user-modal-resen
 - VM reference files describe existing infrastructure/history. New application deployment decisions belong in shared architecture; local setup belongs in the local infrastructure README.
 
 The operator stack and V1 decisions are consolidated in backend architecture. Endpoint contracts and examples live together in the API reference. No separate `.agent` rulebook is required; agents follow the root `AGENTS.md`.
+
+## Latest prepared operator task
+
+[Operator UI clarity goal](gotrue-dashboard/operator-ui-clarity-goal.md) covers shadcn modals, concise action labels and notifications, full-page history details, copy cleanup and consistent dates. Prepared on 2026-10-02; implementation and UI verification have not started.

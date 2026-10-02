@@ -1,5 +1,7 @@
 # GoTrue operator dashboard status
 
+Latest prepared task: [Operator UI clarity goal](operator-ui-clarity-goal.md), prepared on 2026-10-02. It covers shadcn-only invite/confirmation modals, concise View actions, notifications and automatic confirmed-modal closure, removal of routine inline alerts/IDs, full-page history inspection, copy cleanup and consistent dates across all existing screens. The goal document is complete; UI implementation and its verification have not started.
+
 Last verified for this goal: 2026-10-02.
 
 Active [create-user modal and Resend goal](create-user-modal-resend-goal.md): **implementation ready; setup/live delivery pending**.
@@ -27,4 +29,4 @@ The local ignored SMTP settings use `smtp.resend.com:465`, username `resend`, se
 
 ## Recovery password rejection fix (2026-10-02)
 
-The gateway previously classified password-policy rejection as invalid identity and displayed an expired-recovery message despite valid email proof. Recognized same-password/weak-password errors, other rejected updates and upstream limits now produce explicit safe reset errors and fresh-email instructions. One-use recovery claims, password cleanup, unknown-outcome handling and operator eligibility are preserved. No real password was changed by the agent and no test email or SQL was sent/executed. 94 backend/script tests and 79 frontend tests passed; typecheck, lint, formatting and build passed. Actual successful Resend reset with a different password remains for the user's manual test.
+The gateway previously classified password-policy rejection as invalid identity and displayed an expired-recovery message despite valid email proof. Recognized same-password/weak-password errors, other rejected updates and upstream limits now produce explicit safe reset errors and fresh-email instructions. One-use recovery claims, password cleanup, unknown-outcome handling and operator eligibility are preserved. No real password was changed by the agent and no test email or SQL was sent/executed. 94 backend/script tests and 79 frontend tests passed; typecheck, lint, formatting and build passed. The user reported the corrected Resend recovery/reset flow working on 2026-10-02; this is user-reported verification, not a new agent-run inbox/login walkthrough.
