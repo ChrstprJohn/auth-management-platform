@@ -5,6 +5,7 @@ import { SessionProvider } from '@/app/session';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { createSessionRuntime } from '@/lib/query/runtime';
 import { UserActionsProvider } from '@/features/users/actions';
+import { AccountActionsProvider } from '@/features/auth/account';
 
 export const fixtureSession = {
   operator: {
@@ -20,7 +21,9 @@ export function renderApp(view: React.ReactNode, route = '/') {
       <SessionProvider runtime={runtime}>
         <TooltipProvider>
           <MemoryRouter initialEntries={[route]}>
-            <UserActionsProvider>{view}</UserActionsProvider>
+            <AccountActionsProvider>
+              <UserActionsProvider>{view}</UserActionsProvider>
+            </AccountActionsProvider>
           </MemoryRouter>
         </TooltipProvider>
       </SessionProvider>

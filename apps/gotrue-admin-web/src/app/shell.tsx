@@ -13,8 +13,15 @@ import {
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useSession } from './session';
 import { useAccount } from '@/features/auth/hooks';
+import { parsePagination } from '@/lib/query/pagination';
+import { historySearch } from '@/features/history/hooks';
 import { ActionOutcome } from '@/features/users/actions';
-import { Failure, Blank, Loading } from '@/components/feedback/states';
+import {
+  Failure,
+  Blank,
+  Loading,
+  MutationFeedback,
+} from '@/components/feedback/states';
 import { Button } from '@/components/ui/button';
 import {
   SidebarProvider,
@@ -44,13 +51,21 @@ function useShell() {
     active: location.pathname,
     menuSide: isMobile ? ('bottom' as const) : ('right' as const),
     userParent: location.pathname.startsWith('/users/'),
+    historyParent: location.pathname.startsWith('/history/'),
+    historyBack:
+      '/history' +
+      (location.search
+        ? historySearch(parsePagination(new URLSearchParams(location.search)))
+        : ''),
     title:
       location.pathname === '/users/invite'
         ? 'Invite user'
         : location.pathname.startsWith('/users/')
           ? 'Account details'
-          : (shellLinks.find((item) => location.pathname.startsWith(item.to))
-              ?.label ?? 'GoTrue Operator'),
+          : location.pathname.startsWith('/history/')
+            ? 'Action details'
+            : (shellLinks.find((item) => location.pathname.startsWith(item.to))
+                ?.label ?? 'GoTrue Operator'),
   };
 }
 function ShellContent() {
@@ -75,6 +90,16 @@ function ShellContent() {
                   <BreadcrumbItem>
                     <BreadcrumbLink render={<Link to="/users" />}>
                       Users
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator />
+                </>
+              )}
+              {m.historyParent && (
+                <>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink render={<Link to={m.historyBack} />}>
+                      Action history
                     </BreadcrumbLink>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
@@ -112,7 +137,7 @@ function ShellContent() {
                 Current account
               </DropdownMenuItem>
               <DropdownMenuItem
-                disabled={m.account.pending}
+                disabled={m.account.pending || m.account.uncertain}
                 onClick={m.account.logout}
               >
                 <LogOut />
@@ -126,7 +151,9 @@ function ShellContent() {
           tabIndex={-1}
           className="mx-auto w-full max-w-[90rem] min-w-0 flex-1 space-y-4 p-4 pt-6 md:p-8 md:pt-6"
         >
-          {m.account.error && <Failure error={m.account.error} />}
+          {m.active !== '/account' && (
+            <MutationFeedback error={m.account.error} />
+          )}
           <ActionOutcome />
           <Outlet />
         </main>
@@ -147,7 +174,7 @@ export function ProtectedShell() {
     return (
       <Navigate
         replace
-        to={`/login?returnTo=${encodeURIComponent(location.pathname)}`}
+        to={`/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`}
       />
     );
   if (session.state === 'denied')

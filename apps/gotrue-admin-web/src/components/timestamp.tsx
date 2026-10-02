@@ -5,7 +5,6 @@ export function Timestamp({
 }: {
   value: string | null | undefined;
   dateOnly?: boolean;
-  compact?: boolean;
 }) {
   return validDate(value) ? (
     <time

@@ -173,8 +173,9 @@ function useActionController() {
     start,
     changeOpen,
     afterOpenChange: (value: boolean) => {
-      if (!value && !open && opener.current?.isConnected)
-        opener.current.focus();
+      if (value || open) return;
+      if (opener.current?.isConnected) opener.current.focus();
+      else document.getElementById('main')?.focus();
     },
     submit,
     form,

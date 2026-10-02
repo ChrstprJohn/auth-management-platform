@@ -10,6 +10,10 @@ import { operatorApi } from '@/lib/api/operator';
 import { ApiFailure } from '@/lib/api/client';
 import { LoginPage, AccountPage } from './views';
 import { safeReturn, loginSchema } from './schemas';
+import { AccountActionsProvider } from './account';
+import { toast } from 'sonner';
+import { useAccount } from './account';
+import { useSession } from '@/app/session';
 
 const session = {
   operator: {
@@ -24,7 +28,9 @@ function mount(view: React.ReactNode) {
     <QueryClientProvider client={runtime.client}>
       <SessionProvider runtime={runtime}>
         <TooltipProvider>
-          <MemoryRouter>{view}</MemoryRouter>
+          <MemoryRouter>
+            <AccountActionsProvider>{view}</AccountActionsProvider>
+          </MemoryRouter>
         </TooltipProvider>
       </SessionProvider>
     </QueryClientProvider>,
@@ -32,6 +38,61 @@ function mount(view: React.ReactNode) {
   return runtime;
 }
 describe('operator forms and account', () => {
+  it('shares sign-out concurrency across controls and ignores completion after a newer sign-in', async () => {
+    vi.spyOn(operatorApi, 'me').mockResolvedValue(session);
+    const notify = vi.spyOn(toast, 'success');
+    let complete: () => void = () => {};
+    const logout = vi.spyOn(operatorApi, 'logout').mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          complete = () => resolve(undefined);
+        }),
+    );
+    function Control({ label }: { label: string }) {
+      const account = useAccount();
+      return (
+        <button disabled={account.pending} onClick={account.logout}>
+          {label}
+        </button>
+      );
+    }
+    function NewSession() {
+      const current = useSession();
+      return (
+        <button onClick={() => current.establish(session)}>New session</button>
+      );
+    }
+    const runtime = mount(
+      <>
+        <Control label="First logout" />
+        <Control label="Second logout" />
+        <NewSession />
+      </>,
+    );
+    await screen.findByRole('button', { name: 'First logout' });
+    await waitFor(() =>
+      expect(runtime.client.getQueryData(['session', 0])).toEqual(session),
+    );
+    await userEvent.dblClick(
+      screen.getByRole('button', { name: 'First logout' }),
+    );
+    expect(
+      screen.getByRole('button', { name: 'Second logout' }),
+    ).toBeDisabled();
+    expect(logout).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByRole('button', { name: 'New session' }));
+    const generation = runtime.generation();
+    complete();
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Second logout' }),
+      ).toBeEnabled(),
+    );
+    expect(runtime.client.getQueryData(['session', generation])).toEqual(
+      session,
+    );
+    expect(notify).not.toHaveBeenCalled();
+  });
   it('accepts existing short passwords and keeps return destinations internal', () => {
     expect(
       loginSchema.safeParse({ email: 'controlled@example.test', password: 'x' })
@@ -70,6 +131,7 @@ describe('operator forms and account', () => {
     },
   );
   it('restores account information and leaves failed logout visible with data intact', async () => {
+    const notify = vi.spyOn(toast, 'error');
     vi.spyOn(operatorApi, 'me').mockResolvedValue(session);
     vi.spyOn(operatorApi, 'logout').mockRejectedValue(
       new ApiFailure('DEPENDENCY_UNAVAILABLE', 503, false),
@@ -77,7 +139,12 @@ describe('operator forms and account', () => {
     const runtime = mount(<AccountPage />);
     expect(await screen.findByText('controlled@example.test')).toBeVisible();
     await userEvent.click(screen.getByRole('button', { name: 'Logout' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('unavailable');
+    await waitFor(() => expect(notify).toHaveBeenCalledTimes(1));
+    await userEvent.click(
+      screen.getAllByText('Technical details')[0] ??
+        screen.getByText('Technical details'),
+    );
+    expect(screen.getByText(/required service is unavailable/)).toBeVisible();
     expect(runtime.client.getQueryData(['session', 0])).toEqual(session);
   });
   it('clears caches after confirmed 204 logout', async () => {

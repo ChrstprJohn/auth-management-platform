@@ -16,18 +16,12 @@ export function ForgotPasswordPage() {
           Return to sign in
         </Link>
       }
-      description={
-        <>
-          Request recovery here, then open the newest email in this same
-          browser. Older emails and another browser cannot complete this flow.
-        </>
-      }
+      description={<>Open the newest recovery email in this same browser.</>}
     >
       {m.success ? (
-        <Success title="Recovery requested">
-          If the account can be recovered, a recovery email will be sent. This
-          acknowledgement does not confirm delivery. Follow the newest email
-          link; the backend will send you to the reset page.
+        <Success title="Check your email">
+          If the account can be recovered, you’ll receive a link to reset your
+          password. This acknowledgement does not confirm delivery.
         </Success>
       ) : (
         <form noValidate onSubmit={m.submit}>
@@ -78,17 +72,13 @@ export function ResetPasswordPage() {
         </div>
       }
       description={
-        <>
-          Open your newest recovery email in this browser first. Recovery is
-          checked when you submit this form.
-        </>
+        <>Open the newest recovery email in this browser before submitting.</>
       }
       footer="A submitted reset can invalidate dashboard sessions even if the password update fails. Recovery never grants operator access."
     >
       {m.success ? (
-        <Success title="Password reset confirmed">
-          Your dashboard sessions were cleared. Sign in normally with your new
-          password.
+        <Success title="Sign in with your new password">
+          Your dashboard sessions were cleared.
         </Success>
       ) : (
         <form noValidate onSubmit={m.submit}>

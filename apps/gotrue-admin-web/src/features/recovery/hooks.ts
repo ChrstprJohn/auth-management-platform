@@ -8,6 +8,7 @@ import { operatorApi } from '@/lib/api/operator';
 import { ApiFailure } from '@/lib/api/client';
 import { failureMessage } from '@/lib/api/feedback';
 import { useSession } from '@/app/session';
+import { toast } from 'sonner';
 
 export const resetSchema = z
   .object({ password: newPasswordSchema, confirmation: z.string() })
@@ -24,6 +25,9 @@ export function useForgotPassword() {
   const busy = useRef(false);
   const mutation = useMutation({
     mutationFn: () => operatorApi.forgot(form.getValues()),
+    onSuccess: () => {
+      toast.success('Recovery requested');
+    },
     onError: (error) => {
       if (
         error instanceof ApiFailure &&
@@ -65,16 +69,34 @@ export function useResetPassword() {
   const session = useSession();
   const busy = useRef(false);
   const [visible, setVisible] = useState(false);
+  const submittedGeneration = useRef(session.runtime.generation());
   const form = useForm({
     resolver: zodResolver(resetSchema),
     defaultValues: { password: '', confirmation: '' },
   });
   const mutation = useMutation({
-    mutationFn: () =>
-      operatorApi.reset({ password: form.getValues('password') }),
-    onSuccess: () => session.clear(),
+    mutationFn: async () => {
+      submittedGeneration.current = session.runtime.generation();
+      const request = operatorApi.reset({
+        password: form.getValues('password'),
+      });
+      form.reset();
+      setVisible(false);
+      await request;
+      return submittedGeneration.current;
+    },
+    onSuccess: (generation) => {
+      if (session.runtime.generation() !== generation) return;
+      session.clear();
+      toast.success('Password reset');
+    },
     onError: (error) => {
-      if (error instanceof ApiFailure && error.uncertain) session.clear();
+      if (
+        session.runtime.generation() === submittedGeneration.current &&
+        error instanceof ApiFailure &&
+        error.uncertain
+      )
+        session.clear();
     },
   });
   const { reset: resetForm } = form;

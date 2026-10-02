@@ -61,9 +61,6 @@ export function AppSidebar({
               <BrandMark />
               <span className="grid min-w-0 gap-0.5 leading-tight">
                 <span className="truncate font-semibold">GoTrue Operator</span>
-                <span className="truncate text-xs text-muted-foreground">
-                  Shared identity management
-                </span>
               </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -129,7 +126,7 @@ export function AppSidebar({
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  disabled={m.account.pending}
+                  disabled={m.account.pending || m.account.uncertain}
                   onClick={m.account.logout}
                 >
                   <LogOut />

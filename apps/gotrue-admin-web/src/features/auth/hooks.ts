@@ -6,6 +6,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSession } from '@/app/session';
 import { operatorApi } from '@/lib/api/operator';
 import { loginSchema, safeReturn } from './schemas';
+import { toast } from 'sonner';
+export { useAccount } from './account';
 
 export function useLogin() {
   const session = useSession();
@@ -18,9 +20,17 @@ export function useLogin() {
     defaultValues: { email: '', password: '' },
   });
   const mutation = useMutation({
-    mutationFn: () => operatorApi.login(form.getValues()),
-    onSuccess: (result) => {
+    mutationFn: async () => {
+      const generation = session.runtime.generation();
+      const request = operatorApi.login(form.getValues());
+      form.resetField('password');
+      setVisible(false);
+      return { result: await request, generation };
+    },
+    onSuccess: ({ result, generation }) => {
+      if (session.runtime.generation() !== generation) return;
       session.establish(result);
+      toast.success('Signed in');
       navigate(safeReturn(params.get('returnTo')), { replace: true });
     },
   });
@@ -52,35 +62,5 @@ export function useLogin() {
     toggle: () => setVisible(!visible),
     pending: mutation.isPending,
     error: mutation.error,
-  };
-}
-export function useAccount() {
-  const session = useSession();
-  const navigate = useNavigate();
-  const busy = useRef(false);
-  const mutation = useMutation({
-    mutationFn: operatorApi.logout,
-    onSuccess: () => {
-      session.clear();
-      navigate('/login', { replace: true });
-    },
-  });
-  const logout = async () => {
-    if (busy.current) return;
-    busy.current = true;
-    try {
-      await mutation.mutateAsync();
-    } catch {
-      /* Failed logout retains session and visible feedback. */
-    } finally {
-      busy.current = false;
-    }
-  };
-  return {
-    session: session.session,
-    pending: mutation.isPending,
-    error: mutation.error,
-    logout,
-    retry: session.retry,
   };
 }

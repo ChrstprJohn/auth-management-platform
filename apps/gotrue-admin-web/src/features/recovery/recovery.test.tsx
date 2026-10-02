@@ -7,8 +7,70 @@ import { ApiFailure } from '@/lib/api/client';
 import { newPasswordSchema } from '@/features/auth/schemas';
 import { resetSchema } from './hooks';
 import { ForgotPasswordPage, ResetPasswordPage } from './views';
+import { useSession } from '@/app/session';
+import { toast } from 'sonner';
 
 describe('same-browser recovery UI', () => {
+  it.each([false, true])(
+    'preserves a newer session when a late reset failure=%s arrives',
+    async (failed) => {
+      vi.spyOn(operatorApi, 'me').mockResolvedValue(fixtureSession);
+      const notify = vi.spyOn(toast, 'success');
+      let complete: () => void = () => {};
+      vi.spyOn(operatorApi, 'reset').mockImplementation(
+        () =>
+          new Promise((resolve, reject) => {
+            complete = () =>
+              failed
+                ? reject(
+                    new ApiFailure('PASSWORD_RESET_OUTCOME_UNKNOWN', 503, true),
+                  )
+                : resolve(undefined);
+          }),
+      );
+      function NewSession() {
+        const session = useSession();
+        return (
+          <button onClick={() => session.establish(fixtureSession)}>
+            New session
+          </button>
+        );
+      }
+      const { runtime } = renderApp(
+        <>
+          <ResetPasswordPage />
+          <NewSession />
+        </>,
+      );
+      await userEvent.type(
+        screen.getByLabelText('New password'),
+        'valid-password',
+      );
+      await userEvent.type(
+        screen.getByLabelText('Confirm password'),
+        'valid-password',
+      );
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Reset password' }),
+      );
+      expect(screen.getByLabelText('New password')).toHaveValue('');
+      await userEvent.click(
+        screen.getByRole('button', { name: 'New session' }),
+      );
+      const generation = runtime.generation();
+      complete();
+      await waitFor(() =>
+        expect(
+          screen.queryByRole('button', { name: 'Resetting password…' }),
+        ).not.toBeInTheDocument(),
+      );
+      expect(runtime.generation()).toBe(generation);
+      expect(runtime.client.getQueryData(['session', generation])).toEqual(
+        fixtureSession,
+      );
+      expect(notify).not.toHaveBeenCalled();
+    },
+  );
   it('validates UTF-8 bytes and local confirmation', () => {
     expect(newPasswordSchema.safeParse('a'.repeat(72)).success).toBe(true);
     expect(newPasswordSchema.safeParse('é'.repeat(37)).success).toBe(false);
