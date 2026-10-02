@@ -1,7 +1,7 @@
 import type { Identity } from '@auth/gotrue-client';
 
 export function isUsableOperator(
-  user: Identity,
+  user: Pick<Identity, 'id' | 'email_confirmed_at' | 'banned_until'>,
   allowlist: ReadonlySet<string>,
 ): boolean {
   if (
