@@ -1,6 +1,6 @@
 # Operator frontend architecture
 
-Status: implemented in `apps/gotrue-admin-web`; local verification and remaining launch prerequisites are recorded in the [frontend checklist](frontend-checklist.md). This file owns the stack and implementation boundaries. [Frontend requirements](frontend-requirements.md) owns screens and all 22 endpoint mappings; [implementation plan](frontend-implementation-plan.md) owns phases and acceptance gates; [API reference](api.md) owns HTTP contracts; [AGENTS.md](../../AGENTS.md) owns coding and delivery rules.
+This file owns the frontend stack and implementation boundaries. Read [GoTrue status](status.md) for delivered behavior, local verification and remaining work. [Frontend requirements](frontend-requirements.md) owns screens, all 22 endpoint mappings and acceptance scenarios; [API reference](api.md) owns HTTP contracts; [AGENTS.md](../../AGENTS.md) owns coding and delivery rules.
 
 ## Stack
 
@@ -32,7 +32,7 @@ Views call their feature hook and render its returned state/callbacks. Hooks own
 
 Separate a thin page connector from a presentational view when useful: the connector calls `useUsersPage()` and passes its model to `UsersView`. A view may choose markup for named states and attach callbacks; it does not make requests, orchestrate effects, parse URLs, interpret backend outcomes or duplicate validation. Business/form/interaction behavior lives in hooks; pure formatting and validation remain reusable utilities/schemas rather than becoming artificial hooks. React components and hooks are functions; the backend class convention does not require React class components.
 
-Proposed structure:
+Current structure:
 
 ```text
 apps/gotrue-admin-web/
@@ -119,7 +119,7 @@ Hooks return explicit named states rather than a collection of booleans that per
 
 Dialog focus, Escape/cancel, route changes and reduced-motion behavior need explicit handling. During a pending or uncertain mutation, closing an overlay must not discard outcome feedback or imply cancellation of the backend action. Ordinary read failures can retain current data with an error banner; session loss removes it.
 
-Implementation status and verification belong in the [frontend checklist](frontend-checklist.md), with overall product status in the existing delivery checklist. Follow [implementation phases and gates](frontend-implementation-plan.md). Production hosting/origin checks, natural upstream OTP expiry, platform-reference reconciliation and branded backend callback-error redirects remain separately scoped work. A reusable [AI handoff goal](frontend-ai-goal.md) points to the complete documentation and autonomous-work boundaries.
+Implementation status, verification and remaining work belong in [GoTrue status](status.md). Use the requirements' acceptance scenarios and AGENTS.md delivery workflow for future changes; keep detailed architecture decisions in this file.
 
 ## Email extension
 

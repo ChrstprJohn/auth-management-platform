@@ -2,7 +2,7 @@
 
 ## Required project guidance
 
-Follow this file for coding and delivery. Start at [documentation/README.md](documentation/README.md) for topic ownership and relevant project documents. User instructions take precedence. Planned documentation is not completed implementation.
+Follow this file for coding and delivery. Start at [documentation/README.md](documentation/README.md) for topic ownership. Before GoTrue work, read [GoTrue status](documentation/gotrue-dashboard/status.md) to learn what is implemented, what was verified, what remains and the latest prepared goal; then read the relevant topic documents. User instructions take precedence. Planned documentation is not completed implementation.
 
 ## Frontend constraint
 
@@ -40,12 +40,18 @@ This rulebook governs implementation, review, and documentation for this reposit
 - `documentation/gotrue-dashboard/backend-architecture.md`: stack, layers, session/audit policies, provisioning, and remaining upstream checks.
 - `documentation/gotrue-dashboard/frontend-requirements.md`: screens, UI behavior and complete endpoint usage.
 - `documentation/gotrue-dashboard/frontend-architecture.md`: agreed stack, hook/view boundaries, session/API behavior and state presentation.
-- `documentation/gotrue-dashboard/frontend-implementation-plan.md`: implementation phases and frontend acceptance gates.
-- `documentation/gotrue-dashboard/frontend-checklist.md`: frontend feature, endpoint, UI-state and verification delivery tracking.
+- `documentation/gotrue-dashboard/status.md`: the single GoTrue implementation/verification summary, remaining work and latest prepared goal.
 - `documentation/gotrue-dashboard/frontend-components.md`: current shadcn component choices and screen/state mapping.
-- Each product's checklist: implementation and verification status.
+- `documentation/platform/checklist.md`: developer platform implementation and verification status.
 
 Edit the document that owns the changed topic; link to it elsewhere rather than repeating its details. Update other documents only when their actual scope, verification status, or integration instructions are affected. Document unresolved upstream behavior honestly and verify it against the pinned version before relying on it. Do not reopen agreed choices unnecessarily or silently change scope. Do not introduce new services, frameworks, abstractions, or features without a concrete requirement.
+
+### GoTrue status maintenance
+
+- Read `documentation/gotrue-dashboard/status.md` before planning or implementing GoTrue work. Do not treat a prepared goal as implemented behavior or as authorization for an unrelated task.
+- For every GoTrue implementation, verification, setup or scope change, update the affected status entries in the same change. Record delivered behavior, the actual verification date/scope, remaining gaps and user-dependent steps. Review the summary for documentation-only changes and update it when ownership/navigation or recorded status changes; do not advance application-verification dates without new checks.
+- Keep `status.md` as the only GoTrue delivery-status tracker. Replace superseded notes rather than adding duplicate checklists or phase histories. Requirements, architecture, API and setup documents keep their detailed topic ownership and link to the summary for status.
+- On goal completion, consolidate its result/evidence/remaining limits into `status.md`, remove obsolete goal/plan files and fix their references. Preserve the latest goal while work remains; Git history preserves completed task detail.
 
 ### Architecture and separation of concerns
 
@@ -71,13 +77,13 @@ For backend code, follow the layer boundaries, class/constructor-injection conve
 
 ### Implementation workflow
 
-1. Read the applicable documents and inspect existing code and Git changes. Preserve unrelated user work.
+1. Read the applicable documents, including GoTrue `status.md` when relevant, and inspect existing code and Git changes. Preserve unrelated user work.
 2. Identify the smallest complete flow, its acceptance criteria, and any unverified dependency behavior. Resolve routine implementation choices using the agreed design.
 3. Document or update its endpoint contract before implementation. Clearly label planned endpoints until implemented and verified.
 4. Implement the feature through the appropriate layers, including validation, permissions, safe failures, configuration, migrations, and shutdown where relevant.
 5. Run relevant formatting/lint/type/build checks once available. Add meaningful tests for auth boundaries, business rules, failures, concurrency, and storage behavior as applicable. Avoid tests that merely mirror implementation or add ceremony for a documentation-only change.
 6. Use controlled local accounts for GoTrue integration walkthroughs. Do not use production users. Health alone does not verify auth, email, or persistence.
-7. Update the API reference for endpoint changes. Update architecture only for changed internal design, setup instructions only for changed setup, and the checklist only for newly verified delivery status. Mark implemented/verified only with evidence; list remaining gaps honestly.
+7. Update the API reference for endpoint changes, architecture for changed internal design and setup instructions for changed setup. Update GoTrue `status.md` in the same change with delivered behavior, verification evidence and remaining work; use the platform checklist for platform delivery. Mark implemented/verified only with evidence; list remaining gaps honestly.
 8. Report the behavior delivered, verification performed, documentation updated, and relevant limitations. Stop foreground dev/watch processes and inspect project-specific leftovers before finishing.
 
 Initial sequence: workspace/tooling and configuration, admin storage migrations, health, operator login/current account/logout, then recovery, user management with durable audit and last-operator protection, and audit history. Deployment follows local verification. Do not run the local infrastructure stack on the VM.

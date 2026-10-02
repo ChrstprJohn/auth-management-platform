@@ -1,6 +1,6 @@
 # Operator API Reference
 
-Status: health, operator sessions, user management, audit and recovery are implemented with isolated verification. Pinned local GoTrue/Mailpit recovery was verified separately with a disposable account. After user migration/callback setup, the local recovery gateway walkthrough passed against PostgreSQL, including restart persistence, concurrent single use and login/logout. Controlled local management verification passed, including creation, ban/unban, permanent deletion, audit/session persistence and two-instance last-operator protection. The management and recovery walkthroughs also passed after switching to admin_api_runtime; read-only metadata confirmed no superuser, role/database creation, RLS bypass or schema CREATE privileges. Production checks remain pending. Examples illustrate contracts; they are not captured production responses. This file is the source of truth for endpoint contracts and usage. [Backend architecture](backend-architecture.md#agreed-v1-decisions) owns internal session, audit, and provisioning policies.
+This file is the source of truth for endpoint contracts and usage. [GoTrue status](status.md) owns implementation/verification evidence and remaining work. Examples illustrate contracts; they are not captured production responses. [Backend architecture](backend-architecture.md#agreed-v1-decisions) owns internal session, audit and provisioning policies.
 
 ## Connection and browser policy
 
@@ -75,16 +75,16 @@ Audit entries contain UUID `id`, `actorId`, nullable `targetId`, action (`create
 Use the preceding login/me/logout flow to preserve the HttpOnly cookie. The browser supplies Origin. The following helper applies the same credential/CSRF policy; every error response must be handled before using returned data:
 
 ```ts
-async function operatorRequest(path: string, method = "GET", body?: object) {
+async function operatorRequest(path: string, method = 'GET', body?: object) {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method,
-    credentials: "include",
+    credentials: 'include',
     headers:
-      method === "GET"
+      method === 'GET'
         ? {}
         : {
-            "Content-Type": "application/json",
-            "X-CSRF-Protection": "1",
+            'Content-Type': 'application/json',
+            'X-CSRF-Protection': '1',
           },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
@@ -92,42 +92,42 @@ async function operatorRequest(path: string, method = "GET", body?: object) {
   if (!response.ok) throw result; // Include requestId/auditId in safe support reporting.
   return result;
 }
-const page = await operatorRequest("/v1/operator/users?page=1&perPage=20");
-const created = await operatorRequest("/v1/operator/users", "POST", {
-  email: "controlled-test@example.test",
+const page = await operatorRequest('/v1/operator/users?page=1&perPage=20');
+const created = await operatorRequest('/v1/operator/users', 'POST', {
+  email: 'controlled-test@example.test',
   password: controlledTestPassword,
-  confirmation: "operator_confirmed", // Explicitly bypasses email ownership verification.
+  confirmation: 'operator_confirmed', // Explicitly bypasses email ownership verification.
 });
 const targetId = created.user.id;
 const details = await operatorRequest(`/v1/operator/users/${targetId}`);
 // Obtain explicit human confirmation of global shared-account impact first.
 const banned = await operatorRequest(
   `/v1/operator/users/${targetId}/ban`,
-  "POST",
+  'POST',
   {
     targetId,
-    confirmation: "BAN_GLOBAL_USER",
+    confirmation: 'BAN_GLOBAL_USER',
     durationHours: 24,
   },
 );
 const unbanned = await operatorRequest(
   `/v1/operator/users/${targetId}/unban`,
-  "POST",
+  'POST',
   {
     targetId,
-    confirmation: "UNBAN_GLOBAL_USER",
+    confirmation: 'UNBAN_GLOBAL_USER',
   },
 );
 // Requires ALLOW_GLOBAL_USER_DELETION=true; permanent global identity removal.
 const deleted = await operatorRequest(
   `/v1/operator/users/${targetId}`,
-  "DELETE",
+  'DELETE',
   {
     targetId,
-    confirmation: "DELETE_GLOBAL_USER_PERMANENTLY",
+    confirmation: 'DELETE_GLOBAL_USER_PERMANENTLY',
   },
 );
-const history = await operatorRequest("/v1/operator/audit?page=1&perPage=20");
+const history = await operatorRequest('/v1/operator/audit?page=1&perPage=20');
 ```
 
 Representative safe details/create/ban/unban contract:
@@ -170,33 +170,33 @@ Other management errors include `400 UPSTREAM_REJECTED`, `404 USER_NOT_FOUND`, `
 The following illustrates the implemented browser integration. Configure the API and its database first following [backend setup](../../apps/gotrue-admin-api/README.md). Use a controlled operator account and never hard-code real passwords in application source.
 
 ```ts
-const apiBaseUrl = "http://localhost:3100";
+const apiBaseUrl = 'http://localhost:3100';
 
 // email and password come from the sign-in form.
 const login = await fetch(`${apiBaseUrl}/v1/operator/auth/login`, {
-  method: "POST",
-  credentials: "include",
+  method: 'POST',
+  credentials: 'include',
   headers: {
-    "Content-Type": "application/json",
-    "X-CSRF-Protection": "1",
+    'Content-Type': 'application/json',
+    'X-CSRF-Protection': '1',
   },
   body: JSON.stringify({ email, password }),
 });
-if (!login.ok) throw new Error("Sign-in failed");
+if (!login.ok) throw new Error('Sign-in failed');
 const operatorSession = await login.json();
 
 const current = await fetch(`${apiBaseUrl}/v1/operator/auth/me`, {
-  credentials: "include",
+  credentials: 'include',
 });
-if (!current.ok) throw new Error("Could not retrieve current operator");
+if (!current.ok) throw new Error('Could not retrieve current operator');
 const currentOperator = await current.json();
 
 const logout = await fetch(`${apiBaseUrl}/v1/operator/auth/logout`, {
-  method: "POST",
-  credentials: "include",
-  headers: { "X-CSRF-Protection": "1" },
+  method: 'POST',
+  credentials: 'include',
+  headers: { 'X-CSRF-Protection': '1' },
 });
-if (!logout.ok) throw new Error("Sign-out could not be confirmed");
+if (!logout.ok) throw new Error('Sign-out could not be confirmed');
 // Successful logout is 204; there is no JSON body to parse.
 ```
 
@@ -273,18 +273,18 @@ Timeout/ambiguous update returns 503 `PASSWORD_RESET_OUTCOME_UNKNOWN`: password 
 From the configured frontend origin, preserve cookies throughout:
 
 ```ts
-const apiBaseUrl = "http://localhost:3100";
+const apiBaseUrl = 'http://localhost:3100';
 const headers = {
-  "Content-Type": "application/json",
-  "X-CSRF-Protection": "1",
+  'Content-Type': 'application/json',
+  'X-CSRF-Protection': '1',
 };
 const requested = await fetch(
   `${apiBaseUrl}/v1/operator/auth/forgot-password`,
   {
-    method: "POST",
-    credentials: "include",
+    method: 'POST',
+    credentials: 'include',
     headers,
-    body: JSON.stringify({ email: "controlled-operator@example.test" }),
+    body: JSON.stringify({ email: 'controlled-operator@example.test' }),
   },
 );
 if (requested.status !== 202) {
@@ -297,8 +297,8 @@ if (requested.status !== 202) {
 // Follow its GoTrue link; the gateway exchanges the code and redirects
 // to the configured /reset-password page without credentials in the URL.
 const reset = await fetch(`${apiBaseUrl}/v1/operator/auth/reset-password`, {
-  method: "POST",
-  credentials: "include",
+  method: 'POST',
+  credentials: 'include',
   headers,
   body: JSON.stringify({ password: newControlledPassword }),
 });
@@ -306,13 +306,9 @@ if (reset.status !== 204) throw await reset.json();
 // Now use the documented login -> me -> logout flow with the new password.
 ```
 
-The separate [operator frontend](../../apps/gotrue-admin-web/README.md) implements the reset page and this flow; local browser verification is recorded in the [frontend checklist](frontend-checklist.md). For a backend-only manual walkthrough, a cookie-preserving client can request recovery with the same trusted Origin/header, follow the mail link and callback without following the final frontend redirect, then POST reset with that cookie jar. Do not put email links, codes, passwords or cookies into shell history or test logs.
+The separate [operator frontend](../../apps/gotrue-admin-web/README.md) implements the reset page and this flow; local browser verification is recorded in [GoTrue status](status.md). For a backend-only manual walkthrough, a cookie-preserving client can request recovery with the same trusted Origin/header, follow the mail link and callback without following the final frontend redirect, then POST reset with that cookie jar. Do not put email links, codes, passwords or cookies into shell history or test logs.
 
-Observed pinned upstream evidence: Mailpit recovery email, PKCE exchange/state preservation, code replay and invalid-link rejection, password update, old-password/old-access/old-refresh rejection and new-password login passed with a disposable local account. The recovery access token remained valid after update; the gateway discards it after cleanup and does not return it to the browser. Do not claim universal revocation across products or out-of-band resets. See pinned [recovery handler](https://github.com/supabase/auth/blob/v2.196.0/internal/api/recover.go), [PKCE handler](https://github.com/supabase/auth/blob/v2.196.0/internal/api/token.go), and [password update handler](https://github.com/supabase/auth/blob/v2.196.0/internal/api/user.go). After user migration/callback setup, the complete local gateway/PostgreSQL recovery probe passed, including persistence through gateway restart, one winner under concurrent reset, old-session invalidation and new-password login/logout. A real wait-until-link-expiry test remains pending; isolated tests cover local context expiry, replay and storage failures.
-
-## Documentation required during implementation
-
-Update this reference whenever endpoint behavior changes. The local upstream and recovery gateway probes establish only their recorded controlled flows. They do not establish complete V1 management/security verification, production delivery, or deployment.
+Observed pinned token effects: the local reset rejected the old password/access/refresh credentials and allowed new-password login. The recovery access token remained valid after update; the gateway discards it after cleanup and does not return it to the browser. Do not claim universal revocation across products or out-of-band resets. See pinned [recovery handler](https://github.com/supabase/auth/blob/v2.196.0/internal/api/recover.go), [PKCE handler](https://github.com/supabase/auth/blob/v2.196.0/internal/api/token.go), and [password update handler](https://github.com/supabase/auth/blob/v2.196.0/internal/api/user.go). Full probe evidence and remaining expiry checks are recorded in [GoTrue status](status.md).
 
 ## Email extension contract (implemented; live delivery pending)
 
@@ -334,13 +330,13 @@ Use the sign-in/cookie-preserving flow above, then send one intentional operator
 
 ```javascript
 // In the trusted frontend origin, after operator sign-in:
-await fetch("http://localhost:3100/v1/operator/users/invitations", {
-  method: "POST",
-  credentials: "include",
-  headers: { "Content-Type": "application/json", "X-CSRF-Protection": "1" },
+await fetch('http://localhost:3100/v1/operator/users/invitations', {
+  method: 'POST',
+  credentials: 'include',
+  headers: { 'Content-Type': 'application/json', 'X-CSRF-Protection': '1' },
   body: JSON.stringify({
-    email: "controlled-recipient@example.test",
-    confirmation: "SEND_INVITATION",
+    email: 'controlled-recipient@example.test',
+    confirmation: 'SEND_INVITATION',
   }),
 });
 // Verification: POST /v1/operator/users/<UUID>/send-verification
@@ -349,13 +345,13 @@ await fetch("http://localhost:3100/v1/operator/users/invitations", {
 // body: {targetId: '<UUID>', confirmation: 'RESEND_INVITATION'}
 
 // Recipient submits the newest code, without an operator session:
-await fetch("http://localhost:3100/v1/email/confirm", {
-  method: "POST",
-  credentials: "include",
-  headers: { "Content-Type": "application/json", "X-CSRF-Protection": "1" },
+await fetch('http://localhost:3100/v1/email/confirm', {
+  method: 'POST',
+  credentials: 'include',
+  headers: { 'Content-Type': 'application/json', 'X-CSRF-Protection': '1' },
   body: JSON.stringify({
-    email: "controlled-recipient@example.test",
-    code: "<NEWEST_NUMERIC_CODE>",
+    email: 'controlled-recipient@example.test',
+    code: '<NEWEST_NUMERIC_CODE>',
   }),
 });
 // Invitation: POST /v1/email/accept-invitation

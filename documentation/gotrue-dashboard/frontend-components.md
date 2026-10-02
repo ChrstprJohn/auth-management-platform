@@ -1,6 +1,6 @@
 # Frontend shadcn component map
 
-Status: implemented using shadcn CLI 4.21.0, Base UI `base-nova`, neutral default tokens and Lucide. Registry guidance was checked on 2026-10-01; generated source and configuration live in `apps/gotrue-admin-web`. Use this map with [frontend architecture](frontend-architecture.md), [requirements](frontend-requirements.md) and [delivery checklist](frontend-checklist.md).
+Component baseline: shadcn CLI 4.21.0, Base UI `base-nova`, neutral default tokens and Lucide. Registry guidance was checked on 2026-10-01; generated source and configuration live in `apps/gotrue-admin-web`. Use this map with [frontend architecture](frontend-architecture.md) and [requirements](frontend-requirements.md); [GoTrue status](status.md) owns delivery and verification evidence.
 
 ## Current official guidance
 
@@ -61,7 +61,7 @@ If a real requirement later needs Accordion, Collapsible, Tabs, Popover, Scroll 
 
 ## Requested polish component composition (2026-10-01)
 
-The [expanded working goal](frontend-polish-goal.md) captures the user's refinements. New source uses the same pinned Base UI `base-nova` registry and default neutral tokens. Card, Chart, Progress and Dialog are official registry components; Recharts is pinned at 3.8.0 and loaded with the dashboard route.
+The user's dashboard and preview requirements are recorded in [frontend requirements](frontend-requirements.md#requested-dashboard-extension-implemented-2026-10-01); completed polish evidence is consolidated in [GoTrue status](status.md). Source uses the same pinned Base UI `base-nova` registry and default neutral tokens. Card, Chart, Progress and Dialog are official registry components; Recharts is pinned at 3.8.0 and loaded with the dashboard route.
 
 | Area                        | Composition and rendered comparison                                                                                                                                                                                                                                                                                  |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -80,7 +80,7 @@ Captured references and controlled application screenshots live in ignored `arti
 
 ### Application-wide layout composition
 
-The current overhaul covers `/login`, `/forgot-password`, `/reset-password`, `/dashboard`, `/users`, `/users/new`, `/users/:id`, `/history`, `/history/:id`, `/users/invite`, `/confirm-email`, `/accept-invitation`, `/auth/callback`, `/status`, `/account`, unmatched destinations and session-blocked screens. The shell and page composition are owned by [frontend architecture](frontend-architecture.md); verification evidence is owned by the [frontend checklist](frontend-checklist.md).
+The current layout covers `/login`, `/forgot-password`, `/reset-password`, `/dashboard`, `/users`, `/users/new`, `/users/:id`, `/history`, `/history/:id`, `/users/invite`, `/confirm-email`, `/accept-invitation`, `/auth/callback`, `/status`, `/account`, unmatched destinations and session-blocked screens. The shell and page composition are owned by [frontend architecture](frontend-architecture.md); verification evidence is owned by [GoTrue status](status.md).
 
 `AppSidebar`, `PageHeader`, `AuthLayout` and `RouteState` compose existing Base UI shadcn primitives. Metric and service-card ellipsis menus use `DropdownMenu` with Lucide `MoreHorizontal`; table menus retain their account/detail destinations. Service checks use equal-height Card sections with aligned footers. Account/details/chart areas use responsive seven-column splits; creation uses a viewport-bounded Dialog above Users. Card headers use `minmax(0,1fr)` for the text column so menu triggers cannot collide with titles. Email previews truncate with the full address available in account details; full identifiers remain selectable/copyable and wrap in details.
 
@@ -92,7 +92,7 @@ Historical layout evidence remains under ignored artifacts/web-review/layout-aft
 2. Add mapped components as their features are built, using generated source under `src/components/ui` and the documented package-manager policy.
 3. Preserve default tokens and use the same primitive family across features; composition, accessibility and styling checks apply to generated source too.
 4. Check every mapped state/control through behavior tests and desktop/mobile/keyboard review. A component being installed is not evidence that a feature/state works.
-5. Update frontend checklist items only with actual implementation/verification evidence. Recheck source guidance when a registry API changes; never mechanically copy stale examples.
+5. Update GoTrue status with actual implementation/verification evidence and remaining checks. Recheck source guidance when a registry API changes; never mechanically copy stale examples.
 
 ## Email extension controls
 

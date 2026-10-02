@@ -2,7 +2,7 @@
 
 Agreed product scope; not an implementation report. Build `gotrue-admin-api` and `gotrue-admin-web` first. See [backend architecture](backend-architecture.md), [technology stack](backend-architecture.md#technology-stack), and [shared deployment](../architecture-and-deployment.md).
 
-[Frontend requirements](frontend-requirements.md) maps this scope to screens, interactions and every existing backend endpoint. Frontend architecture and implementation phases will be planned separately.
+[Frontend requirements](frontend-requirements.md) maps this scope to screens, interactions and every existing backend endpoint; [frontend architecture](frontend-architecture.md) owns the agreed implementation boundaries. Read [GoTrue status](status.md) for delivered behavior, verification and remaining work.
 
 ## What this dashboard manages
 
@@ -94,7 +94,7 @@ The user-requested frontend polish adds a bounded operator dashboard, summary co
 
 Secure operator sessions, constructor-injected class-based layers, server-side input validation, exact browser origins, CSRF protection for cookie-authenticated mutations, request/body limits, safe errors and logging, bounded Axios timeouts, and durable audit persistence. No unrestricted GoTrue passthrough or direct access to GoTrue tables.
 
-Planned route groups remain `/v1/operator/auth/*`, `/v1/operator/users`, operator audit history, and minimal health. Final methods/payloads, storage, session lifecycle, and recovery callbacks are documented before their implementation.
+Route groups are `/v1/operator/auth/*`, `/v1/operator/users`, operator audit history and minimal health. The [API reference](api.md) owns methods/payloads, session lifecycle and recovery callback contracts; backend architecture owns storage policy.
 
 ## Authorized email extension
 
@@ -106,4 +106,4 @@ Global email search until upstream support is assessed; editing user email/passw
 
 ## Complete V1
 
-An eligible operator signs in, browses accounts, opens details, creates a controlled test account, bans/unbans it, deletes it, and sees durable action outcomes. Recovery, logout, expiry, ordinary-account rejection, and last-operator protection work. The frontend communicates only with our API. See [specific delivery checks](checklist.md).
+An eligible operator signs in, browses accounts, opens details, creates a controlled test account, bans/unbans it, deletes it, and sees durable action outcomes. Recovery, logout, expiry, ordinary-account rejection, and last-operator protection work. The frontend communicates only with our API. See [GoTrue status](status.md) for actual delivery evidence and remaining checks.

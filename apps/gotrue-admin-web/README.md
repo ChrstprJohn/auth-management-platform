@@ -6,7 +6,7 @@ Use Node 24.15.0 and pnpm 11.19.0. From the repository root run ordinary `pnpm i
 
 The sole public setting is `VITE_API_BASE_URL`, defaulting to `http://localhost:3100`. Copy `.env.example` only if you need to change it. It must be an HTTP(S) origin without credentials, path, query or fragment. Never add backend credentials to Vite configuration. Keep `localhost` consistent across browser/API/recovery configuration.
 
-`pnpm web:test`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `pnpm build` verify the frontend and repository. Isolated browser fixtures do not prove real GoTrue, cookie/CORS, mail or storage integration. Verification evidence and remaining checks are tracked in the [frontend checklist](../../documentation/gotrue-dashboard/frontend-checklist.md).
+`pnpm web:test`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `pnpm build` verify the frontend and repository. Isolated browser fixtures do not prove real GoTrue, cookie/CORS, mail or storage integration. Verification evidence and remaining checks are tracked in [GoTrue status](../../documentation/gotrue-dashboard/status.md).
 
 After building, `pnpm exec tsx scripts/check-web-assets.ts` checks emitted assets for server-only markers and locally configured credential values without printing those values. No server environment is imported by the browser app.
 

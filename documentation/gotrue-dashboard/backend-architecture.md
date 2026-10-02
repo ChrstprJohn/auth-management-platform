@@ -1,6 +1,6 @@
 # GoTrue Admin API: Backend Architecture
 
-Health/operator sessions, user management, durable audit and password recovery are implemented with isolated tests. Pinned local GoTrue/Mailpit recovery was verified separately. The user applied migration 0003 and reloaded callback configuration; the local PostgreSQL recovery gateway flow passed, including restart persistence and concurrent single-use reset. Controlled local management verification passed, including persistence and two-instance last-operator protection. The management and recovery walkthroughs also passed after switching to admin_api_runtime; read-only metadata confirmed no superuser, role/database creation, RLS bypass or schema CREATE privileges. Production checks remain pending. Read alongside [V1 features](features.md) and [shared architecture](../architecture-and-deployment.md).
+Read [GoTrue status](status.md) for implemented behavior, verification evidence and remaining work. Read this design alongside [V1 features](features.md) and [shared architecture](../architecture-and-deployment.md).
 
 This file owns backend structure, technology choices, and agreed session/audit/provisioning policies. [API reference](api.md) owns endpoint contracts and usage. [AGENTS.md](../../AGENTS.md) owns coding and delivery rules.
 
@@ -52,7 +52,7 @@ Example wiring:
 const usersService = new UsersService(gotrueClient, auditService);
 const usersController = new UsersController(usersService);
 router.get(
-  "/:id",
+  '/:id',
   authenticate.handle,
   requireOperator.handle,
   usersController.getUser,
@@ -167,7 +167,7 @@ The diagram shows a protected operation. Login, recovery, and minimal health hav
 
 ## Agreed V1 decisions
 
-These decisions are approved for implementation. Sessions, health, recovery, user management and audit are implemented. The user has provisioned the local database through baseline 0003 and an operator account; controlled live walkthroughs are recorded in the checklist. The local API now connects as admin_api_runtime, and both management and recovery walkthroughs passed with this restricted role. Keep V1 small: existing PostgreSQL, Express/TypeScript, and private GoTrue. No Redis, queue, ORM, automatic session refresh, or operator-role management UI.
+These decisions are approved for implementation; delivery evidence and local setup status are recorded in [GoTrue status](status.md). Keep V1 small: existing PostgreSQL, Express/TypeScript, and private GoTrue. No Redis, queue, ORM, automatic session refresh, or operator-role management UI.
 
 ### Operator sessions
 
@@ -197,7 +197,7 @@ Reconciliation is a trusted manual procedure in V1: inspect the intent, check cu
 
 ### First operator and lockout recovery
 
-For local provisioning commands, use the [backend setup helper instructions](../../apps/gotrue-admin-api/README.md#first-local-operator). The helper is covered by isolated boundary tests. The user reported creating the first verified account; controlled local operator login and ordinary-account rejection are independently verified by the management walkthrough.
+For local provisioning commands, use the [backend setup helper instructions](../../apps/gotrue-admin-api/README.md#first-local-operator). Provisioning and login verification status are recorded in [GoTrue status](status.md).
 
 1. Create a controlled account in the environment's GoTrue using its supported signup/setup flow, and verify its email. Locally, use the configured recipient mailbox; hosted Resend is the selected sender.
 2. Obtain its UUID from a trusted GoTrue response or supported admin operation.
@@ -206,7 +206,7 @@ For local provisioning commands, use the [backend setup helper instructions](../
 
 If every operator loses access, a trusted server administrator uses supported GoTrue recovery/admin operations to recover or provision a verified usable account, updates the allowlist, and restarts the API. Keep privileged GoTrue credentials outside browser bundles, logs, and the repository. No public emergency-access endpoint is added. Local setup commands live in the backend README; production provisioning has not been performed.
 
-Last-usable-operator protection is implemented for ban/delete, including concurrency handling and failing closed when usability cannot be established. The controlled local management walkthrough verified contention across two API instances sharing PostgreSQL.
+Ban/delete must protect the last usable operator, including concurrency handling and failing closed when usability cannot be established. Verification evidence is recorded in [GoTrue status](status.md).
 
 Implementation policy for ban/delete: use a session-level PostgreSQL advisory lock on a dedicated connection, serialize destructive operations across instances, and hold it through intent, eligibility checks, upstream call and audit completion. Refuse additional configured-operator removals while a pending/unknown destructive operator intent exists. GoTrue's pinned public admin user JSON does not expose password presence; count another operator only when verified/unbanned and backed by a current dashboard password-login session revalidated upstream. This is deliberately conservative: a configured operator may need to sign in before another can be removed. Require identical database and allowlist configuration across API instances. Production permanent deletion stays disabled by default until platform-reference reconciliation has been reviewed.
 
@@ -222,7 +222,7 @@ When the gateway successfully completes password reset, invalidate all local ope
 
 Implemented recovery uses a server-generated S256 PKCE verifier and separate browser state/cookie. The `operator_recovery` table stores hashes plus AES-GCM encrypted verifier/token material, never passwords, plaintext email or refresh tokens. Atomic pending-to-exchanging and ready-to-resetting claims enforce single use across API instances. Callback checks the same browser state and eligible identity, then shortens expiry to ten minutes capped by upstream expiry. The reset claim transaction invalidates local sessions before upstream mutation; completion invalidates them again and removes identified contexts. Failures can leave consumed contexts; no automatic mutation retries or rollback claims are made. The callback and final reset-page URLs are server configuration, validated with production same-site HTTPS requirements. Requests, failures and setup prerequisites are owned by the [API reference](api.md#password-recovery-implemented-isolated-verification) and [database README](../../packages/database/admin/README.md).
 
-Pinned-local recovery evidence (2026-10-01): `scripts/verify-local-recovery.ts` used a disposable verified account, received Mailpit recovery mail, followed the standard `/verify?type=recovery` link, exchanged the PKCE code with its server-generated verifier, rejected code replay and invalid links, updated the password, and verified old-password/old-refresh/old-access rejection and new-password login. The recovery access token remained valid after update. Callback state survived the redirect. The account and its messages were removed. Upstream expiry checks were inspected in the pinned handlers; a real wait-until-OTP-expiry walkthrough remains pending. This helper executes supported local APIs only, no SQL. After user migration 0003 and GoTrue restart, `scripts/verify-local-gateway-recovery.ts` passed the complete local gateway flow: context persisted through gateway restart; Mailpit/code callback succeeded; concurrent reset admitted exactly one winner; old dashboard session/password failed; new-password login/logout succeeded. Temporary operator eligibility existed only in the probe process; the real allowlist was unchanged. Disposable accounts/messages were removed. No schema SQL was executed by the agent. Controlled local creation/confirmation without email, ban duration, unban, permanent deletion and two-instance last-operator protection subsequently passed in the management walkthrough. The gateway recovery probe also passed browser/state/redirect, replay, premature reset and CSRF boundaries; its --expiry mode verified persisted ready-context expiry after restart without password or session mutation. The management and recovery walkthroughs subsequently passed with admin_api_runtime. Natural upstream OTP expiry remains unverified.
+Pinned upstream observations, local gateway verification and remaining expiry checks are consolidated in [GoTrue status](status.md#recorded-verification-evidence). The [API reference](api.md) retains recovery usage and upstream token-effect limits; do not promise universal revocation across products.
 
 ## Email extension
 
