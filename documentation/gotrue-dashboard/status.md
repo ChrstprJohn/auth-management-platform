@@ -1,6 +1,6 @@
 # GoTrue operator dashboard status
 
-UI clarity implementation is in progress. Shared sign-out controls prevent duplicate submissions, auth/recovery feedback is concise, and stale reset/logout completions preserve newer sessions. Modal/history/local-time changes are implemented. All 105 frontend tests and typecheck passed on 2026-10-02; final aggregate checks and bounded browser review remain in progress.
+UI clarity implementation is in progress. The bounded 1440/320px fixture review passed with 53 captures. Its single confirmation identified mobile deletion focus; destination focus now passes a dedicated regression and a focused desktop/mobile browser check. All 106 backend/script and 106 frontend tests, typecheck and lint passed on 2026-10-02. Final build/asset/format confirmation and documentation consolidation remain in progress.
 
 Latest prepared task: [Operator UI clarity goal](operator-ui-clarity-goal.md), prepared on 2026-10-02. It covers shadcn-only invite/confirmation modals, concise View actions, notifications and automatic confirmed-modal closure, removal of routine inline alerts/IDs, full-page history inspection, copy cleanup and consistent dates across all existing screens. Implementation has started; required frontend and aggregate verification is in progress.
 

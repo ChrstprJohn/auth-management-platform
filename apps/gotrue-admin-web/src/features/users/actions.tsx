@@ -69,6 +69,7 @@ function useActionController() {
   const [open, setOpen] = useState(false);
   const busy = useRef(false);
   const opener = useRef<HTMLElement | null>(null);
+  const focusUsers = useRef(false);
   const form = useForm({
     resolver: zodResolver(durationSchema),
     defaultValues: { durationHours: 24 },
@@ -106,8 +107,10 @@ function useActionController() {
       void runtime.client.invalidateQueries({
         queryKey: ['private', generation],
       });
-      if (response.target.action === 'delete')
+      if (response.target.action === 'delete') {
+        focusUsers.current = true;
         navigate('/users', { replace: true });
+      }
     },
     onError: (error) => {
       if (
@@ -125,11 +128,18 @@ function useActionController() {
     setTarget(null);
     setOpen(false);
     busy.current = false;
+    focusUsers.current = false;
     resetMutation();
     resetForm({ durationHours: 24 });
   }, [generation, resetMutation, resetForm]);
   useEffect(() => {
     setOpen(false);
+    if (location.pathname !== '/users' || !focusUsers.current) return;
+    focusUsers.current = false;
+    const frame = requestAnimationFrame(() =>
+      document.getElementById('main')?.focus(),
+    );
+    return () => cancelAnimationFrame(frame);
   }, [location.pathname]);
   const start = (user: SafeUser, action: Action, element: HTMLElement) => {
     if (busy.current || uncertain) return;

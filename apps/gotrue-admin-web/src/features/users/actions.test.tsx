@@ -6,6 +6,7 @@ import { ApiFailure } from '@/lib/api/client';
 import { renderApp, fixtureSession } from '@/test/providers';
 import { UserActions, ActionOutcome, durationSchema } from './actions';
 import { toast } from 'sonner';
+import { Routes, Route } from 'react-router-dom';
 
 const user = {
   id: '00000000-0000-4000-8000-000000000003',
@@ -26,6 +27,42 @@ function mount() {
   );
 }
 describe('confirmed global mutations', () => {
+  it('focuses Users after deletion removes the initiating control', async () => {
+    vi.spyOn(operatorApi, 'me').mockResolvedValue(fixtureSession);
+    vi.spyOn(operatorApi, 'delete').mockResolvedValue({
+      deleted: true,
+      targetId: user.id,
+      auditId: user.id,
+    });
+    renderApp(
+      <>
+        <ActionOutcome />
+        <Routes>
+          <Route path="/users/:id" element={<UserActions user={user} />} />
+          <Route
+            path="/users"
+            element={
+              <main id="main" tabIndex={-1}>
+                Users destination
+              </main>
+            }
+          />
+        </Routes>
+      </>,
+      `/users/${user.id}`,
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Permanently delete user' }),
+    );
+    await userEvent.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', {
+        name: 'Confirm permanent deletion',
+      }),
+    );
+    const destination = await screen.findByRole('main');
+    await waitFor(() => expect(destination).toHaveFocus());
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
   it.each([
     ['unban', 'Unban user', 'Confirm unban', 'User unbanned'],
     [

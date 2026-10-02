@@ -30,14 +30,12 @@ const invited = {
 };
 function mountInvite(legacy = false) {
   vi.spyOn(operatorApi, 'me').mockResolvedValue(fixtureSession);
-  const users = vi
-    .spyOn(operatorApi, 'users')
-    .mockResolvedValue({
-      users: [invited],
-      page: 3,
-      perPage: 50,
-      hasNextPage: false,
-    });
+  const users = vi.spyOn(operatorApi, 'users').mockResolvedValue({
+    users: [invited],
+    page: 3,
+    perPage: 50,
+    hasNextPage: false,
+  });
   const controls: { navigate?: NavigateFunction; establish?: () => void } = {};
   function Controls() {
     const location = useLocation();
