@@ -84,7 +84,7 @@ describe('bounded dashboard snapshots', () => {
     expect(summary.outcomes.map((row) => row.count)).toEqual([1, 0, 1, 1]);
     expect(summary.actions.map((row) => row.count)).toEqual([1, 2, 0, 0, 0, 0]);
     expect(summary.daily).toEqual([
-      { date: '2026-10-01', attempts: 3, unresolved: 2 },
+      { date: new Date(2026, 9, 1).toISOString(), attempts: 3, unresolved: 2 },
     ]);
   });
   it('reads only page one and retains a previous snapshot after a refresh failure', async () => {

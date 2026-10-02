@@ -3,6 +3,7 @@ import type { AuditEntry, SafeUser } from '@auth/contracts';
 import { useSession } from '@/app/session';
 import { operatorApi } from '@/lib/api/operator';
 import { useStatusPage } from '@/features/status/hooks';
+import { validDate, actionName } from '@/lib/format/display';
 
 export function summarizeUsers(users: SafeUser[]) {
   return {
@@ -41,7 +42,13 @@ export function summarizeAudit(entries: AuditEntry[]) {
     { date: string; attempts: number; unresolved: number }
   >();
   for (const entry of entries) {
-    const date = new Date(entry.createdAt).toISOString().slice(0, 10);
+    const timestamp = validDate(entry.createdAt);
+    if (!timestamp) continue;
+    const date = new Date(
+      timestamp.getFullYear(),
+      timestamp.getMonth(),
+      timestamp.getDate(),
+    ).toISOString();
     const day = days.get(date) ?? { date, attempts: 0, unresolved: 0 };
     day.attempts++;
     if (entry.outcome === 'pending' || entry.outcome === 'unknown')
@@ -66,7 +73,7 @@ export function summarizeAudit(entries: AuditEntry[]) {
         'send_verification',
       ] as const
     ).map((action) => ({
-      label: action,
+      label: actionName(action),
       count: entries.filter((entry) => entry.action === action).length,
     })),
     unresolved: entries.filter(

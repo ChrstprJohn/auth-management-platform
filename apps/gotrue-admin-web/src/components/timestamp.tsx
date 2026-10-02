@@ -1,18 +1,18 @@
-import { date } from '@/lib/format/display';
+import { date, validDate } from '@/lib/format/display';
 export function Timestamp({
   value,
-  compact = false,
+  dateOnly = false,
 }: {
   value: string | null | undefined;
+  dateOnly?: boolean;
   compact?: boolean;
 }) {
-  return value ? (
-    <time dateTime={value} title={value} className="tabular-nums">
-      {compact
-        ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(
-            new Date(value),
-          )
-        : date(value)}
+  return validDate(value) ? (
+    <time
+      dateTime={value ?? undefined}
+      className="whitespace-normal tabular-nums"
+    >
+      {date(value, { dateOnly })}
     </time>
   ) : (
     <span>Not reported</span>

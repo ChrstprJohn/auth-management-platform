@@ -29,7 +29,7 @@ describe('independent health signals', () => {
       ).findByText('unavailable'),
     ).toBeVisible();
     expect(await screen.findByText('GoTrue version: v2.196.0')).toBeVisible();
-    expect(screen.getByText(/do not prove email/)).toBeVisible();
+    expect(screen.getByText(/do not verify email/)).toBeVisible();
     await userEvent.click(
       screen.getByRole('button', { name: 'Refresh all checks' }),
     );

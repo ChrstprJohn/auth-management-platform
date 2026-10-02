@@ -38,6 +38,7 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 import { useDashboard } from './hooks';
+import { actionName } from '@/lib/format/display';
 
 export function DashboardPage() {
   const m = useDashboard();
@@ -45,7 +46,7 @@ export function DashboardPage() {
     <section className="min-w-0 space-y-6">
       <PageHeader
         title="Dashboard"
-        description="A snapshot of the first 20 users and 20 recent audit records. These charts describe the loaded pages, not global totals or growth."
+        description="Counts cover the first 20 users and 20 recent actions."
         actions={
           <Button variant="outline" disabled={m.refreshing} onClick={m.refresh}>
             <RefreshCw className={m.refreshing ? 'animate-spin' : ''} />
@@ -58,25 +59,21 @@ export function DashboardPage() {
           {
             title: 'Users loaded',
             value: m.users.data?.users.length,
-            description: 'First page · maximum 20',
             href: '/users',
           },
           {
             title: 'Confirmed emails',
             value: m.users.summary?.confirmation[0]?.count,
-            description: 'Within the loaded user page',
             href: '/users',
           },
           {
             title: 'Unresolved attempts',
             value: m.audit.summary?.unresolved,
-            description: 'Pending or unknown · audit page',
             href: '/history',
           },
           {
             title: 'Failed attempts',
             value: m.audit.summary?.outcomes[1]?.count,
-            description: 'Reported failures · audit page',
             href: '/history',
           },
         ].map((metric) => (
@@ -105,14 +102,6 @@ export function DashboardPage() {
                 {metric.value ?? '—'}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <Link
-                to={metric.href}
-                className="text-xs text-muted-foreground underline"
-              >
-                {metric.description}
-              </Link>
-            </CardContent>
           </Card>
         ))}
       </div>
@@ -162,18 +151,17 @@ export function DashboardPage() {
             </div>
           ))}
         </div>
-        <p className="text-xs text-muted-foreground">
-          Health does not prove email delivery, login or end-to-end persistence.
-        </p>
       </section>
       <section aria-labelledby="dashboard-users" className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
-            <h2 id="dashboard-users">User snapshot</h2>
+            <h2 id="dashboard-users">Users</h2>
             <p className="text-sm text-muted-foreground">
               {m.users.data
-                ? `${m.users.data.users.length} records loaded · page 1 · limit 20${m.users.data.hasNextPage ? ' · more pages available' : ''}`
-                : 'First user page · limit 20'}
+                ? `${m.users.data.users.length} loaded${m.users.data.hasNextPage ? ' · more available' : ''}`
+                : m.users.loading
+                  ? 'Loading users'
+                  : 'Snapshot unavailable'}
               {m.users.refreshing && m.users.data ? ' · refreshing' : ''}
             </p>
           </div>
@@ -224,11 +212,13 @@ export function DashboardPage() {
       <section aria-labelledby="dashboard-audit" className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
-            <h2 id="dashboard-audit">Action snapshot</h2>
+            <h2 id="dashboard-audit">Actions</h2>
             <p className="text-sm text-muted-foreground">
               {m.audit.data
-                ? `${m.audit.data.entries.length} recent records loaded · page 1 · limit 20${m.audit.data.hasNextPage ? ' · more pages available' : ''}`
-                : 'First audit page · limit 20'}
+                ? `${m.audit.data.entries.length} loaded${m.audit.data.hasNextPage ? ' · more available' : ''}`
+                : m.audit.loading
+                  ? 'Loading actions'
+                  : 'Snapshot unavailable'}
               {m.audit.refreshing && m.audit.data ? ' · refreshing' : ''}
             </p>
           </div>
@@ -287,9 +277,7 @@ export function DashboardPage() {
             <CardTitle>
               <h2>Recent attempts</h2>
             </CardTitle>
-            <CardDescription>
-              The five newest entries from the loaded audit page.
-            </CardDescription>
+            <CardDescription>Latest five actions</CardDescription>
           </CardHeader>
           <CardContent>
             <Table className="table-fixed">
@@ -307,8 +295,8 @@ export function DashboardPage() {
               <TableBody>
                 {m.audit.data.entries.slice(0, 5).map((entry) => (
                   <TableRow key={entry.id}>
-                    <TableCell className="whitespace-nowrap capitalize font-medium">
-                      {entry.action}
+                    <TableCell className="whitespace-normal font-medium">
+                      {actionName(entry.action)}
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -336,7 +324,7 @@ export function DashboardPage() {
                       </span>
                     </TableCell>
                     <TableCell className="hidden whitespace-normal lg:table-cell">
-                      <Timestamp value={entry.createdAt} compact />
+                      <Timestamp value={entry.createdAt} />
                     </TableCell>
                     <TableCell className="text-right">
                       <ActionDetails entry={entry} />
@@ -348,7 +336,7 @@ export function DashboardPage() {
           </CardContent>
           <CardFooter>
             <Link to="/history" className="text-sm underline">
-              Inspect durable action history
+              View history
             </Link>
           </CardFooter>
         </Card>

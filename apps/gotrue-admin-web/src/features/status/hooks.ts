@@ -32,7 +32,7 @@ export function useStatusPage() {
     },
     {
       label: 'GoTrue reachability',
-      description: 'Authenticated upstream health and safe version.',
+      description: 'GoTrue availability and version.',
       query: upstream,
       version: upstream.error ? null : (upstream.data?.version ?? null),
     },

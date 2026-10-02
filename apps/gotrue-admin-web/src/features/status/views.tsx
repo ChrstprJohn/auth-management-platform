@@ -7,7 +7,6 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-  CardFooter,
 } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -29,7 +28,7 @@ export function StatusPage() {
     <section className="min-w-0 space-y-6">
       <PageHeader
         title="Service status"
-        description="Health checks are separate signals. They do not prove email delivery, sign-in or end-to-end persistence."
+        description="Availability checks do not verify email delivery or sign-in."
         actions={
           <Button
             variant="outline"
@@ -99,20 +98,21 @@ export function StatusPage() {
                   GoTrue version: {check.version}
                 </p>
               )}
+              {!!check.checkedAt && (
+                <details className="min-w-0 text-sm">
+                  <summary className="cursor-pointer">
+                    Technical details
+                  </summary>
+                  <p className="mt-2 break-all font-mono text-xs">
+                    Source check timestamp:{' '}
+                    {new Date(check.checkedAt).toISOString()}
+                  </p>
+                </details>
+              )}
               {check.error && (
                 <Failure error={check.error} retry={check.refresh} />
               )}
             </CardContent>
-            <CardFooter className="justify-end">
-              <Button
-                variant="outline"
-                disabled={check.refreshing}
-                onClick={check.refresh}
-                aria-label={`Refresh ${check.label}`}
-              >
-                {check.refreshing ? <Spinner /> : <RefreshCw />}Refresh
-              </Button>
-            </CardFooter>
           </Card>
         ))}
       </div>

@@ -25,6 +25,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { Progress } from '@/components/ui/progress';
+import { date } from '@/lib/format/display';
 
 type Count = { label: string; count: number };
 export function DailyActivity({
@@ -42,10 +43,7 @@ export function DailyActivity({
         <CardTitle>
           <h3>Activity by day</h3>
         </CardTitle>
-        <CardDescription>
-          UTC dates represented in the latest 20 records. Gaps and earlier
-          activity are not inferred.
-        </CardDescription>
+        <CardDescription>Attempts by local date.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <ChartContainer
@@ -61,12 +59,19 @@ export function DailyActivity({
             <CartesianGrid vertical={false} />
             <XAxis
               dataKey="date"
+              tickFormatter={(value: string) => date(value, { dateOnly: true })}
               tickLine={false}
               axisLine={false}
               minTickGap={32}
             />
             <YAxis allowDecimals={false} axisLine={false} tickLine={false} />
-            <ChartTooltip content={<ChartTooltipContent />} />
+            <ChartTooltip
+              content={
+                <ChartTooltipContent
+                  labelFormatter={(value) => date(String(value))}
+                />
+              }
+            />
             <Area
               dataKey="attempts"
               type="linear"
@@ -96,7 +101,7 @@ export function DailyActivity({
               key={day.date}
               className="flex flex-wrap justify-between gap-2"
             >
-              <dt>{day.date}</dt>
+              <dt>{date(day.date, { dateOnly: true })}</dt>
               <dd>
                 {day.attempts} attempts · {day.unresolved} unresolved
               </dd>
@@ -211,7 +216,7 @@ export function OutcomeChart({
   return (
     <SnapshotChart
       title="Recorded outcomes"
-      description={`${unresolved} unresolved records in this page. Pending and unknown are not completed outcomes.`}
+      description={`${unresolved} unresolved attempts`}
       data={data}
     >
       <ChartContainer
@@ -285,9 +290,7 @@ export function BanBreakdown({
         <h3 id="ban-breakdown" className="text-base font-medium">
           Ban status
         </h3>
-        <CardDescription>
-          Share of this user page. Unknown is counted separately.
-        </CardDescription>
+        <CardDescription>Unknown status is counted separately.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col justify-center gap-6">
         {data.map((row) => (
